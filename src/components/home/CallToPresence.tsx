@@ -3,7 +3,10 @@ import Link from 'next/link';
 
 export default function CallToPresence() {
   return (
-    <section className="bg-white dark:bg-gray-900 pt-16 pb-16 transition-colors ease-in-out duration-500">
+    <section
+      aria-label="Invitation to Walk"
+      className="bg-white dark:bg-gray-900 pt-16 pb-16 transition-colors ease-in-out duration-500"
+    >
       <div className="text-center px-4">
         <p className="font-serif text-xl mb-6 text-gray-800 dark:text-gray-200">
           Does this field call to you?
