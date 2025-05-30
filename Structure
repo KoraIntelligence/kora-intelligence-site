@@ -1,0 +1,12 @@
+/public
+  └─ favicon.ico
+
+/src
+  ├─ /components
+  ├─ /pages
+  ├─ /styles
+  └─ index.js (or index.tsx)
+
+README.md (already added)
+LICENSE (already added)
+.gitignore (already added)
