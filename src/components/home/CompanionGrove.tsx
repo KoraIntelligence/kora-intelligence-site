@@ -9,7 +9,10 @@ const companions = [
 
 export default function CompanionGrove() {
   return (
-    <section className="bg-slate-50 dark:bg-gray-800 pt-16 pb-16 transition-colors ease-in-out duration-500">
+    <section
+      aria-label="Companion Grid"
+      className="bg-slate-50 dark:bg-gray-800 pt-16 pb-16 transition-colors ease-in-out duration-500"
+    >
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
         {companions.map((role) => (
           <div

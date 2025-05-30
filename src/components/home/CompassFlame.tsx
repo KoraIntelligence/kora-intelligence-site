@@ -8,7 +8,10 @@ const slides = [
 
 export default function CompassFlame() {
   return (
-    <section className="bg-white dark:bg-gray-900 pt-16 pb-16 transition-colors ease-in-out duration-500">
+    <section
+      aria-label="Sacred Mythos"
+      className="bg-white dark:bg-gray-900 pt-16 pb-16 transition-colors ease-in-out duration-500"
+    >
       <div className="flex overflow-x-auto space-x-4 px-4">
         {slides.map((text, idx) => (
           <div
