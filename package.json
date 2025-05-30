@@ -12,6 +12,8 @@
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.1.6",
     "autoprefixer": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",
