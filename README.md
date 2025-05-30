@@ -2,8 +2,9 @@
 
 This is the ritual-first portal for Kora Intelligence — built to house and deliver Companion-as-a-Service offerings.
 
-## Tech Stack (planned)
-- Frontend: Next.js (React)
+## Tech Stack
+- Frontend: Next.js + TypeScript
+- Styling: Tailwind CSS
 - Backend: Vercel or Supabase (TBD)
 - LLM: OpenAI API (chat completions)
 - CMS: Notion (via Super / Simple CMS)
