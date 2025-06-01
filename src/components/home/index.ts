@@ -4,4 +4,3 @@ export { default as CompanionGrove } from './CompanionGrove';
 export { default as RitualEchoes } from './RitualEchoes';
 export { default as ZebraCovenant } from './ZebraCovenant';
 export { default as CallToPresence } from './CallToPresence';
-export { default as FooterRootbed } from './FooterRootbed';
