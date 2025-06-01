@@ -6,7 +6,6 @@ import {
   RitualEchoes,
   ZebraCovenant,
   CallToPresence,
-  FooterRootbed,
 } from '../components/home';
 
 export default function HomePage() {
@@ -23,7 +22,6 @@ export default function HomePage() {
         <ZebraCovenant />
         <CallToPresence />
       </main>
-      <FooterRootbed />
     </>
   );
 }
