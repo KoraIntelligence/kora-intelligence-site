@@ -11,15 +11,15 @@ export default function CompanionGrove() {
   return (
     <section
       aria-label="Companion Grid"
-      className="bg-slate-50 dark:bg-gray-800 pt-16 pb-16 transition-colors ease-in-out duration-500"
+      className="bg-neutral-50 dark:bg-gray-900 pt-24 pb-24 px-6 transition-colors ease-in-out duration-500"
     >
-      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
+      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
         {companions.map((role) => (
           <div
             key={role}
-            className="p-4 bg-white dark:bg-gray-700 rounded-lg text-center shadow-sm font-serif text-gray-800 dark:text-gray-200 transition-opacity duration-300 ease-in-out hover:opacity-80"
+            className="p-6 bg-white dark:bg-emerald-950 rounded-2xl text-center shadow-sm font-serif text-gray-900 dark:text-emerald-200 transition duration-300 ease-in-out hover:opacity-80"
           >
-            {role}
+            <span className="text-amber-600 text-lg">{role}</span>
           </div>
         ))}
       </div>
