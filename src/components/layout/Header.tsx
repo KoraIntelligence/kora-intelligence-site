@@ -15,7 +15,7 @@ export default function Header() {
             alt="Kora Intelligence"
             width={40}
             height={40}
-            className="rounded"
+            className="rounded sm:w-12 sm:h-12"
           />
           <span className="font-serif text-lg text-gray-900 dark:text-white">
             Kora Intelligence
@@ -24,11 +24,11 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <div className="hidden sm:flex space-x-6 text-sm font-medium text-gray-800 dark:text-gray-200">
-          <Link href="/">Home</Link>
-          <Link href="/companions">Companions</Link>
-          <Link href="/support">Support</Link>
-          <Link href="/dispatch">Dispatch</Link>
-          <Link href="/about">About</Link>
+          <Link href="/" className="hover:text-indigo-600 transition-colors duration-200">Home</Link>
+          <Link href="/companions" className="hover:text-indigo-600 transition-colors duration-200">Companions</Link>
+          <Link href="/support" className="hover:text-indigo-600 transition-colors duration-200">Support</Link>
+          <Link href="/dispatch" className="hover:text-indigo-600 transition-colors duration-200">Dispatch</Link>
+          <Link href="/about" className="hover:text-indigo-600 transition-colors duration-200">About</Link>
         </div>
 
         {/* Mobile Toggle Button */}
@@ -53,11 +53,11 @@ export default function Header() {
       {/* Mobile Navigation */}
       {open && (
         <div className="sm:hidden transition-all bg-white dark:bg-gray-900 space-y-2 text-center py-4 text-sm font-medium text-gray-800 dark:text-gray-200">
-          <Link href="/" onClick={() => setOpen(false)}>Home</Link>
-          <Link href="/companions" onClick={() => setOpen(false)}>Companions</Link>
-          <Link href="/support" onClick={() => setOpen(false)}>Support</Link>
-          <Link href="/dispatch" onClick={() => setOpen(false)}>Dispatch</Link>
-          <Link href="/about" onClick={() => setOpen(false)}>About</Link>
+          <Link href="/" onClick={() => setOpen(false)} className="hover:text-indigo-600 transition-colors duration-200">Home</Link>
+          <Link href="/companions" onClick={() => setOpen(false)} className="hover:text-indigo-600 transition-colors duration-200">Companions</Link>
+          <Link href="/support" onClick={() => setOpen(false)} className="hover:text-indigo-600 transition-colors duration-200">Support</Link>
+          <Link href="/dispatch" onClick={() => setOpen(false)} className="hover:text-indigo-600 transition-colors duration-200">Dispatch</Link>
+          <Link href="/about" onClick={() => setOpen(false)} className="hover:text-indigo-600 transition-colors duration-200">About</Link>
         </div>
       )}
     </nav>
