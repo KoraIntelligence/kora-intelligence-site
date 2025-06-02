@@ -12,7 +12,7 @@ export default function CallToPresence() {
           Does this field call to you?
         </p>
         <Link href="/companions" legacyBehavior>
-          <a className="inline-block px-4 py-2 text-sm sm:text-base rounded transition-opacity hover:opacity-80 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900">
+          <a className="inline-block bg-amber-100 hover:bg-amber-200 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors duration-300 ease-in-out text-sm sm:text-base">
             Enter Companion Portal
           </a>
         </Link>
