@@ -20,16 +20,15 @@ export default function CompanionGrove() {
     >
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {companions.map((companion) => (
-          <div
+          <Link
             key={companion.slug}
-            className="p-6 bg-white dark:bg-emerald-950 rounded-2xl text-center shadow-sm font-serif text-gray-900 dark:text-emerald-200 transition duration-300 ease-in-out hover:opacity-80 transform hover:scale-105"
+            href={`/companions/${companion.slug}`}
+            legacyBehavior
           >
-            <Link href={`/companions/${companion.slug}`} legacyBehavior>
-              <a className="text-amber-600 text-lg font-serif hover:text-indigo-600 hover:underline transition-opacity duration-300 ease-in-out">
-                {companion.label}
-              </a>
-            </Link>
-          </div>
+            <a className="block p-4 py-3 px-4 text-base sm:text-lg bg-emerald-950 text-emerald-100 hover:bg-emerald-800 transition-all rounded-lg text-center shadow-sm font-serif hover:shadow-lg">
+              {companion.label}
+            </a>
+          </Link>
         ))}
       </div>
     </section>
