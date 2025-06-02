@@ -16,9 +16,9 @@ export default function CompanionGrove() {
   return (
     <section
       aria-label="Companion Grid"
-      className="bg-neutral-50 dark:bg-gray-900 pt-24 pb-24 px-6 transition-colors ease-in-out duration-500"
+      className="bg-neutral-50 dark:bg-gray-900 px-4 sm:px-6 md:px-8 pt-16 pb-16 transition-colors ease-in-out duration-500"
     >
-      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {companions.map((companion) => (
           <div
             key={companion.slug}
