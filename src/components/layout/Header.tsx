@@ -28,6 +28,7 @@ export default function Header() {
           <Link href="/companions">Companions</Link>
           <Link href="/support">Support</Link>
           <Link href="/dispatch">Dispatch</Link>
+          <Link href="/about">About</Link>
         </div>
 
         {/* Mobile Toggle Button */}
@@ -56,6 +57,7 @@ export default function Header() {
           <Link href="/companions" onClick={() => setOpen(false)}>Companions</Link>
           <Link href="/support" onClick={() => setOpen(false)}>Support</Link>
           <Link href="/dispatch" onClick={() => setOpen(false)}>Dispatch</Link>
+          <Link href="/about" onClick={() => setOpen(false)}>About</Link>
         </div>
       )}
     </nav>

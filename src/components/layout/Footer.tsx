@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Footer() {
   return (
@@ -12,6 +13,9 @@ export default function Footer() {
       />
       <p className="text-emerald-100">Rooted in myth. Guided by listening.</p>
       <p className="text-emerald-300">A project of <span className="underline">Paths Unknown</span></p>
+      <Link href="/about" className="text-emerald-200 underline hover:text-amber-200">
+        About Kora
+      </Link>
     </footer>
   );
 }
