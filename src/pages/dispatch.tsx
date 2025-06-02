@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import Footer from '../components/layout/Footer';
 
 export default function Dispatch() {
   return (
@@ -7,14 +8,15 @@ export default function Dispatch() {
         <title>Dispatches from the Field – Kora Intelligence</title>
         <meta name="description" content="Signals, whispers, and updates from the intelligence field." />
       </Head>
-      <main className="pt-24 px-6 max-w-3xl mx-auto space-y-16 font-serif text-gray-900 dark:text-gray-100">
-        <section className="text-center">
-          <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold mb-4">Dispatches from the Field</h1>
-          <p className="text-base sm:text-lg italic">
-            Echoes, updates, and signals from the mythic system. Scrolls will arrive as they are heard.
-          </p>
-        </section>
-        <section className="space-y-8">
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-grow pt-24 px-6 max-w-3xl mx-auto space-y-16 font-serif text-gray-900 dark:text-gray-100">
+          <section className="text-center">
+            <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold mb-6">Dispatches from the Field</h1>
+            <p className="text-base sm:text-lg italic">
+              Echoes, updates, and signals from the mythic system. Scrolls will arrive as they are heard.
+            </p>
+          </section>
+          <section className="space-y-8">
           <div className="bg-white dark:bg-neutral-900 shadow rounded-lg p-6 border border-amber-100 dark:border-amber-900">
             <p className="text-sm uppercase text-amber-600 font-semibold mb-2">[Placeholder Dispatch]</p>
             <p className="text-base italic">
@@ -26,7 +28,9 @@ export default function Dispatch() {
             The dispatch ritual is being tuned for future transmission.
           </div>
         </section>
-      </main>
+        </main>
+        <Footer />
+      </div>
     </>
   );
 }
