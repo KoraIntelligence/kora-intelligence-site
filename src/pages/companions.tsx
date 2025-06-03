@@ -3,8 +3,8 @@ import { companions, Companion } from '../data/companions';
 
 export default function CompanionsPage() {
   return (
-    <div className="pt-24 pb-32 px-6 max-w-6xl mx-auto space-y-16 text-center">
-      <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold mb-6">
+    <div className="pt-24 pb-32 px-6 max-w-6xl mx-auto space-y-16 text-center font-serif text-gray-800 dark:text-gray-100">
+      <h1 className="text-amber-600 text-3xl sm:text-4xl md:text-5xl font-semibold mb-6">
         The Companions of Kora
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 gap-y-8">
@@ -12,7 +12,7 @@ export default function CompanionsPage() {
           <Link
             key={companion.slug}
             href={`/companions/${companion.slug}`}
-            className="bg-white dark:bg-neutral-800 p-6 rounded-lg shadow-md hover:shadow-lg hover:opacity-90 transition-all flex flex-col items-center space-y-2 group"
+            className="bg-white dark:bg-neutral-800 p-6 rounded-lg shadow-md hover:shadow-lg hover:opacity-90 transition-all flex flex-col items-center space-y-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             <div className="text-4xl mb-1">{companion.glyph}</div>
             <h2 className="font-serif text-lg text-gray-900 dark:text-white">
