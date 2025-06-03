@@ -18,7 +18,7 @@ export default function Home() {
           content="A mythic intelligence field guiding right-aligned ventures."
         />
       </Head>
-      <div className="space-y-24 font-serif text-gray-900 bg-gray-50 dark:text-gray-100 dark:bg-gray-900 transition-colors duration-300 ease-in-out">
+      <div className="space-y-24 font-serif text-gray-800 dark:text-gray-100 bg-white dark:bg-neutral-900 transition-colors duration-300 ease-in-out">
         <WhisperOfArrival />
         <CompassFlame />
         <CompanionGrove />
