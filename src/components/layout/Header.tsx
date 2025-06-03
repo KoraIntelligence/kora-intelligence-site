@@ -14,7 +14,7 @@ export default function Header() {
             Home
           </a>
           <a
-            href="/our-story"
+            href="/about"
             className="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             Our Story
@@ -32,7 +32,7 @@ export default function Header() {
             Dispatch
           </a>
           <a
-            href="/contact"
+            href="/support"
             className="bg-amber-600 text-white rounded-md px-3 py-1 hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             Begin

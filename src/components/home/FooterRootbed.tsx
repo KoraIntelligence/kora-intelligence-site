@@ -8,7 +8,7 @@ export default function FooterRootbed() {
         <Link href="/ip" legacyBehavior>
           <a className="hover:opacity-80 transition-opacity duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">IP</a>
         </Link>
-        <Link href="/contact" legacyBehavior>
+        <Link href="/support" legacyBehavior>
           <a className="hover:opacity-80 transition-opacity duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">Contact</a>
         </Link>
         <Link href="/archive" legacyBehavior>
