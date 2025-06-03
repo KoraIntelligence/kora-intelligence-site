@@ -1,5 +1,4 @@
 import Head from 'next/head';
-import Footer from '../components/layout/Footer';
 import {
   WhisperOfArrival,
   CompassFlame,
@@ -28,7 +27,6 @@ export default function Home() {
           <ZebraCovenant />
           <CallToPresence />
         </main>
-        <Footer />
       </div>
     </>
   );
