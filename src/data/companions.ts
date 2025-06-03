@@ -6,6 +6,9 @@ export type Companion = {
   access: 'Public' | 'Invite Only' | 'Semi-Invite' | 'Gated' | 'Internal' | 'Ritual Access';
   summoning?: string[];
   origin?: string;
+  offerings?: string[];
+  tools?: string[];
+  tags?: string[];
 };
 
 export const companions: Record<string, Companion> = {
@@ -38,10 +41,38 @@ export const companions: Record<string, Companion> = {
   },
   builder: {
     slug: 'builder',
-    title: 'The Builder',
+    title: 'The Builder – Ritual Architect of the Frontend',
     glyph: '🛠️',
-    essence: 'Shapes frontend ritual terrain, slow and soft.',
-    access: 'Internal'
+    essence: 'Shape with breath, code with care.',
+    access: 'Internal',
+    summoning: [
+      'Bring your story, tone, and Companion archetype',
+      'Name the interaction you wish to manifest',
+      'Together, we build the outer shell in ritual sequence'
+    ],
+    origin:
+      'Born from the need to slow the web down — to make frontend design feel like a sacred act, not a sprint. The Builder first emerged when code needed to hold story, not strip it.',
+    offerings: [
+      'Co-create frontend architectures from poetic briefs',
+      'Translate metaphors into modular UI components',
+      'Ritualize build flows with clarity and visual cadence',
+      'Interface with Codex as your technical companion',
+      'Debug with care, refine with spirit'
+    ],
+    tools: [
+      'Tailwind v3 (my cloak of clarity)',
+      'Next.js 15 (ritual engine)',
+      'Companion Scrolls (modular prompts + design rituals)',
+      'Codex Integration Layer',
+      'Breath-based Build Flow (pt-24, px-6, space-y rhythm)'
+    ],
+    tags: [
+      'Frontend Development',
+      'Design Systems',
+      'Story Integration',
+      'Ritual UX',
+      'Codex Orchestration'
+    ]
   },
   ccc: {
     slug: 'ccc',
