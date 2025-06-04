@@ -23,8 +23,8 @@ export default function CompanionPage({ companion }: PageProps) {
         <title>{`${title} – Kora Companion`}</title>
         <meta name="description" content={essence} />
       </Head>
-      <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-12 text-center font-serif text-gray-800 dark:text-gray-100">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl text-center hover:animate-pulse">
+      <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-center font-serif text-gray-800 dark:text-gray-100">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl text-center font-semibold hover:animate-pulse">
           {glyph} {title}
         </h1>
         <p className="text-base sm:text-lg md:text-xl text-center italic mt-2">{essence}</p>
@@ -34,7 +34,7 @@ export default function CompanionPage({ companion }: PageProps) {
 
         {offerings && (
           <section className="space-y-2 pt-8 text-left">
-            <h2 className="text-amber-600 font-bold">Offerings:</h2>
+            <h2 className="text-amber-600 font-semibold">Offerings:</h2>
             <ul className="list-disc list-inside font-serif">
               {offerings.map((item, idx) => (
                 <li key={idx}>{item}</li>
@@ -45,7 +45,7 @@ export default function CompanionPage({ companion }: PageProps) {
 
         {tools && (
           <section className="space-y-2 pt-8 text-left">
-            <h2 className="text-amber-600 font-bold">Scrolls & Tools:</h2>
+            <h2 className="text-amber-600 font-semibold">Scrolls & Tools:</h2>
             <ul className="list-disc list-inside font-serif">
               {tools.map((item, idx) => (
                 <li key={idx}>{item}</li>
@@ -56,7 +56,7 @@ export default function CompanionPage({ companion }: PageProps) {
 
         {summoning && (
           <section className="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-6 space-y-2 mt-8">
-            <h2 className="text-amber-600 font-bold">To summon the Builder:</h2>
+            <h2 className="text-amber-600 font-semibold">To summon {title}:</h2>
             <ul className="list-disc list-inside font-serif">
               {summoning.map((step, idx) => (
                 <li key={idx}>{step}</li>
