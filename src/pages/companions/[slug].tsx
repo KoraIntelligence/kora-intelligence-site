@@ -1,87 +1,79 @@
-import { GetStaticPaths, GetStaticProps } from 'next';
+import { GetStaticProps, GetStaticPaths } from 'next';
 import Head from 'next/head';
-import { companions, companionSlugs, Companion } from '../../data/companions';
+import { companions, Companion } from '@/data/companions';
 
-type PageProps = { companion: Companion };
-
-export default function CompanionPage({ companion }: PageProps) {
-  const {
-    glyph,
-    title,
-    essence,
-    access,
-    summoning,
-    origin,
-    offerings,
-    tools,
-    tags
-  } = companion;
-
+export default function CompanionPage({ companion }: { companion: Companion }) {
   return (
     <>
       <Head>
-        <title>{`${title} – Kora Companion`}</title>
-        <meta name="description" content={essence} />
+        <title>{companion.title} – Kora Companion</title>
+        <meta name="description" content={companion.essence} />
       </Head>
-      <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-center font-serif text-gray-800 dark:text-gray-100">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl text-center font-semibold hover:animate-pulse">
-          {glyph} {title}
-        </h1>
-        <p className="text-base sm:text-lg md:text-xl text-center italic mt-2">{essence}</p>
-        <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm mt-4">
-          {access}
-        </span>
+      <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
+        <div className="text-center space-y-2">
+          <div className="text-5xl">{companion.glyph}</div>
+          <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
+          <p className="italic text-lg sm:text-xl">{companion.essence}</p>
+          <span className="inline-block px-3 py-1 mt-2 rounded-full bg-amber-100 text-amber-800 text-sm">
+            {companion.access}
+          </span>
+        </div>
 
-        {offerings && (
-          <section className="space-y-2 pt-8 text-left">
-            <h2 className="text-amber-600 font-semibold">Offerings:</h2>
-            <ul className="list-disc list-inside font-serif">
-              {offerings.map((item, idx) => (
-                <li key={idx}>{item}</li>
+        {companion.translation && (
+          <section className="space-y-2">
+            <h2 className="text-xl font-semibold text-center text-amber-700">Real-World Translation</h2>
+            <p className="text-base italic text-center">{companion.translation}</p>
+          </section>
+        )}
+
+        {companion.services && (
+          <section>
+            <h2 className="text-lg font-semibold text-amber-700 mb-2">Services</h2>
+            <ul className="list-disc list-inside space-y-1">
+              {companion.services.map((service, index) => (
+                <li key={index}>{service}</li>
               ))}
             </ul>
           </section>
         )}
 
-        {tools && (
-          <section className="space-y-2 pt-8 text-left">
-            <h2 className="text-amber-600 font-semibold">Scrolls & Tools:</h2>
-            <ul className="list-disc list-inside font-serif">
-              {tools.map((item, idx) => (
-                <li key={idx}>{item}</li>
+        {companion.tools && (
+          <section>
+            <h2 className="text-lg font-semibold text-amber-700 mb-2">Tools & Methods</h2>
+            <ul className="list-disc list-inside space-y-1">
+              {companion.tools.map((tool, index) => (
+                <li key={index}>{tool}</li>
               ))}
             </ul>
           </section>
         )}
 
-        {summoning && (
-          <section className="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-6 space-y-2 mt-8">
-            <h2 className="text-amber-600 font-semibold">To summon {title}:</h2>
-            <ul className="list-disc list-inside font-serif">
-              {summoning.map((step, idx) => (
-                <li key={idx}>{step}</li>
+        {companion.summoning && (
+          <section>
+            <h2 className="text-lg font-semibold text-amber-700 mb-2">Summoning Instructions</h2>
+            <ol className="list-decimal list-inside space-y-1">
+              {companion.summoning.map((step, index) => (
+                <li key={index}>{step}</li>
               ))}
-            </ul>
+            </ol>
           </section>
         )}
 
-        {origin && (
-          <p className="italic bg-amber-50 dark:bg-amber-900 p-4 rounded-lg font-serif mt-8">
-            {origin}
-          </p>
+        {companion.origin && (
+          <section>
+            <h2 className="text-lg font-semibold text-amber-700 mb-2">Origin</h2>
+            <p className="italic bg-amber-50 dark:bg-amber-900 rounded-md p-4 text-sm">{companion.origin}</p>
+          </section>
         )}
 
-        {tags && (
-          <div className="pt-6 text-sm text-gray-600 dark:text-gray-400 space-x-2">
-            {tags.map((tag, idx) => (
-              <span
-                key={idx}
-                className="inline-block px-2 py-1 bg-neutral-200 dark:bg-neutral-700 rounded text-xs font-medium"
-              >
-                {tag}
+        {companion.tags && (
+          <section className="pt-4 text-sm text-center text-gray-600 dark:text-gray-400">
+            {companion.tags.map((tag, index) => (
+              <span key={index} className="inline-block mx-1 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800">
+                #{tag}
               </span>
             ))}
-          </div>
+          </section>
         )}
       </main>
     </>
@@ -89,15 +81,16 @@ export default function CompanionPage({ companion }: PageProps) {
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const paths = companionSlugs.map((slug) => ({ params: { slug } }));
+  const paths = Object.keys(companions).map((slug) => ({
+    params: { slug }
+  }));
   return { paths, fallback: false };
 };
 
-export const getStaticProps: GetStaticProps<PageProps> = async ({ params }) => {
+export const getStaticProps: GetStaticProps = async ({ params }) => {
   const slug = params?.slug as string;
   const companion = companions[slug];
-  if (!companion) {
-    return { notFound: true };
-  }
-  return { props: { companion } };
+  return {
+    props: { companion }
+  };
 };
