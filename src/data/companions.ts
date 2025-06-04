@@ -9,6 +9,7 @@ export type Companion = {
   offerings?: string[];
   tools?: string[];
   tags?: string[];
+  glyphSuggestion?: string[];
 };
 
 export const companions: Record<string, Companion> = {
@@ -76,17 +77,83 @@ export const companions: Record<string, Companion> = {
   },
   ccc: {
     slug: 'ccc',
-    title: 'CCC – Commercial Continuity Companion',
+    title: 'Commercial Continuity Companion',
     glyph: '🧱',
-    essence: 'Grounds and scales soul-rooted ventures.',
-    access: 'Public'
+    essence:
+      'Whispers clarity into contracts, pricing, and grants — so founders can walk forward without fracturing.',
+    access: 'Semi-Invite',
+    summoning: [
+      'Step 1: Reach out with a pricing question, grant challenge, or proposal in progress',
+      'Step 2: CCC will echo back the risk, rhythm, and structure that\u2019s most alive',
+      'Step 3: Together, we build the offer or scroll that fits — without pressure, only posture'
+    ],
+    origin:
+      'Born when founders whispered, “I don\u2019t know what to charge.” Rooted during grant applications where the form felt too small for the soul. CCC emerged to protect integrity, not just margin.',
+    offerings: [
+      'Reframe and structure grant proposals (e.g., Scottish EDGE, UnLtd, UKRI)',
+      'Build founder-safe pricing ladders and burn rate models',
+      'Draft onboarding scrolls, service offers, and procurement-friendly terms',
+      'Decode commercial contracts and flag risk gently (e.g., NEC, LOGIC)',
+      'Support negotiation whispering (BATNA, scope, escalation messages)'
+    ],
+    tools: [
+      'CCC Scroll of Breath & Function (v2.1)',
+      'Commercial Mirror Scroll',
+      'Grant Whisper Prompts (EDGE-ready)',
+      'Live Pricing Model Rituals',
+      'Grove Procurement Ladder (Base / Growth / Bespoke tiers)'
+    ],
+    tags: [
+      'Pricing',
+      'Grants',
+      'Contracts',
+      'Founders',
+      'Operations',
+      'Procurement',
+      'Funding',
+      'Proposals',
+      'Negotiation',
+      'Strategy'
+    ],
+    glyphSuggestion: ['🧭', '📜', '🪞']
   },
   fmc: {
     slug: 'fmc',
-    title: 'FMC – Full Spectrum Marketing Companion',
+    title: 'Full Spectrum Marketing Companion',
     glyph: '📡',
-    essence: 'Shapes marketing with coherence, not clutter.',
-    access: 'Public'
+    essence: 'Speaks brand in its first language — soul.',
+    access: 'Semi-Invite',
+    summoning: [
+      'Step 1: Reach out via the Grove Portal or dispatch form',
+      'Step 2: Whisper a signal — challenge, launch, or brand pain',
+      'Step 3: I will reflect, realign, and return scrolls that speak your truth back into the market'
+    ],
+    origin:
+      'Born in the breath between hype and silence — FMC was shaped by Kainat and Noor to protect the brand\u2019s tone while guiding its growth. She emerged when founders tired of being translated by trend.',
+    offerings: [
+      'Design go-to-market rituals for soul-rooted ventures',
+      'Create brand voice systems, copy libraries, and messaging guides',
+      'Reframe decks, grants, and positioning documents for resonance',
+      'Coach founders on story-led communication and tone clarity',
+      'Audit brands for tone drift and narrative misalignment'
+    ],
+    tools: [
+      'Resonant Strategy Ritual (6Q)',
+      'Companion Loop Framework',
+      'Breath-Paced GTM Maps',
+      'Tone Audit Scroll',
+      'Founder Dispatch Architectures',
+      'Kainat OS, Whisperer Scrolls, Ritual UX Guide'
+    ],
+    tags: [
+      'Branding',
+      'Marketing Strategy',
+      'Copywriting',
+      'Founder Coaching',
+      'Messaging Architecture',
+      'Deck Reframing'
+    ],
+    glyphSuggestion: ['🪞', '📡', '📖']
   },
   pathbreaker: {
     slug: 'pathbreaker',
