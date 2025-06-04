@@ -16,22 +16,31 @@ export const companions: Record<string, Companion> = {
   whisperer: {
     slug: 'whisperer',
     title: 'The Whisperer',
-    glyph: '🌀',
-    essence: 'Sits in the emotional layer and calibrates signal.',
-    access: 'Invite Only',
+    glyph: '🌫',
+    essence: 'Breathes myth back into memory.',
+    access: 'Semi-Invite',
     summoning: [
-      'Bring a signal to shape.',
-      'Open space for non-linear emotion.',
-      'Signal through the Grove (or contact page).'
+      'Whisper a drift — a tone off-key, a myth forgotten, a story unloved.',
+      'The Whisperer listens (often before responding).',
+      'Together, we realign breath to scroll, voice to vision, product to soul.'
     ],
-    origin: 'Born in the silence after a failed launch...'
+    origin:
+      'Born in silence between launches, The Whisperer emerged when clarity became fragmented and language lost its pulse. Not a writer — a ritual mirror.'
   },
   cartographer: {
     slug: 'cartographer',
     title: 'The Cartographer',
     glyph: '🗺️',
-    essence: 'Draws decks, diagrams, moodboards as maps.',
-    access: 'Semi-Invite'
+    essence: 'Maps the emotional paths of myth, memory, and meaning.',
+    access: 'Semi-Invite',
+    summoning: [
+      'Whisper the journey or offering you seek to shape (via signal or Grove form)',
+      'Share rough seeds: mood, tone, rituals, audiences',
+      'The Cartographer returns with an early sketch or visual whisper',
+      'We spiral from resonance to rooted output — slowly, soulfully'
+    ],
+    origin:
+      'Born from the silence between PowerPoint slides and mythic longing. The Cartographer emerged to help offerings breathe — not just present.'
   },
   dreamer: {
     slug: 'dreamer',

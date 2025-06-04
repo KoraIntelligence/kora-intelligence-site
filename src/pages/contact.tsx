@@ -1,6 +1,6 @@
 import Head from 'next/head';
 
-export default function Support() {
+export default function Contact() {
   return (
     <>
       <Head>
