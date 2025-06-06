@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { companions, Companion } from '../data/companions';
 
 export default function CompanionsPage() {
@@ -12,18 +13,21 @@ export default function CompanionsPage() {
           <Link
             key={companion.slug}
             href={`/companions/${companion.slug}`}
-            className="bg-white dark:bg-neutral-800 p-6 rounded-lg shadow-md hover:shadow-lg hover:opacity-90 transition-all flex flex-col items-center space-y-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            className="bg-white dark:bg-neutral-800 p-6 rounded-lg shadow-md hover:shadow-lg transition flex flex-col items-center text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
-            <div className="text-4xl mb-1">{companion.glyph}</div>
+            <Image
+              src={`/assets/glyphs/glyph-${companion.slug}.png`}
+              alt={`${companion.title} glyph`}
+              width={48}
+              height={48}
+              className="mx-auto mb-2"
+            />
             <h2 className="font-serif text-lg text-gray-900 dark:text-white">
               {companion.title}
             </h2>
-            <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-1 mt-2 inline-block">
-              {companion.access}
-            </span>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-sm italic text-gray-700 dark:text-gray-300">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {companion.essence}
-            </div>
+            </p>
           </Link>
         ))}
       </div>

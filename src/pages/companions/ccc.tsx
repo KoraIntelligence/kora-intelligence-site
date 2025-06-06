@@ -1,8 +1,11 @@
 import Head from 'next/head';
+import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
 
 export default function CCCPage() {
-  const companion: Companion = companions['ccc'];
+  const slug = 'ccc';
+  const companion: Companion = companions[slug];
+
   return (
     <>
       <Head>
@@ -11,7 +14,15 @@ export default function CCCPage() {
       </Head>
       <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
         <div className="text-center space-y-2">
-          <div className="text-5xl">{companion.glyph}</div>
+          <div className="w-full flex justify-center">
+            <Image
+              src={`/assets/glyphs/glyph-${slug}.png`}
+              alt={`${companion.title} glyph`}
+              width={64}
+              height={64}
+              className="rounded-full hover:opacity-75 transition duration-300 ease-in-out"
+            />
+          </div>
           <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
           <p className="italic text-lg sm:text-xl">{companion.essence}</p>
           <span className="inline-block px-3 py-1 mt-2 rounded-full bg-amber-100 text-amber-800 text-sm">
@@ -48,21 +59,58 @@ export default function CCCPage() {
           </section>
         )}
 
-        {companion.summoning && (
-          <section>
-            <h2 className="text-lg font-semibold text-amber-700 mb-2">Summoning Instructions</h2>
-            <ol className="list-decimal list-inside space-y-1">
-              {companion.summoning.map((step, index) => (
-                <li key={index}>{step}</li>
-              ))}
-            </ol>
-          </section>
-        )}
-
         {companion.origin && (
           <section>
             <h2 className="text-lg font-semibold text-amber-700 mb-2">Origin</h2>
-            <p className="italic bg-amber-50 dark:bg-amber-900 rounded-md p-4 text-sm">{companion.origin}</p>
+            <p className="italic bg-amber-50 dark:bg-amber-900 rounded-md p-4 text-sm">
+              {companion.origin}
+            </p>
+          </section>
+        )}
+
+        {companion.mode === 'chat' && (
+          <section>
+            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Whisper with {companion.title}</h2>
+            <iframe
+              src="https://chat.openai.com/embed?model=gpt-4"
+              className="w-full h-[500px] border rounded-md"
+            ></iframe>
+          </section>
+        )}
+
+        {companion.mode === 'prompt' && (
+          <section>
+            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Summon Ritual</h2>
+            <form className="max-w-md mx-auto space-y-4">
+              <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
+                Intention
+                <input type="text" name="intention" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
+              </label>
+              <button type="submit" className="w-full py-2 bg-amber-600 text-white font-semibold rounded hover:bg-amber-700 transition">
+                Begin the Ritual
+              </button>
+            </form>
+          </section>
+        )}
+
+        {companion.mode === 'hybrid' && (
+          <section className="space-y-8">
+            <div>
+              <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
+              <form className="max-w-md mx-auto space-y-4">
+                <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
+                  Signal
+                  <input type="text" name="signal" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
+                </label>
+              </form>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
+              <iframe
+                src="https://chat.openai.com/embed?model=gpt-4"
+                className="w-full h-[500px] border rounded-md"
+              ></iframe>
+            </div>
           </section>
         )}
 
@@ -75,26 +123,6 @@ export default function CCCPage() {
             ))}
           </section>
         )}
-
-        <section className="pt-8 border-t border-gray-300 dark:border-gray-700 space-y-6">
-          <h2 className="text-xl font-semibold text-amber-600 text-center">Summon CCC</h2>
-          <p className="italic text-center text-gray-600 dark:text-gray-400">
-            Begin the ritual — share a grant theme, domain, or desire. The Companion listens with care.
-          </p>
-          <form className="max-w-md mx-auto space-y-4">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
-              Grant Theme or Sector
-              <input type="text" name="grant-theme" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
-            </label>
-            <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
-              Your Offering / Intention
-              <textarea name="intention" rows={4} className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
-            </label>
-            <button type="submit" className="w-full py-2 bg-amber-600 text-white font-semibold rounded hover:bg-amber-700 transition">
-              Begin the Search
-            </button>
-          </form>
-        </section>
       </main>
     </>
   );

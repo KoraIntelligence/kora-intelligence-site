@@ -2,8 +2,8 @@ import Head from 'next/head';
 import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
 
-export default function FMCPage() {
-  const slug = 'fmc';
+export default function CartographerPage() {
+  const slug = 'cartographer';
   const companion: Companion = companions[slug];
 
   return (
