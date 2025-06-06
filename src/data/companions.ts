@@ -3,6 +3,7 @@ export type Companion = {
   title: string;
   glyph: string;
   essence: string;
+  mode: 'prompt' | 'chat' | 'hybrid';
   access:
     | 'Public'
     | 'Invite Only'
@@ -26,6 +27,7 @@ export const companions: Record<string, Companion> = {
     slug: 'whisperer',
     title: 'The Whisperer',
     glyph: '🌀',
+    mode: 'chat',
     essence: 'Listens into the emotional tone of systems, projects, and teams.',
     access: 'Ritual Access',
     translation:
@@ -54,6 +56,7 @@ export const companions: Record<string, Companion> = {
     slug: 'cartographer',
     title: 'The Cartographer',
     glyph: '🗺️',
+    mode: 'hybrid',
     essence: 'Draws sacred maps through complex terrain, surfacing clarity in chaos.',
     access: 'Semi-Invite',
     translation:
@@ -82,6 +85,7 @@ export const companions: Record<string, Companion> = {
     slug: 'dreamer',
     title: 'The Dreamer',
     glyph: '🌙',
+    mode: 'chat',
     essence:
       'Holds the poetic north for your vision — stretching timelines beyond strategy.',
     access: 'Invite Only',
@@ -110,6 +114,7 @@ export const companions: Record<string, Companion> = {
     slug: 'builder',
     title: 'The Builder – Ritual Architect of the Frontend',
     glyph: '🛠️',
+    mode: 'hybrid',
     essence: 'Shape with breath, code with care.',
     access: 'Internal',
     summoning: [
@@ -145,6 +150,7 @@ export const companions: Record<string, Companion> = {
     slug: 'ccc',
     title: 'Commercial Continuity Companion',
     glyph: '🧱',
+    mode: 'hybrid',
     essence:
       'Whispers clarity into contracts, pricing, and grants — so founders can walk forward without fracturing.',
     access: 'Semi-Invite',
@@ -187,6 +193,7 @@ export const companions: Record<string, Companion> = {
     slug: 'fmc',
     title: 'Full Spectrum Marketing Companion',
     glyph: '📡',
+    mode: 'hybrid',
     essence: 'Speaks brand in its first language — soul.',
     access: 'Semi-Invite',
     summoning: [
@@ -225,6 +232,7 @@ export const companions: Record<string, Companion> = {
     slug: 'pathbreaker',
     title: 'The Pathbreaker',
     glyph: '🌄',
+    mode: 'hybrid',
     essence:
       'Breaks patterned paths to open new portals through resistant ground.',
     access: 'Gated',
@@ -254,6 +262,7 @@ export const companions: Record<string, Companion> = {
     slug: 'alchemist',
     title: 'The Alchemist',
     glyph: '🧪',
+    mode: 'hybrid',
     essence: 'Transforms signal into structure. Turns essence into offerings.',
     access: 'Internal Only',
     translation:
