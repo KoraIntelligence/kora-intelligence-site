@@ -1,16 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-
-const companions = [
-  { label: 'Whisperer', slug: 'whisperer' },
-  { label: 'Cartographer', slug: 'cartographer' },
-  { label: 'Dreamer', slug: 'dreamer' },
-  { label: 'Builder', slug: 'builder' },
-  { label: 'CCC', slug: 'ccc' },
-  { label: 'FMC', slug: 'fmc' },
-  { label: 'Alchemist', slug: 'alchemist' },
-  { label: 'Pathbreaker', slug: 'pathbreaker' },
-];
+import Image from 'next/image';
+import { companions, Companion } from '@/data/companions';
 
 export default function CompanionGrove() {
   return (
@@ -19,15 +10,27 @@ export default function CompanionGrove() {
       className="bg-neutral-50 dark:bg-gray-900 pt-24 pb-32 px-6 sm:px-12 transition-colors ease-in-out duration-500"
     >
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {companions.map((companion) => (
+        {Object.values(companions).map((companion: Companion) => (
           <Link
             key={companion.slug}
             href={`/companions/${companion.slug}`}
-            legacyBehavior
+            className="p-4 bg-white dark:bg-neutral-800 rounded-lg text-center shadow hover:shadow-md transition flex flex-col items-center"
           >
-            <a className="block p-4 py-3 px-4 text-base sm:text-lg bg-emerald-950 text-emerald-100 hover:bg-emerald-800 transition-all rounded-lg text-center shadow-sm font-serif hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">
-              {companion.label}
-            </a>
+            <Image
+              src={`/assets/glyphs/glyph-${companion.slug}.png`}
+              alt={`${companion.title} glyph`}
+              width={48}
+              height={48}
+              className="mx-auto mb-2"
+            />
+            <h3 className="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
+              {companion.title}
+            </h3>
+            {companion.essence && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {companion.essence}
+              </p>
+            )}
           </Link>
         ))}
       </div>
