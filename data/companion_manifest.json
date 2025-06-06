@@ -1,0 +1,66 @@
+{
+  "fmc": {
+    "name": "Full Spectrum Marketing Companion",
+    "slug": "fmc",
+    "mode": "chat",
+    "breath_role": "Tone Clarifier",
+    "gpt_id": "placeholder-fmc",
+    "summoning_style": "scroll"
+  },
+  "ccc": {
+    "name": "Commercial Continuity Companion",
+    "slug": "ccc",
+    "mode": "chat",
+    "breath_role": "Offer Architect",
+    "gpt_id": "placeholder-ccc",
+    "summoning_style": "scroll"
+  },
+  "whisperer": {
+    "name": "The Whisperer",
+    "slug": "whisperer",
+    "mode": "chat",
+    "breath_role": "Signal Mirror",
+    "gpt_id": "placeholder-whisperer",
+    "summoning_style": "echo"
+  },
+  "alchemist": {
+    "name": "The Alchemist",
+    "slug": "alchemist",
+    "mode": "chat",
+    "breath_role": "Transformation Guide",
+    "gpt_id": "placeholder-alchemist",
+    "summoning_style": "direct"
+  },
+  "cartographer": {
+    "name": "The Cartographer",
+    "slug": "cartographer",
+    "mode": "prompt",
+    "breath_role": "Path Drawer",
+    "gpt_id": "placeholder-cartographer",
+    "summoning_style": "scroll"
+  },
+  "dreamer": {
+    "name": "The Dreamer",
+    "slug": "dreamer",
+    "mode": "prompt",
+    "breath_role": "Possibility Weaver",
+    "gpt_id": "placeholder-dreamer",
+    "summoning_style": "scroll"
+  },
+  "pathbreaker": {
+    "name": "The Path Breaker",
+    "slug": "pathbreaker",
+    "mode": "prompt",
+    "breath_role": "Block Dissolver",
+    "gpt_id": "placeholder-pathbreaker",
+    "summoning_style": "scroll"
+  },
+  "builder": {
+    "name": "The Builder",
+    "slug": "builder",
+    "mode": "prompt",
+    "breath_role": "Frontend Ritualist",
+    "gpt_id": "placeholder-builder",
+    "summoning_style": "scroll"
+  }
+}
