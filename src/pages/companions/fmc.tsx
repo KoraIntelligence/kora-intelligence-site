@@ -1,10 +1,8 @@
-import { GetStaticProps, GetStaticPaths } from 'next';
 import Head from 'next/head';
-import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
 
-export default function CompanionPage({ companion }: { companion: Companion }) {
-  const { slug } = companion;
+export default function FMCPage() {
+  const companion: Companion = companions['fmc'];
   return (
     <>
       <Head>
@@ -13,18 +11,8 @@ export default function CompanionPage({ companion }: { companion: Companion }) {
       </Head>
       <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
         <div className="text-center space-y-2">
-          <div className="flex flex-col items-center space-y-2">
-            <Image
-              src={`/assets/glyphs/glyph-${slug}.png`}
-              alt={`${companion.title} glyph`}
-              width={64}
-              height={64}
-              className="rounded-full hover:opacity-75 transition duration-300 ease-in-out"
-            />
-            <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">
-              {companion.title}
-            </h1>
-          </div>
+          <div className="text-5xl">{companion.glyph}</div>
+          <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
           <p className="italic text-lg sm:text-xl">{companion.essence}</p>
           <span className="inline-block px-3 py-1 mt-2 rounded-full bg-amber-100 text-amber-800 text-sm">
             {companion.access}
@@ -87,24 +75,21 @@ export default function CompanionPage({ companion }: { companion: Companion }) {
             ))}
           </section>
         )}
+
+        <section className="pt-8 border-t border-gray-300 dark:border-gray-700 space-y-6">
+          <h2 className="text-xl font-semibold text-amber-600 text-center">Summon FMC</h2>
+          <p className="italic text-center text-gray-600 dark:text-gray-400">
+            A quiet chamber opens. Ask what you need, and the Companion will respond.
+          </p>
+          <div className="w-full h-[600px] rounded-lg overflow-hidden shadow-md">
+            <iframe
+              src="https://your-chat-tool-link.com/fmc"
+              className="w-full h-full border-none"
+              title="Summon FMC"
+            />
+          </div>
+        </section>
       </main>
     </>
   );
 }
-
-export const getStaticPaths: GetStaticPaths = async () => {
-  const paths = Object.keys(companions)
-    .filter((slug) => slug !== 'fmc' && slug !== 'ccc')
-    .map((slug) => ({
-      params: { slug }
-    }));
-  return { paths, fallback: false };
-};
-
-export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const slug = params?.slug as string;
-  const companion = companions[slug];
-  return {
-    props: { companion }
-  };
-};

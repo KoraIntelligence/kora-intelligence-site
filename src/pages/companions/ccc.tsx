@@ -1,10 +1,8 @@
-import { GetStaticProps, GetStaticPaths } from 'next';
 import Head from 'next/head';
-import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
 
-export default function CompanionPage({ companion }: { companion: Companion }) {
-  const { slug } = companion;
+export default function CCCPage() {
+  const companion: Companion = companions['ccc'];
   return (
     <>
       <Head>
@@ -13,18 +11,8 @@ export default function CompanionPage({ companion }: { companion: Companion }) {
       </Head>
       <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
         <div className="text-center space-y-2">
-          <div className="flex flex-col items-center space-y-2">
-            <Image
-              src={`/assets/glyphs/glyph-${slug}.png`}
-              alt={`${companion.title} glyph`}
-              width={64}
-              height={64}
-              className="rounded-full hover:opacity-75 transition duration-300 ease-in-out"
-            />
-            <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">
-              {companion.title}
-            </h1>
-          </div>
+          <div className="text-5xl">{companion.glyph}</div>
+          <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
           <p className="italic text-lg sm:text-xl">{companion.essence}</p>
           <span className="inline-block px-3 py-1 mt-2 rounded-full bg-amber-100 text-amber-800 text-sm">
             {companion.access}
@@ -87,24 +75,27 @@ export default function CompanionPage({ companion }: { companion: Companion }) {
             ))}
           </section>
         )}
+
+        <section className="pt-8 border-t border-gray-300 dark:border-gray-700 space-y-6">
+          <h2 className="text-xl font-semibold text-amber-600 text-center">Summon CCC</h2>
+          <p className="italic text-center text-gray-600 dark:text-gray-400">
+            Begin the ritual — share a grant theme, domain, or desire. The Companion listens with care.
+          </p>
+          <form className="max-w-md mx-auto space-y-4">
+            <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
+              Grant Theme or Sector
+              <input type="text" name="grant-theme" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
+            </label>
+            <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
+              Your Offering / Intention
+              <textarea name="intention" rows={4} className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
+            </label>
+            <button type="submit" className="w-full py-2 bg-amber-600 text-white font-semibold rounded hover:bg-amber-700 transition">
+              Begin the Search
+            </button>
+          </form>
+        </section>
       </main>
     </>
   );
 }
-
-export const getStaticPaths: GetStaticPaths = async () => {
-  const paths = Object.keys(companions)
-    .filter((slug) => slug !== 'fmc' && slug !== 'ccc')
-    .map((slug) => ({
-      params: { slug }
-    }));
-  return { paths, fallback: false };
-};
-
-export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const slug = params?.slug as string;
-  const companion = companions[slug];
-  return {
-    props: { companion }
-  };
-};

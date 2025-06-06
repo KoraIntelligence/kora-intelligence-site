@@ -10,7 +10,7 @@ export default function ZebraCovenant() {
   return (
     <section
       aria-label="Covenant Ritual"
-      className="bg-slate-50 dark:bg-gray-800 px-4 sm:px-6 md:px-8 pt-16 pb-16 transition-colors ease-in-out duration-500"
+      className="bg-slate-50 dark:bg-gray-800 pt-24 pb-32 px-6 sm:px-12 transition-colors ease-in-out duration-500"
     >
       <div className="max-w-3xl mx-auto space-y-4">
         <ul className="space-y-4 text-center max-w-sm mx-auto text-gray-800 dark:text-gray-100 font-serif">
