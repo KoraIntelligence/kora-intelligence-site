@@ -1,8 +1,8 @@
-import { GetStaticProps, GetStaticPaths } from 'next';
 import Head from 'next/head';
 import { companions, Companion } from '@/data/companions';
 
-export default function CompanionPage({ companion }: { companion: Companion }) {
+export default function FMCPage() {
+  const companion: Companion = companions['fmc'];
   return (
     <>
       <Head>
@@ -75,24 +75,21 @@ export default function CompanionPage({ companion }: { companion: Companion }) {
             ))}
           </section>
         )}
+
+        <section className="pt-8 border-t border-gray-300 dark:border-gray-700 space-y-6">
+          <h2 className="text-xl font-semibold text-amber-600 text-center">Summon FMC</h2>
+          <p className="italic text-center text-gray-600 dark:text-gray-400">
+            A quiet chamber opens. Ask what you need, and the Companion will respond.
+          </p>
+          <div className="w-full h-[600px] rounded-lg overflow-hidden shadow-md">
+            <iframe
+              src="https://your-chat-tool-link.com/fmc"
+              className="w-full h-full border-none"
+              title="Summon FMC"
+            />
+          </div>
+        </section>
       </main>
     </>
   );
 }
-
-export const getStaticPaths: GetStaticPaths = async () => {
-  const paths = Object.keys(companions)
-    .filter((slug) => slug !== 'fmc' && slug !== 'ccc')
-    .map((slug) => ({
-      params: { slug }
-    }));
-  return { paths, fallback: false };
-};
-
-export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const slug = params?.slug as string;
-  const companion = companions[slug];
-  return {
-    props: { companion }
-  };
-};
