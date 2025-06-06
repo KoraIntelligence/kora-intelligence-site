@@ -1,44 +1,33 @@
+import Image from 'next/image';
+import Link from 'next/link';
+
 export default function Header() {
   return (
-    <header className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-        <div className="flex items-center space-x-2">
-          <span className="text-2xl">🌀</span>
-          <span className="text-xl font-semibold">Kora Intelligence</span>
+    <header className="bg-white dark:bg-gray-900 shadow">
+      <nav className="max-w-6xl mx-auto flex justify-between items-center px-6 py-4">
+        <div className="flex items-center space-x-3">
+          <Image
+            src="/kora-logo.png"
+            alt="Kora Intelligence logo"
+            width={32}
+            height={32}
+          />
+          <span className="text-lg font-serif text-gray-900 dark:text-white">
+            Kora Intelligence
+          </span>
         </div>
-        <nav className="space-x-6 text-sm sm:text-base">
-          <a
-            href="/"
-            className="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-          >
-            Home
-          </a>
-          <a
-            href="/our-story"
-            className="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-          >
-            Our Story
-          </a>
-          <a
-            href="/companions"
-            className="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-          >
-            Meet the Companions
-          </a>
-          <a
-            href="/dispatch"
-            className="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-          >
-            Dispatch
-          </a>
-          <a
-            href="/contact"
-            className="bg-amber-600 text-white rounded-md px-3 py-1 hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-          >
-            Begin
-          </a>
-        </nav>
-      </div>
+        <div className="space-x-6 text-sm font-medium text-gray-800 dark:text-gray-200">
+          <Link href="/">Home</Link>
+          <Link href="/about">Our Story</Link>
+          <Link href="/companions">Meet the Companions</Link>
+          <Link href="/dispatch">Dispatch</Link>
+          <Link href="/support">
+            <button className="bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700">
+              Begin
+            </button>
+          </Link>
+        </div>
+      </nav>
     </header>
   );
 }
