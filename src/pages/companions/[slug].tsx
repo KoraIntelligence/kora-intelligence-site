@@ -1,8 +1,10 @@
 import { GetStaticProps, GetStaticPaths } from 'next';
 import Head from 'next/head';
+import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
 
 export default function CompanionPage({ companion }: { companion: Companion }) {
+  const { slug } = companion;
   return (
     <>
       <Head>
@@ -11,8 +13,18 @@ export default function CompanionPage({ companion }: { companion: Companion }) {
       </Head>
       <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
         <div className="text-center space-y-2">
-          <div className="text-5xl">{companion.glyph}</div>
-          <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
+          <div className="flex flex-col items-center space-y-2">
+            <Image
+              src={`/assets/glyphs/glyph-${slug}.png`}
+              alt={`${companion.title} glyph`}
+              width={64}
+              height={64}
+              className="rounded-full hover:opacity-75 transition duration-300 ease-in-out"
+            />
+            <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">
+              {companion.title}
+            </h1>
+          </div>
           <p className="italic text-lg sm:text-xl">{companion.essence}</p>
           <span className="inline-block px-3 py-1 mt-2 rounded-full bg-amber-100 text-amber-800 text-sm">
             {companion.access}
