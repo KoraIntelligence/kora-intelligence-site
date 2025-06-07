@@ -19,9 +19,9 @@ export default function CompanionGrove() {
             <Image
               src={`/assets/glyphs/glyph-${companion.slug}.png`}
               alt={`${companion.title} glyph`}
-              width={48}
-              height={48}
-              className="mx-auto mb-2"
+              width={72}
+              height={72}
+              className="mx-auto mb-3"
             />
             <h3 className="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
               {companion.title}

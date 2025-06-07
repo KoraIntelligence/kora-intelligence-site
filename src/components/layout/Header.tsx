@@ -18,12 +18,12 @@ export default function Header() {
         </div>
         <div className="space-x-6 text-sm font-medium text-gray-800 dark:text-gray-200">
           <Link href="/">Home</Link>
-          <Link href="/about">Our Story</Link>
+          <Link href="/our-story">Our Story</Link>
           <Link href="/companions">Meet the Companions</Link>
           <Link href="/dispatch">Dispatch</Link>
-          <Link href="/support">
+          <Link href="/contact">
             <button className="bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700">
-              Begin
+              Begin Your Journey
             </button>
           </Link>
         </div>
