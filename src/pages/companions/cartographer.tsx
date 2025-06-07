@@ -18,8 +18,8 @@ export default function CartographerPage() {
             <Image
               src={`/assets/glyphs/glyph-${slug}.png`}
               alt={`${companion.title} glyph`}
-              width={80}
-              height={80}
+              width={128}
+              height={128}
               className="mx-auto mb-4 rounded-full hover:opacity-75 transition duration-300 ease-in-out"
             />
           </div>
