@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
+import CompanionInvocationCCC from '@/components/companions/CompanionInvocationCCC';
 
 export default function CCCPage() {
   const slug = 'ccc';
@@ -81,15 +82,7 @@ export default function CCCPage() {
         {companion.mode === 'prompt' && (
           <section>
             <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Summon Ritual</h2>
-            <form className="max-w-md mx-auto space-y-4">
-              <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
-                Intention
-                <input type="text" name="intention" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
-              </label>
-              <button type="submit" className="w-full py-2 bg-amber-600 text-white font-semibold rounded hover:bg-amber-700 transition">
-                Begin the Ritual
-              </button>
-            </form>
+            <CompanionInvocationCCC />
           </section>
         )}
 
@@ -97,12 +90,7 @@ export default function CCCPage() {
           <section className="space-y-8">
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
-              <form className="max-w-md mx-auto space-y-4">
-                <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
-                  Signal
-                  <input type="text" name="signal" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
-                </label>
-              </form>
+              <CompanionInvocationCCC />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
