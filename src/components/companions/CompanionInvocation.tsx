@@ -3,7 +3,7 @@ import { useState } from 'react';
 export default function CompanionInvocation() {
   const [form, setForm] = useState({ q1: '', q2: '', q3: '', q4: '', q5: '' });
   const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<{ whisper: string; timestamp: string } | null>(null);
+  const [response, setResponse] = useState<{ whisper: any; timestamp: string } | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -43,6 +43,31 @@ export default function CompanionInvocation() {
     "In one sentence, how do you want your work to feel when someone encounters it?"
   ];
 
+  const renderWhisper = (whisper: any) => {
+    if (typeof whisper === 'string') {
+      return <p className="text-md whitespace-pre-line leading-relaxed">{whisper}</p>;
+    }
+    if (typeof whisper === 'object' && whisper !== null) {
+      return (
+        <div className="space-y-2">
+          {Object.entries(whisper).map(([key, value], i) => (
+            <div key={i}>
+              <p className="font-semibold text-sm">{key}</p>
+              <p className="text-sm whitespace-pre-line">
+                {Array.isArray(value)
+                  ? value.join('\n')
+                  : typeof value === 'object' && value !== null
+                  ? JSON.stringify(value, null, 2)
+                  : String(value)}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return <p className="italic text-sm text-gray-500">No valid whisper received.</p>;
+  };
+
   return (
     <div className="max-w-md mx-auto space-y-4" aria-label="FMC prompt form">
       {['q1', 'q2', 'q3', 'q4', 'q5'].map((key, index) => (
@@ -69,7 +94,7 @@ export default function CompanionInvocation() {
 
       {response && response.whisper && (
         <div className="whisper-output rounded-xl mt-6 p-4 bg-amber-50 border border-amber-200 text-slate-800 space-y-2 shadow-sm">
-          <p className="text-md whitespace-pre-line leading-relaxed">{response.whisper}</p>
+          {renderWhisper(response.whisper)}
           <p className="text-xs text-gray-500">
             Companion FMC has spoken at{' '}
             {response.timestamp
@@ -85,3 +110,4 @@ export default function CompanionInvocation() {
     </div>
   );
 }
+      
