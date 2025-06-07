@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Image from 'next/image';
 import { companions, Companion } from '@/data/companions';
+import CompanionInvocation from '@/components/companions/CompanionInvocation';
 
 export default function FMCPage() {
   const slug = 'fmc';
@@ -97,12 +98,7 @@ export default function FMCPage() {
           <section className="space-y-8">
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
-              <form className="max-w-md mx-auto space-y-4">
-                <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
-                  Signal
-                  <input type="text" name="signal" className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100" />
-                </label>
-              </form>
+              <CompanionInvocation />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
