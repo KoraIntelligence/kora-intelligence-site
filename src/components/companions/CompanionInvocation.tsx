@@ -24,7 +24,7 @@ export default function CompanionInvocation() {
     setLoading(true);
     try {
       const res = await fetch(
-        'https://koraintelligence.app.n8n.cloud/webhook/webhook/companion-invoke/fmc',
+        'https://koraintelligence.app.n8n.cloud/webhook/companion-invoke/fmc',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
