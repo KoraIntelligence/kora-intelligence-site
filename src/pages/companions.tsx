@@ -18,8 +18,8 @@ export default function CompanionsPage() {
             <Image
               src={`/assets/glyphs/glyph-${companion.slug}.png`}
               alt={`${companion.title} glyph`}
-              width={48}
-              height={48}
+              width={128}
+              height={128}
               className="mx-auto mb-2"
             />
             <h2 className="font-serif text-lg text-gray-900 dark:text-white">
