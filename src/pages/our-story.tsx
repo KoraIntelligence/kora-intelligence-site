@@ -4,8 +4,8 @@ export default function OurStory() {
   return (
     <>
       <Head>
-        <title>Grove of Origins – About Kora</title>
-        <meta name="description" content="The origin of Kora Intelligence and the mythic soil of Paths Unknown." />
+        <title>Our Story – Kora Intelligence</title>
+        <meta name="description" content="The origin story of Kora, and the pulse behind Paths Unknown." />
       </Head>
       <div className="pt-24 pb-32 px-6 max-w-4xl mx-auto space-y-16 text-center font-serif text-gray-800 dark:text-gray-100">
         <h1 className="text-amber-600 text-3xl sm:text-4xl md:text-5xl font-semibold mb-6">Grove of Origins</h1>

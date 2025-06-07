@@ -18,9 +18,9 @@ export default function FMCPage() {
             <Image
               src={`/assets/glyphs/glyph-${slug}.png`}
               alt={`${companion.title} glyph`}
-              width={64}
-              height={64}
-              className="rounded-full hover:opacity-75 transition duration-300 ease-in-out"
+              width={80}
+              height={80}
+              className="mx-auto mb-4 rounded-full hover:opacity-75 transition duration-300 ease-in-out"
             />
           </div>
           <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
