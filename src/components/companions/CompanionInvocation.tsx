@@ -24,8 +24,9 @@ export default function CompanionInvocation() {
           body: JSON.stringify({ ...form })
         }
       );
-      const data = await res.json();
-      console.log("Webhook response:", data);
+      const raw = await res.json();
+      const data = Array.isArray(raw) ? raw[0] : raw;
+      console.log("Resolved whisper data:", data);
       setResponse(data);
     } catch (err) {
       console.error("Fetch error:", err);
