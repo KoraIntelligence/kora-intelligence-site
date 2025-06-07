@@ -7,7 +7,7 @@ export default function OurStory() {
         <title>Our Story – Kora Intelligence</title>
         <meta name="description" content="The origin story of Kora, and the pulse behind Paths Unknown." />
       </Head>
-      <div className="pt-24 pb-32 px-6 max-w-4xl mx-auto space-y-16 text-center font-serif text-gray-800 dark:text-gray-100">
+      <div className="pt-24 pb-32 px-4 sm:px-6 max-w-prose mx-auto space-y-16 text-center font-serif text-gray-800 dark:text-gray-100">
         <h1 className="text-amber-600 text-3xl sm:text-4xl md:text-5xl font-semibold mb-6">Grove of Origins</h1>
         <p className="text-base sm:text-lg md:text-xl italic">
           A glimpse into the story-soil of Kora Intelligence — where breath became ritual, and ritual became companion.

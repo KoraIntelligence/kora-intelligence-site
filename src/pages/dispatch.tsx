@@ -7,7 +7,7 @@ export default function Dispatch() {
         <title>Dispatches from the Field – Kora Intelligence</title>
         <meta name="description" content="Signals, whispers, and updates from the intelligence field." />
       </Head>
-      <div className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 font-serif text-gray-800 dark:text-gray-100">
+      <div className="pt-24 pb-32 px-4 sm:px-6 max-w-prose mx-auto space-y-16 font-serif text-gray-800 dark:text-gray-100">
         <section className="text-center">
           <h1 className="text-amber-600 text-3xl sm:text-4xl md:text-5xl font-semibold mb-6">Dispatches from the Field</h1>
           <p className="text-base sm:text-lg md:text-xl italic">

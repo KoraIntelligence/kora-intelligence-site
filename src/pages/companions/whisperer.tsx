@@ -12,7 +12,7 @@ export default function WhispererPage() {
         <title>{companion.title} – Kora Companion</title>
         <meta name="description" content={companion.essence} />
       </Head>
-      <main className="pt-24 pb-32 px-6 max-w-3xl mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
+      <main className="pt-24 pb-32 px-4 sm:px-6 max-w-prose mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
         <div className="text-center space-y-2">
           <div className="w-full flex justify-center">
             <Image
