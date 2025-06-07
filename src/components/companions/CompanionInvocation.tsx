@@ -12,8 +12,8 @@ export default function CompanionInvocation() {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    console.log("Submitting form...");
     setLoading(true);
     try {
       const res = await fetch(
@@ -25,9 +25,10 @@ export default function CompanionInvocation() {
         }
       );
       const data = await res.json();
+      console.log("Webhook response:", data);
       setResponse(data);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -42,30 +43,28 @@ export default function CompanionInvocation() {
   ];
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-4" aria-label="FMC prompt form">
-        {['q1', 'q2', 'q3', 'q4', 'q5'].map((key, index) => (
-          <label key={key} className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
-            {prompts[index]}
-            <input
-              type="text"
-              name={key}
-              value={form[key as keyof typeof form]}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring disabled:opacity-50"
-              disabled={loading}
-              required
-            />
-          </label>
-        ))}
-        <button
-          type="submit"
-          className="w-full py-2 bg-amber-600 text-white font-semibold rounded hover:bg-amber-700 transition disabled:opacity-50"
-          disabled={loading}
-        >
-          {loading ? 'Listening...' : 'Receive Whisper'}
-        </button>
-      </form>
+    <div className="max-w-md mx-auto space-y-4" aria-label="FMC prompt form">
+      {['q1', 'q2', 'q3', 'q4', 'q5'].map((key, index) => (
+        <label key={key} className="block text-sm text-gray-700 dark:text-gray-300 font-medium">
+          {prompts[index]}
+          <input
+            type="text"
+            name={key}
+            value={form[key as keyof typeof form]}
+            onChange={handleChange}
+            className="mt-1 w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring disabled:opacity-50"
+            disabled={loading}
+            required
+          />
+        </label>
+      ))}
+      <button
+        onClick={handleSubmit}
+        className="w-full py-2 bg-amber-600 text-white font-semibold rounded hover:bg-amber-700 transition disabled:opacity-50"
+        disabled={loading}
+      >
+        {loading ? 'Listening...' : 'Receive Whisper'}
+      </button>
 
       {response && response.whisper && (
         <div className="whisper-output rounded-xl mt-6 p-4 bg-amber-50 border border-amber-200 text-slate-800 space-y-2 shadow-sm">
