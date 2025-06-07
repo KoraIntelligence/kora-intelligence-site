@@ -1,16 +1,9 @@
 import { useState } from 'react';
-import PromptOutput from './PromptOutput';
-
-type ResponsePayload = {
-  whisper: string;
-  companion: string;
-  timestamp?: string;
-};
 
 export default function CompanionInvocation() {
   const [form, setForm] = useState({ q1: '', q2: '', q3: '', q4: '', q5: '' });
   const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<ResponsePayload | null>(null);
+  const [response, setResponse] = useState<{ whisper: string; timestamp: string } | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -28,10 +21,10 @@ export default function CompanionInvocation() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ companion: 'fmc', ...form })
+          body: JSON.stringify({ ...form })
         }
       );
-      const data: ResponsePayload = await res.json();
+      const data = await res.json();
       setResponse(data);
     } catch (err) {
       console.error(err);
@@ -112,7 +105,12 @@ export default function CompanionInvocation() {
         </button>
       </form>
       {response?.whisper && (
-        <PromptOutput whisper={response.whisper} timestamp={response.timestamp} />
+        <div className="whisper-output rounded-xl p-4 bg-amber-50 border border-amber-200 text-slate-800 space-y-2">
+          <p className="text-md whitespace-pre-line">{response.whisper}</p>
+          <p className="text-xs text-muted-foreground">
+            Companion FMC has spoken at {new Date(response.timestamp).toLocaleString()}.
+          </p>
+        </div>
       )}
     </div>
   );
