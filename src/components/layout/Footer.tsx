@@ -6,9 +6,9 @@ export default function Footer() {
       <Image
         src="/paths-unknown-logo.png"
         alt="Paths Unknown logo"
-        width={24}
-        height={24}
-        className="mx-auto mb-2 opacity-80"
+        width={40}
+        height={40}
+        className="mx-auto mb-2 opacity-90 hover:opacity-100 transition-opacity"
       />
       <p>Rooted in myth. Guided by listening.</p>
       <p className="text-xs mt-1">A project of Paths Unknown</p>
