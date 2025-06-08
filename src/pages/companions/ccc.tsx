@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import { companions } from '@/data/companions';
-import CompanionScrollLayout from '@/components/layouts/CompanionScrollLayout';
+import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
 import CompanionInvocationCCC from '@/components/companions/CompanionInvocationCCC';
 
 export default function CCCPage() {

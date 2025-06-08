@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import { companions } from '@/data/companions';
-import CompanionScrollLayout from '@/components/layouts/CompanionScrollLayout';
+import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
 
 export default function CartographerPage() {
   const companion = companions['cartographer'];
