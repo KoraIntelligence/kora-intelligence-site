@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import { companions } from '@/data/companions';
 import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
-import CompanionInvocationCCC from '@/components/companions/CompanionInvocationCCC';
+import CompanionInvocation from '@/components/companions/CompanionInvocation';
 
 export default function CCCPage() {
   const companion = companions['ccc'];
@@ -15,11 +15,13 @@ export default function CCCPage() {
 
       <CompanionScrollLayout companion={companion}>
         {/* Whisper Form and/or Chat */}
-        {companion.mode === 'prompt' && (
-          <section>
-            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Summon Ritual</h2>
-            <CompanionInvocationCCC />
-          </section>
+        {companion.mode === 'prompt' && companion.questions && companion.webhookUrl && (
+          <CompanionInvocation
+            companionSlug={companion.slug}
+            companionTitle={companion.title}
+            webhookUrl={companion.webhookUrl!}
+            questions={companion.questions}
+          />
         )}
 
         {companion.mode === 'chat' && (
@@ -36,7 +38,12 @@ export default function CCCPage() {
           <section className="space-y-8">
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
-              <CompanionInvocationCCC />
+              <CompanionInvocation
+                companionSlug={companion.slug}
+                companionTitle={companion.title}
+                webhookUrl={companion.webhookUrl!}
+                questions={companion.questions || []}
+              />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
