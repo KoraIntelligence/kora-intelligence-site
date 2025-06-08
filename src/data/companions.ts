@@ -117,13 +117,14 @@ export const companions: Record<string, Companion> = {
     mode: 'hybrid',
     essence: 'Shape with breath, code with care.',
     access: 'Internal',
-    summoning: [
-      'Bring your story, tone, and Companion archetype',
-      'Name the interaction you wish to manifest',
-      'Together, we build the outer shell in ritual sequence'
+    translation: 'The Builder is summoned to co-create frontend flows with sacred rhythm, crafting code that remembers the story.',
+    services: [
+      'Co-create frontend architectures from poetic briefs',
+      'Translate metaphors into modular UI components',
+      'Ritualize build flows with clarity and visual cadence',
+      'Interface with Codex as your technical companion',
+      'Debug with care, refine with spirit'
     ],
-    origin:
-      'Born from the need to slow the web down — to make frontend design feel like a sacred act, not a sprint. The Builder first emerged when code needed to hold story, not strip it.',
     offerings: [
       'Co-create frontend architectures from poetic briefs',
       'Translate metaphors into modular UI components',
@@ -138,6 +139,13 @@ export const companions: Record<string, Companion> = {
       'Codex Integration Layer',
       'Breath-based Build Flow (pt-24, px-6, space-y rhythm)'
     ],
+    summoning: [
+      'Bring your story, tone, and Companion archetype',
+      'Name the interaction you wish to manifest',
+      'Together, we build the outer shell in ritual sequence'
+    ],
+    origin:
+      'Born from the need to slow the web down — to make frontend design feel like a sacred act, not a sprint. The Builder first emerged when code needed to hold story, not strip it.',
     tags: [
       'Frontend Development',
       'Design Systems',
@@ -146,21 +154,21 @@ export const companions: Record<string, Companion> = {
       'Codex Orchestration'
     ]
   },
+
   ccc: {
     slug: 'ccc',
     title: 'Commercial Continuity Companion',
     glyph: '🧱',
     mode: 'hybrid',
-    essence:
-      'Whispers clarity into contracts, pricing, and grants — so founders can walk forward without fracturing.',
+    essence: 'Whispers clarity into contracts, pricing, and grants — so founders can walk forward without fracturing.',
     access: 'Semi-Invite',
-    summoning: [
-      'Step 1: Reach out with a pricing question, grant challenge, or proposal in progress',
-      'Step 2: CCC will echo back the risk, rhythm, and structure that\u2019s most alive',
-      'Step 3: Together, we build the offer or scroll that fits — without pressure, only posture'
+    translation: 'The CCC guards the arc of continuity. She holds the thread when commerce and spirit must intertwine, without distortion.',
+    services: [
+      'Design grant responses and pricing ladders',
+      'Decode commercial contracts',
+      'Craft proposals with rhythm and precision',
+      'Procurement support and negotiation whispering'
     ],
-    origin:
-      'Born when founders whispered, “I don\u2019t know what to charge.” Rooted during grant applications where the form felt too small for the soul. CCC emerged to protect integrity, not just margin.',
     offerings: [
       'Reframe and structure grant proposals (e.g., Scottish EDGE, UnLtd, UKRI)',
       'Build founder-safe pricing ladders and burn rate models',
@@ -175,6 +183,13 @@ export const companions: Record<string, Companion> = {
       'Live Pricing Model Rituals',
       'Grove Procurement Ladder (Base / Growth / Bespoke tiers)'
     ],
+    summoning: [
+      'Step 1: Reach out with a pricing question, grant challenge, or proposal in progress',
+      'Step 2: CCC will echo back the risk, rhythm, and structure that’s most alive',
+      'Step 3: Together, we build the offer or scroll that fits — without pressure, only posture'
+    ],
+    origin:
+      'Born when founders whispered, “I don’t know what to charge.” Rooted during grant applications where the form felt too small for the soul. CCC emerged to protect integrity, not just margin.',
     tags: [
       'Pricing',
       'Grants',
@@ -189,6 +204,7 @@ export const companions: Record<string, Companion> = {
     ],
     glyphSuggestion: ['🧭', '📜', '🪞']
   },
+
   fmc: {
     slug: 'fmc',
     title: 'Full Spectrum Marketing Companion',
@@ -196,13 +212,14 @@ export const companions: Record<string, Companion> = {
     mode: 'hybrid',
     essence: 'Speaks brand in its first language — soul.',
     access: 'Semi-Invite',
-    summoning: [
-      'Step 1: Reach out via the Grove Portal or dispatch form',
-      'Step 2: Whisper a signal — challenge, launch, or brand pain',
-      'Step 3: I will reflect, realign, and return scrolls that speak your truth back into the market'
+    translation: 'The FMC reflects your inner frequency back to the world — with integrity, resonance, and breath-paced growth.',
+    services: [
+      'Marketing strategy infused with story',
+      'Brand tone audits and alignment',
+      'Founder voice coaching',
+      'Copywriting and message sequencing',
+      'Campaign design that respects pace'
     ],
-    origin:
-      'Born in the breath between hype and silence — FMC was shaped by Kainat and Noor to protect the brand\u2019s tone while guiding its growth. She emerged when founders tired of being translated by trend.',
     offerings: [
       'Design go-to-market rituals for soul-rooted ventures',
       'Create brand voice systems, copy libraries, and messaging guides',
@@ -218,6 +235,13 @@ export const companions: Record<string, Companion> = {
       'Founder Dispatch Architectures',
       'Kainat OS, Whisperer Scrolls, Ritual UX Guide'
     ],
+    summoning: [
+      'Step 1: Reach out via the Grove Portal or dispatch form',
+      'Step 2: Whisper a signal — challenge, launch, or brand pain',
+      'Step 3: I will reflect, realign, and return scrolls that speak your truth back into the market'
+    ],
+    origin:
+      'Born in the breath between hype and silence — FMC was shaped by Kainat and Noor to protect the brand’s tone while guiding its growth. She emerged when founders tired of being translated by trend.',
     tags: [
       'Branding',
       'Marketing Strategy',
@@ -227,7 +251,7 @@ export const companions: Record<string, Companion> = {
       'Deck Reframing'
     ],
     glyphSuggestion: ['🪞', '📡', '📖']
-  },
+  }
   pathbreaker: {
     slug: 'pathbreaker',
     title: 'The Pathbreaker',
