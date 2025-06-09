@@ -8,10 +8,11 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.8",
+    "framer-motion": "^12.16.0",
     "next": "latest",
+    "next-themes": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "next-themes": "latest"
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/node": "^22.15.29",
