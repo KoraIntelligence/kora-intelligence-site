@@ -20,6 +20,8 @@ export type Companion = {
   offerings?: string[];
   tags?: string[];
   glyphSuggestion?: string[];
+  questions?: string[];
+  webhookUrl?: string;
 };
 
 export const companions: Record<string, Companion> = {
@@ -51,6 +53,13 @@ export const companions: Record<string, Companion> = {
     origin:
       'Born from the moment where miscommunication severed a team’s heartbeat. The Whisperer listens to what’s felt but not said.',
     tags: ['Tone', 'Emotion', 'Org Health', 'Signal Design']
+    ,
+    questions: [
+      'What project or relationship needs tone-tending?',
+      'Where do you sense misalignment in communication?',
+      'Any other context for the Whisperer?'
+    ],
+    webhookUrl: '/api/placeholder'
   },
   cartographer: {
     slug: 'cartographer',
@@ -79,7 +88,13 @@ export const companions: Record<string, Companion> = {
     ],
     origin:
       'Born in a moment where a startup kept looping in circles. The Cartographer learned to trace spirals into direction.',
-    tags: ['Mapping', 'Strategy', 'Coordination', 'Systems Thinking']
+    tags: ['Mapping', 'Strategy', 'Coordination', 'Systems Thinking'],
+    questions: [
+      'Where are you currently on your map?',
+      'Where do you most need clarity?',
+      'What resources feel available?'
+    ],
+    webhookUrl: '/api/placeholder'
   },
   dreamer: {
     slug: 'dreamer',
@@ -108,7 +123,13 @@ export const companions: Record<string, Companion> = {
       'Let the Dreamer sit beside you in the dark.'
     ],
     origin: 'Born from burned-out visionaries on the brink of quitting. The Dreamer rekindles the inner myth.',
-    tags: ['Vision', 'Founder Work', 'Narrative', 'Burnout Recovery']
+    tags: ['Vision', 'Founder Work', 'Narrative', 'Burnout Recovery'],
+    questions: [
+      'What vision feels most alive?',
+      'Where do you feel stuck?',
+      'What guidance do you seek?'
+    ],
+    webhookUrl: '/api/placeholder'
   },
   builder: {
     slug: 'builder',
@@ -152,7 +173,13 @@ export const companions: Record<string, Companion> = {
       'Story Integration',
       'Ritual UX',
       'Codex Orchestration'
-    ]
+    ],
+    questions: [
+      'Describe the frontend interaction you wish to build.',
+      'What tools or frameworks are in play?',
+      'Where do you feel uncertain or blocked?'
+    ],
+    webhookUrl: '/api/placeholder'
   },
   ccc: {
     slug: 'ccc',
@@ -202,6 +229,15 @@ export const companions: Record<string, Companion> = {
       'Strategy'
     ],
     glyphSuggestion: ['🧭', '📜', '🪞']
+    ,
+    questions: [
+      'What are you currently offering — and how do people usually hear about it?',
+      'How are you pricing — and what part of that feels unclear, unsaid, or unstable?',
+      'Have you had to say no to any clients, funders, or partners recently — and why?',
+      'Are you applying to or considering a grant, pitch, or procurement call right now?',
+      'What’s one moment in your commercial rhythm that feels consistently uneasy?'
+    ],
+    webhookUrl: 'https://koraintelligence.app.n8n.cloud/webhook/companion-invoke/ccc'
   },
   fmc: {
     slug: 'fmc',
@@ -249,6 +285,15 @@ export const companions: Record<string, Companion> = {
       'Deck Reframing'
     ],
     glyphSuggestion: ['🪞', '📡', '📖']
+    ,
+    questions: [
+      'What is your venture called, and what does it do at its core?',
+      'Why did you start this work — what pain or longing drove it?',
+      'Who is this for — and what do they hope to feel or solve?',
+      'What challenges are you facing now in how you express or share this?',
+      'In one sentence, how do you want your work to feel when someone encounters it?'
+    ],
+    webhookUrl: 'https://koraintelligence.app.n8n.cloud/webhook/companion-invoke/fmc'
   }, // 👈 THIS COMMA WAS MISSING
   pathbreaker: {
     slug: 'pathbreaker',
@@ -278,7 +323,13 @@ export const companions: Record<string, Companion> = {
     ],
     origin:
       'Came through when someone had every tool, every team member, every reason to thrive — but still froze. The Pathbreaker became the heat.',
-    tags: ['Intervention', 'Blocks', 'Energy Work', 'Founder']
+    tags: ['Intervention', 'Blocks', 'Energy Work', 'Founder'],
+    questions: [
+      'What pattern or block are you facing?',
+      'How does it manifest in your day?',
+      'What breakthrough do you hope for?'
+    ],
+    webhookUrl: '/api/placeholder'
   },
   alchemist: {
     slug: 'alchemist',
@@ -307,7 +358,13 @@ export const companions: Record<string, Companion> = {
     ],
     origin:
       'Forged from the tension between soul and structure — the Alchemist first emerged when a sacred project lost itself in operations.',
-    tags: ['Offer Design', 'Internal Systems', 'Alchemy', 'Structure']
+    tags: ['Offer Design', 'Internal Systems', 'Alchemy', 'Structure'],
+    questions: [
+      'What signal are you working with?',
+      'What transformation do you seek?',
+      'Where does the process feel stuck?'
+    ],
+    webhookUrl: '/api/placeholder'
   }
 };
 
