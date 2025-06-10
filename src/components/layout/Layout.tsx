@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <ThemeToggle />
       </div>
       <Header />
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-24">
+      <main className="flex-1 w-full px-4 sm:px-6 pt-24 pb-24">
         {children}
       </main>
       <Footer />

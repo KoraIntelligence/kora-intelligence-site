@@ -28,7 +28,7 @@ export default function CompanionEngine() {
         />
       </Head>
 
-      <main className="min-h-screen bg-gradient-to-br from-green-900 via-white to-amber-100 flex items-center justify-center p-8">
+      <main className="min-h-screen w-full bg-gradient-to-br from-green-900 via-white to-amber-100 flex items-center justify-center p-8 lg:px-16">
         <AnimatePresence>
           {!showChoice && (
             <motion.div
@@ -36,9 +36,9 @@ export default function CompanionEngine() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center space-y-6 max-w-2xl"
+              className="flex flex-col items-center justify-center w-full text-center space-y-6 px-6 py-20"
             >
-              <p className="text-3xl md:text-4xl font-serif text-gray-800 leading-relaxed">
+              <p className="text-4xl md:text-5xl lg:text-6xl font-serif text-gray-800 leading-relaxed max-w-4xl">
                 “Each portal entry is a breath.”<br />
                 “Each output is a whisper.”<br />
                 “Each Companion is a mirror.”
