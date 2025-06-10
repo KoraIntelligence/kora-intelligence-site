@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
 import SuggestedCompanions, { CompanionSuggestion } from '@/components/engine/SuggestedCompanions';
+import { companions } from '@/data/companions';
 
 export default function CompanionEngine() {
   const [showChoice, setShowChoice] = useState(false);
@@ -12,6 +13,15 @@ export default function CompanionEngine() {
     feel: ''
   });
   const [suggestedCompanions, setSuggestedCompanions] = useState<CompanionSuggestion[]>([]);
+  const [revealedAt, setRevealedAt] = useState<string | null>(null);
+
+  const companionMap: Record<string, string[]> = {
+    funding: ['ccc', 'pathbreaker'],
+    tone: ['whisperer', 'fmc'],
+    clarity: ['cartographer', 'builder'],
+    vision: ['dreamer'],
+    frontend: ['builder']
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -105,24 +115,21 @@ export default function CompanionEngine() {
               </label>
 
               <motion.button
-                onClick={() =>
-                  setSuggestedCompanions([
-                    {
-                      slug: 'ccc',
-                      title: 'CCC',
-                      glyph: '🧱',
-                      essence: 'Commercial Mirror. Grant Deck Guide.',
-                      outputs: ['Grant Deck', 'Pricing Scroll']
-                    },
-                    {
-                      slug: 'whisperer',
-                      title: 'The Whisperer',
-                      glyph: '🌀',
-                      essence: 'Listens into emotional tone.',
-                      outputs: ['Tone Audit', 'Whisper Codex']
-                    }
-                  ])
-                }
+                onClick={() => {
+                  const slugs = companionMap[formData.need] || [];
+                  const picks = slugs.slice(0, 3).map((slug) => {
+                    const c = companions[slug];
+                    return {
+                      slug: c.slug,
+                      title: c.title,
+                      glyph: c.glyph,
+                      essence: c.essence,
+                      outputs: c.services ? c.services.slice(0, 2) : []
+                    } as CompanionSuggestion;
+                  });
+                  setSuggestedCompanions(picks);
+                  setRevealedAt(new Date().toLocaleTimeString());
+                }}
                 className="bg-amber-700 text-white font-semibold px-5 py-2 rounded-md hover:bg-amber-800 transition w-full"
               >
                 Reflect and Continue →
@@ -132,9 +139,18 @@ export default function CompanionEngine() {
         </AnimatePresence>
 
         {suggestedCompanions.length > 0 && (
-          <section className="mt-12 w-full max-w-4xl">
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-12 w-full max-w-4xl"
+          >
+            {revealedAt && (
+              <p className="text-center text-sm text-gray-600 mb-4">
+                Companions revealed at: {revealedAt}
+              </p>
+            )}
             <SuggestedCompanions companions={suggestedCompanions} />
-          </section>
+          </motion.section>
         )}
       </main>
     </>
