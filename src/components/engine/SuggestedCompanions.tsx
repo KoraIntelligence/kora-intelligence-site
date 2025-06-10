@@ -11,7 +11,9 @@ export type CompanionSuggestion = {
 export default function SuggestedCompanions({ companions }: { companions: CompanionSuggestion[] }) {
   return (
     <section className="space-y-6 mt-8">
-      <h3 className="text-2xl font-serif text-center text-amber-700">These Companions have answered your call</h3>
+      <h3 className="text-2xl font-serif text-center text-amber-700">
+        These Companions have answered your call
+      </h3>
       <div className="grid gap-6 sm:grid-cols-2">
         {companions.map((companion, idx) => (
           <motion.div
