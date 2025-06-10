@@ -8,6 +8,12 @@ export default function CompanionsPage() {
       <h1 className="text-amber-600 text-3xl sm:text-4xl md:text-5xl font-semibold mb-6">
         The Companions of Kora
       </h1>
+      <Link
+        href="/engine"
+        className="inline-block mt-6 px-5 py-3 bg-amber-600 text-white font-semibold rounded-md hover:bg-amber-700 transition"
+      >
+        Begin My Ritual →
+      </Link>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 gap-y-8">
         {Object.values(companions).map((companion: Companion) => (
           <Link

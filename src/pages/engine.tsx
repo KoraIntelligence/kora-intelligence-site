@@ -21,8 +21,11 @@ export default function CompanionEngine() {
   return (
     <>
       <Head>
-        <title>Companion Engine – Kora</title>
-        <meta name="description" content="Enter the divining pool. Let the Companion Engine guide your next step." />
+        <title>The Companion Engine – Kainat OS (Early Ritual Prototype)</title>
+        <meta
+          name="description"
+          content="Enter the divining pool. Begin your ritual. The Companion Engine offers soft triage and soul-aligned guidance, powered by Kainat OS."
+        />
       </Head>
 
       <main className="min-h-screen bg-gradient-to-br from-green-900 via-white to-amber-100 flex items-center justify-center p-8">
