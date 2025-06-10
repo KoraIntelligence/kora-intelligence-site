@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 export default function CompanionEngine() {
-  const [started, setStarted] = useState(false);
+  const [showChoice, setShowChoice] = useState(false);
+  const [beginFullRitual, setBeginFullRitual] = useState(false);
+
   const [formData, setFormData] = useState({
     journey: '',
     need: '',
@@ -24,7 +27,7 @@ export default function CompanionEngine() {
 
       <main className="min-h-screen bg-gradient-to-br from-green-900 via-white to-amber-100 flex items-center justify-center p-8">
         <AnimatePresence>
-          {!started && (
+          {!showChoice && (
             <motion.div
               key="welcome"
               initial={{ opacity: 0 }}
@@ -38,7 +41,7 @@ export default function CompanionEngine() {
                 “Each Companion is a mirror.”
               </p>
               <motion.button
-                onClick={() => setStarted(true)}
+                onClick={() => setShowChoice(true)}
                 className="bg-amber-600 text-white font-semibold px-6 py-3 rounded-md shadow-md hover:bg-amber-700 transition"
                 whileHover={{ scale: 1.05 }}
               >
@@ -47,7 +50,35 @@ export default function CompanionEngine() {
             </motion.div>
           )}
 
-          {started && (
+          {showChoice && !beginFullRitual && (
+            <motion.div
+              key="choice"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center space-y-6 max-w-xl w-full bg-white/80 p-8 rounded-lg shadow-md"
+            >
+              <p className="text-xl font-serif text-gray-700">
+                Not all paths begin the same way.<br />Choose the doorway that feels most alive today:
+              </p>
+              <div className="flex flex-col md:flex-row gap-4 justify-center pt-2">
+                <button
+                  onClick={() => setBeginFullRitual(true)}
+                  className="bg-green-700 text-white font-semibold px-6 py-3 rounded hover:bg-green-800 transition"
+                >
+                  ✦ Begin Full Ritual
+                </button>
+                <Link
+                  href="/companions"
+                  className="bg-gray-200 text-gray-800 font-semibold px-6 py-3 rounded hover:bg-gray-300 transition text-center"
+                >
+                  ⟡ Go Straight to Companions
+                </Link>
+              </div>
+            </motion.div>
+          )}
+
+          {beginFullRitual && (
             <motion.div
               key="form"
               initial={{ opacity: 0, y: 20 }}
