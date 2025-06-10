@@ -59,6 +59,7 @@ export default function Header() {
           <Link href="/">Home</Link>
           <Link href="/our-story">Our Story</Link>
           <Link href="/companions">Meet the Companions</Link>
+          <Link href="/engine" className="text-amber-700 font-serif hover:underline">Companion Engine</Link>
           <Link href="/dispatch">Dispatch</Link>
           <Link href="/contact" className="inline-block">
             <span className="bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700">
@@ -78,6 +79,9 @@ export default function Header() {
             </li>
             <li>
               <Link href="/companions">Meet the Companions</Link>
+            </li>
+            <li>
+              <Link href="/engine" className="text-amber-700 font-serif hover:underline">Companion Engine</Link>
             </li>
             <li>
               <Link href="/dispatch">Dispatch</Link>
