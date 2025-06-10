@@ -14,6 +14,9 @@ export default function CompanionEngine() {
   });
   const [suggestedCompanions, setSuggestedCompanions] = useState<CompanionSuggestion[]>([]);
   const [revealedAt, setRevealedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [whisper, setWhisper] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const companionMap: Record<string, string[]> = {
     funding: ['ccc', 'pathbreaker'],
@@ -28,6 +31,29 @@ export default function CompanionEngine() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const sendToWebhook = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('https://koraintelligence.app.n8n.cloud/webhook/companion-invoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q1: formData.journey,
+          q2: formData.need,
+          q3: formData.feel
+        })
+      });
+      const data = await res.json();
+      setWhisper(data.response?.whisper || 'No whisper returned.');
+    } catch (err) {
+      console.error(err);
+      setError('Something went wrong retrieving the whisper.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Head>
@@ -38,7 +64,7 @@ export default function CompanionEngine() {
         />
       </Head>
 
-      <main className="min-h-screen w-full bg-gradient-to-br from-green-900 via-white to-amber-100 flex items-center justify-center p-8 lg:px-16">
+      <main className="min-h-screen w-full bg-gradient-to-br from-green-900 via-white to-amber-100 flex flex-col items-center justify-center p-8 lg:px-16 space-y-8">
         <AnimatePresence>
           {!showChoice && (
             <motion.div
@@ -46,24 +72,31 @@ export default function CompanionEngine() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center w-full text-center space-y-6 px-6 py-20"
+              className="text-center space-y-6 max-w-4xl"
             >
-              <p className="text-4xl md:text-5xl lg:text-6xl font-serif text-gray-800 leading-relaxed max-w-4xl">
+              <p className="text-4xl md:text-5xl font-serif text-gray-800 leading-relaxed">
                 “Each portal entry is a breath.”<br />
                 “Each output is a whisper.”<br />
                 “Each Companion is a mirror.”
               </p>
-              <motion.button
-                onClick={() => setShowChoice(true)}
-                className="bg-amber-600 text-white font-semibold px-6 py-3 rounded-md shadow-md hover:bg-amber-700 transition"
-                whileHover={{ scale: 1.05 }}
-              >
-                Begin My Ritual →
-              </motion.button>
+              <motion.div className="flex flex-col items-center gap-4">
+                <button
+                  onClick={() => setShowChoice(true)}
+                  className="bg-amber-600 text-white font-semibold px-6 py-3 rounded-md shadow-md hover:bg-amber-700 transition"
+                >
+                  Begin My Ritual →
+                </button>
+                <button
+                  onClick={() => window.location.href = '/companions'}
+                  className="text-sm text-amber-800 underline"
+                >
+                  Or skip ritual and browse directly
+                </button>
+              </motion.div>
             </motion.div>
           )}
 
-          {beginFullRitual && (
+          {showChoice && (
             <motion.div
               key="form"
               initial={{ opacity: 0, y: 20 }}
@@ -129,6 +162,7 @@ export default function CompanionEngine() {
                   });
                   setSuggestedCompanions(picks);
                   setRevealedAt(new Date().toLocaleTimeString());
+                  sendToWebhook();
                 }}
                 className="bg-amber-700 text-white font-semibold px-5 py-2 rounded-md hover:bg-amber-800 transition w-full"
               >
@@ -137,6 +171,24 @@ export default function CompanionEngine() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {loading && (
+          <p className="text-center text-amber-800 italic mt-6">The Grove is listening...</p>
+        )}
+
+        {error && (
+          <p className="text-center text-red-600 mt-6">{error}</p>
+        )}
+
+        {whisper && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-amber-50 border border-amber-300 p-6 rounded-lg font-serif text-gray-800 shadow-md prose max-w-3xl mx-auto whitespace-pre-line mt-8"
+          >
+            {whisper}
+          </motion.div>
+        )}
 
         {suggestedCompanions.length > 0 && (
           <motion.section
