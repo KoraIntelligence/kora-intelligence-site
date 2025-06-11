@@ -12,7 +12,8 @@
     "next": "latest",
     "next-themes": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-simple-typewriter": "^2.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.29",
