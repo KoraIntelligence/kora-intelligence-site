@@ -3,16 +3,18 @@ import { useEffect, useState } from 'react';
 export default function WhisperOfArrival() {
   const [displayedText, setDisplayedText] = useState('');
   const fullText = 'Welcome Seeker, Kora is listening';
-  const typingSpeed = 100; // ms per character
+  const typingSpeed = 100; // Adjust as you like: 75–100ms is ideal for the rhythm
 
   useEffect(() => {
     let index = 0;
-    const interval = setInterval(() => {
-      setDisplayedText((prev) => prev + fullText.charAt(index));
+    const typeNext = () => {
+      setDisplayedText(fullText.slice(0, index + 1));
       index++;
-      if (index >= fullText.length) clearInterval(interval);
-    }, typingSpeed);
-    return () => clearInterval(interval);
+      if (index < fullText.length) {
+        setTimeout(typeNext, typingSpeed);
+      }
+    };
+    typeNext();
   }, []);
 
   return (
@@ -29,3 +31,4 @@ export default function WhisperOfArrival() {
     </section>
   );
 }
+
