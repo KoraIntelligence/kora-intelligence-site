@@ -1,8 +1,9 @@
-// src/components/home/WhisperOfArrival.tsx
 import { useState } from 'react';
 import { Typewriter } from 'react-simple-typewriter';
 
 export default function WhisperOfArrival() {
+  const [done, setDone] = useState(false);
+
   return (
     <section
       aria-label="Welcome Invocation"
@@ -13,11 +14,12 @@ export default function WhisperOfArrival() {
           <Typewriter
             words={["Welcome Seeker, Kora is listening"]}
             loop={false}
-            cursor
+            cursor={!done}
             cursorStyle="."
             typeSpeed={50}
             deleteSpeed={0}
             delaySpeed={1000}
+            onLoopDone={() => setDone(true)}
           />
         </h1>
       </div>
