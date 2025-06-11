@@ -1,8 +1,19 @@
-import { useState } from 'react';
-import { Typewriter } from 'react-simple-typewriter';
+import { useEffect, useState } from 'react';
 
 export default function WhisperOfArrival() {
-  const [done, setDone] = useState(false);
+  const [displayedText, setDisplayedText] = useState('');
+  const fullText = 'Welcome Seeker, Kora is listening';
+  const typingSpeed = 50; // ms per character
+
+  useEffect(() => {
+    let index = 0;
+    const interval = setInterval(() => {
+      setDisplayedText((prev) => prev + fullText.charAt(index));
+      index++;
+      if (index >= fullText.length) clearInterval(interval);
+    }, typingSpeed);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section
@@ -11,16 +22,8 @@ export default function WhisperOfArrival() {
     >
       <div className="bg-white text-black dark:bg-zinc-900 dark:text-white p-8 rounded-md">
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-serif text-center">
-          <Typewriter
-            words={["Welcome Seeker, Kora is listening"]}
-            loop={false}
-            cursor={!done}
-            cursorStyle="."
-            typeSpeed={50}
-            deleteSpeed={0}
-            delaySpeed={1000}
-            onLoopDone={() => setDone(true)}
-          />
+          {displayedText}
+          <span className="animate-pulse ml-1">.</span>
         </h1>
       </div>
     </section>
