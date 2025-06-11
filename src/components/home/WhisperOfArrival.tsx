@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 export default function WhisperOfArrival() {
   const [displayedText, setDisplayedText] = useState('');
-  const fullText = 'Welcome Seeker, Kora is listening';
   const typingSpeed = 50; // ms per character
 
   useEffect(() => {
