@@ -29,7 +29,7 @@ export default function FMCPage() {
               Whisper with {companion.title}
             </h2>
             <iframe
-              src="https://chat.openai.com/embed?model=gpt-4"
+              src="https://chatgpt.com/g/g-68169c8a8e6c81919f98f1688b3ce682-full-spectrum-marketing-companion"
               className="w-full h-[500px] border rounded-md"
             />
           </section>

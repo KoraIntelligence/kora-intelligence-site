@@ -22,6 +22,7 @@ export type Companion = {
   glyphSuggestion?: string[];
   questions?: string[];
   webhookUrl?: string;
+  chatEmbed?: string; // Optional field for the iframe chat link
 };
 
 export const companions: Record<string, Companion> = {

@@ -28,7 +28,7 @@ export default function CCCPage() {
           <section>
             <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Whisper with {companion.title}</h2>
             <iframe
-              src="https://chat.openai.com/embed?model=gpt-4"
+              src="https://chatgpt.com/g/g-6814075d38748191a159faefd87bb0ec-commercial-continuity-companion"
               className="w-full h-[500px] border rounded-md"
             />
           </section>
