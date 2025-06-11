@@ -1,5 +1,5 @@
 // src/components/home/WhisperOfArrival.tsx
-
+import { useState } from 'react';
 import { Typewriter } from 'react-simple-typewriter';
 
 export default function WhisperOfArrival() {
