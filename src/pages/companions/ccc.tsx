@@ -25,13 +25,7 @@ export default function CCCPage() {
           />
         )}
 
-        {/* GPT Chat via Salar Whisper */}
-        {companion.slug === 'ccc' && (
-          <section className="mt-12">
-            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Speak with CCC</h2>
-            <SalarWhisper />
-          </section>
-        )}
+
 
         {/* Optional Hybrid Mode */}
         {companion.mode === 'hybrid' && (
