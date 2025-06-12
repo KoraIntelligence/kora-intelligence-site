@@ -19,7 +19,13 @@ export default function SalarWhisper() {
         body: JSON.stringify({ message }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json()
+      } catch (jsonErr){
+        console.error('Failed to parse JSON:', jsonErr);
+        return;
+      }
 
       if (res.ok) {
         setReply(data.reply);
