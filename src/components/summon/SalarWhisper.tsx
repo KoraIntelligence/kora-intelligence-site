@@ -27,7 +27,7 @@ export default function SalarWhisper() {
         setError(data.error || 'Unknown error');
       }
     } catch (err) {
-      setError('Something went wrong while invoking Salar.');
+      setError('Something went wrong while invoking CCC.');
     } finally {
       setLoading(false);
     }
@@ -35,12 +35,12 @@ export default function SalarWhisper() {
 
   return (
     <section className="p-6 bg-white/80 rounded-xl max-w-2xl mx-auto space-y-4 shadow">
-      <h2 className="text-xl font-serif text-amber-700 text-center">Speak to Salar</h2>
+      <h2 className="text-xl font-serif text-amber-700 text-center">Speak to CCC</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Ask Salar something commercial, rhythmic, and true..."
+          placeholder="Ask CCC something commercial, rhythmic, and true..."
           rows={4}
           className="w-full p-3 border border-amber-300 rounded shadow-inner"
           required
