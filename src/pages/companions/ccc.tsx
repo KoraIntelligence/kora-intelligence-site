@@ -25,18 +25,7 @@ export default function CCCPage() {
           />
         )}
 
-        {/* ✦ GPT Ritual */}
-        {(companion.mode === 'chat' || companion.slug === 'ccc') && (
-          <section className="mt-12">
-            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Speak with CCC</h2>
-            <CompanionChat
-              companionSlug="ccc"
-              title="CCC"
-              apiPath="/api/summon/salar"
-            />
-          </section>
-        )}
-
+        
         {/* ✦ Hybrid Ritual */}
         {companion.mode === 'hybrid' && (
           <section className="space-y-8 mt-12">
