@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { companions } from '@/data/companions';
 import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
 import CompanionInvocation from '@/components/companions/CompanionInvocation';
-import SalarWhisper from '@/components/summon/SalarWhisper';
+import CompanionChat from '@/components/chat/CompanionChat';
 
 export default function CCCPage() {
   const companion = companions['ccc'];
@@ -15,7 +15,7 @@ export default function CCCPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        {/* Ritual Prompt Form */}
+        {/* ✦ Prompt Ritual */}
         {companion.mode === 'prompt' && companion.questions && companion.webhookUrl && (
           <CompanionInvocation
             companionSlug={companion.slug}
@@ -25,17 +25,21 @@ export default function CCCPage() {
           />
         )}
 
-        {/* GPT Chat via Salar Whisper */}
-        {companion.slug === 'ccc' && (
+        {/* ✦ GPT Ritual */}
+        {(companion.mode === 'chat' || companion.slug === 'ccc') && (
           <section className="mt-12">
             <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Speak with CCC</h2>
-            <SalarWhisper />
+            <CompanionChat
+              companionSlug="ccc"
+              title="CCC"
+              apiPath="/api/summon/salar"
+            />
           </section>
         )}
 
-        {/* Optional Hybrid Mode */}
+        {/* ✦ Hybrid Ritual */}
         {companion.mode === 'hybrid' && (
-          <section className="space-y-8">
+          <section className="space-y-8 mt-12">
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
               <CompanionInvocation
@@ -47,7 +51,11 @@ export default function CCCPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
-              <SalarWhisper />
+              <CompanionChat
+                companionSlug="ccc"
+                title="CCC"
+                apiPath="/api/summon/salar"
+              />
             </div>
           </section>
         )}
