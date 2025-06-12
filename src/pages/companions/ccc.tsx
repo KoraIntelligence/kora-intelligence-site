@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { companions } from '@/data/companions';
 import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
 import CompanionInvocation from '@/components/companions/CompanionInvocation';
+import SalarWhisper from '@/components/summon/SalarWhisper';
 
 export default function CCCPage() {
   const companion = companions['ccc'];
@@ -14,7 +15,7 @@ export default function CCCPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        {/* Whisper Form and/or Chat */}
+        {/* Ritual Prompt Form */}
         {companion.mode === 'prompt' && companion.questions && companion.webhookUrl && (
           <CompanionInvocation
             companionSlug={companion.slug}
@@ -24,16 +25,15 @@ export default function CCCPage() {
           />
         )}
 
-        {companion.mode === 'chat' && (
-          <section>
-            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Whisper with {companion.title}</h2>
-            <iframe
-              src="https://chatgpt.com/g/g-6814075d38748191a159faefd87bb0ec-commercial-continuity-companion"
-              className="w-full h-[500px] border rounded-md"
-            />
+        {/* GPT Chat via Salar Whisper */}
+        {companion.slug === 'ccc' && (
+          <section className="mt-12">
+            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Speak with CCC</h2>
+            <SalarWhisper />
           </section>
         )}
 
+        {/* Optional Hybrid Mode */}
         {companion.mode === 'hybrid' && (
           <section className="space-y-8">
             <div>
@@ -47,10 +47,7 @@ export default function CCCPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
-              <iframe
-                src="https://chat.openai.com/embed?model=gpt-4"
-                className="w-full h-[500px] border rounded-md"
-              />
+              <SalarWhisper />
             </div>
           </section>
         )}
