@@ -20,7 +20,9 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 250); // Slight delay for fluid UX
   };
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const timestamp = new Date().toLocaleTimeString();
     const newMessage: Message = {
@@ -51,27 +53,17 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       });
 
       const data = await res.json();
-      if (res.ok) {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            sender: 'companion',
-            content: data.reply,
-            timestamp: new Date().toLocaleTimeString()
-          }
-        ]);
-      } else {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            sender: 'companion',
-            content: '⚠️ The Companion fell silent. Please try again.',
-            timestamp: new Date().toLocaleTimeString()
-          }
-        ]);
-      }
+      const responseText = res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.';
+      
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'companion',
+          content: responseText,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ]);
     } catch (err) {
       setMessages(prev => [
         ...prev,
@@ -99,7 +91,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`text-sm font-serif p-2 rounded-lg ${
+            className={`text-sm font-serif p-2 rounded-lg whitespace-pre-wrap ${
               msg.sender === 'user'
                 ? 'bg-amber-100 text-right'
                 : 'bg-amber-50 text-left border-l-4 border-amber-400'
@@ -126,7 +118,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
         <button
           type="submit"
           disabled={loading}
-          className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800"
+          className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
         >
           {loading ? 'Summoning...' : 'Send'}
         </button>
