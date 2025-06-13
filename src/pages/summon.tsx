@@ -22,7 +22,7 @@ export default function SummonPage() {
             <h1 className="text-3xl md:text-4xl font-serif text-gray-800">Who would you like to summon?</h1>
             <div className="grid gap-6 md:grid-cols-2 max-w-3xl">
               {Object.values(companions)
-                .filter((c) => c.mode === 'chat')
+                .filter((c) => c.mode === 'hybrid')
                 .map((c) => (
                   <button
                     key={c.slug}
