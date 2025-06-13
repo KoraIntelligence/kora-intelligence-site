@@ -125,11 +125,11 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
               }`}
             >
               {msg.sender === 'companion' && (
-                <span className="absolute top-1 right-2 opacity-5">
+                <span className="absolute top-1 right-2 opacity-5 transition-opacity duration-700 ease-in opacity-0 animate-fade-in">
                   <img
                     src={`/assets/glyphs/glyph-${companionSlug}.png`}
                     alt={`${companionSlug} glyph`}
-                    className="h-6 w-6"
+                    className="h-12 w-12"
                   />
                 </span>
               )}
