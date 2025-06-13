@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 
+// SohbatChalice – Companion chat interface
+
 type Message = {
   id: number;
-  sender: 'user' | 'companion';
+  sender: 'user' | 'companion' | 'system';
   content: string;
   timestamp: string;
 };
@@ -41,7 +43,16 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       timestamp,
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => [
+      ...prev,
+      newMessage,
+      {
+        id: Date.now() + 0.5,
+        sender: 'system',
+        content: 'Summoning reply...',
+        timestamp,
+      },
+    ]);
     setInput('');
     setLoading(true);
 
@@ -58,7 +69,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
         : '⚠️ The Companion fell silent. Please try again.';
 
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => m.sender !== 'system'),
         {
           id: Date.now() + 1,
           sender: 'companion',
@@ -68,7 +79,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       ]);
     } catch (err) {
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => m.sender !== 'system'),
         {
           id: Date.now() + 1,
           sender: 'companion',
@@ -82,9 +93,9 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   };
 
   return (
-    <div className="bg-white/90 dark:bg-zinc-900 rounded-xl shadow-lg p-6 space-y-6 max-w-3xl mx-auto border border-amber-300 dark:border-zinc-700">
+    <div className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-4">
       {title && (
-        <h2 className="text-center text-xl font-serif text-amber-700 dark:text-amber-400">
+        <h2 className="text-center text-xl font-ritual text-amber-700 dark:text-amber-400">
           Speak with {title}
         </h2>
       )}
@@ -95,17 +106,32 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
         style={{ height: '450px', scrollBehavior: 'smooth' }}
       >
         {messages.map((msg) => (
+          msg.sender === 'system' ? (
+            <p
+              key={msg.id}
+              className="text-xs font-system text-zinc-500 flex items-center gap-1"
+            >
+              <img src="/icons/scroll.svg" className="w-4 h-4" />
+              {msg.content}
+            </p>
+          ) : (
           <div
             key={msg.id}
-            className={`text-sm font-serif p-3 rounded-xl whitespace-pre-wrap ${
+            className={`p-3 rounded-lg text-sm font-serif whitespace-pre-wrap relative ${
               msg.sender === 'user'
                 ? 'bg-amber-100 text-right'
-                : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700 dark:border-amber-500'
+                : 'bg-amber-50 text-left border-l-4 border-amber-400 relative'
             }`}
           >
-            <p>{msg.content}</p>
-            <span className="block text-gray-500 text-xs mt-1">{msg.timestamp}</span>
-          </div>
+              {msg.sender !== 'user' && (
+                <span className="absolute top-1 right-2 opacity-5">
+                  <img src={`/assets/glyphs/glyph-${companionSlug}.png`} className="w-6 h-6" />
+                </span>
+              )}
+              <p>{msg.content}</p>
+              <span className="block text-gray-500 text-xs mt-1">{msg.timestamp}</span>
+            </div>
+          )
         ))}
       </div>
 
