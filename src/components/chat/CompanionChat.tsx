@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 // SohbatChalice – Companion chat interface
 
@@ -111,7 +112,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
               key={msg.id}
               className="text-xs font-system text-zinc-500 flex items-center gap-1"
             >
-              <img src="/icons/scroll.svg" className="w-4 h-4" />
+              <Image src="/icons/scroll.svg" alt="scroll" width={16} height={16} />
               {msg.content}
             </p>
           ) : (
@@ -125,10 +126,11 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
             >
               {msg.sender === 'companion' && (
                 <span className="absolute top-1 right-2 opacity-5">
-                  <img
+                  <Image
                     src={`/assets/glyphs/glyph-${companionSlug}.png`}
-                    className="w-6 h-6 animate-pulse opcity-5"
                     alt={`${companionSlug} glyph`}
+                    width={24}
+                    height={24}
                   />
                 </span>
               )}
