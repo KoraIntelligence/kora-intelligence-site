@@ -13,17 +13,7 @@ export default function WhispererPage() {
         <meta name="description" content={companion.essence} />
       </Head>
 
-      <CompanionScrollLayout companion={companion}>
-        {companion.mode === 'hybrid' && companion.questions && companion.webhookUrl && (
-          <CompanionInvocation
-            companionSlug={companion.slug}
-            companionTitle={companion.title}
-            webhookUrl={companion.webhookUrl!}
-            questions={companion.questions}
-          />
-        )}
-
-        
+      <CompanionScrollLayout companion={companion}>        
 
         {companion.mode === 'hybrid' && (
           <section className="space-y-8">

@@ -15,17 +15,7 @@ export default function CCCPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        {/* ✦ Prompt Ritual */}
-        {companion.mode === 'hybrid' && companion.questions && companion.webhookUrl && (
-          <CompanionInvocation
-            companionSlug={companion.slug}
-            companionTitle={companion.title}
-            webhookUrl={companion.webhookUrl!}
-            questions={companion.questions}
-          />
-        )}
-
-        
+      
         {/* ✦ Hybrid Ritual */}
         {companion.mode === 'hybrid' && (
           <section className="space-y-8 mt-12">
