@@ -14,7 +14,7 @@ export default function WhispererPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        {companion.mode === 'prompt' && companion.questions && companion.webhookUrl && (
+        {companion.mode === 'hybrid' && companion.questions && companion.webhookUrl && (
           <CompanionInvocation
             companionSlug={companion.slug}
             companionTitle={companion.title}
