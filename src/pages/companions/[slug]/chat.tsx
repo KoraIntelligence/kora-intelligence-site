@@ -6,17 +6,27 @@ import Link from 'next/link';
 
 export default function CompanionChatPage() {
   const router = useRouter();
-  const { slug } = router.query;
+  const querySlug = Array.isArray(router.query.slug)
+    ? router.query.slug[0]
+    : router.query.slug;
 
-  if (typeof slug !== 'string') {
-    return <div className="text-center mt-20 text-amber-600">Whispering paths are unclear...</div>;
+  if (typeof querySlug !== 'string') {
+    return (
+      <div className="text-center mt-20 text-amber-600">
+        Whispering paths are unclear...
+      </div>
+    );
   }
+
+  const slug = querySlug;
 
   const companion = companions[slug];
 
   if (!companion) {
     return <div className="text-center mt-20 text-red-600">This Companion has yet to be summoned.</div>;
   }
+
+  const glyphPath = `/assets/glyphs/glyph-${slug}.png`;
 
   return (
     <>
@@ -28,13 +38,11 @@ export default function CompanionChatPage() {
       <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-zinc-800 dark:to-zinc-900 px-4 sm:px-8 py-10">
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center">
-            {companion.glyph && (
-              <img
-                src={companion.glyph}
-                alt={`${companion.title} glyph`}
-                className="mx-auto h-12 w-12 mb-3 opacity-90"
-              />
-            )}
+            <img
+              src={glyphPath}
+              alt={`${companion.title} glyph`}
+              className="mx-auto h-12 w-12 mb-3 opacity-90"
+            />
             <h1 className="text-2xl sm:text-3xl font-serif text-amber-700 dark:text-amber-300">
               Whisper with {companion.title}
             </h1>
