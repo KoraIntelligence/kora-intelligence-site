@@ -9,58 +9,48 @@ export default function CompanionChatPage() {
   const { slug } = router.query;
 
   if (typeof slug !== 'string') {
-    return null;
+    return <div className="text-center mt-20 text-amber-600">Whispering paths are unclear...</div>;
   }
 
   const companion = companions[slug];
 
   if (!companion) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black text-center p-6">
-        <div>
-          <div className="text-4xl">🌀</div>
-          <h2 className="text-2xl font-serif text-amber-700 mt-4">This path hasn’t been drawn yet.</h2>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
-            You’ve reached a quiet clearing. Return when the way reveals itself.
-          </p>
-          <Link href="/" className="text-amber-600 underline mt-4 block">
-            Return Home
-          </Link>
-        </div>
-      </div>
-    );
+    return <div className="text-center mt-20 text-red-600">This Companion has yet to be summoned.</div>;
   }
-
-  // Define backend route per Companion
-  const apiPath = `/api/summon/${slug}`;
 
   return (
     <>
       <Head>
-        <title>Sohbat with {companion.title} – Kora Companion</title>
-        <meta name="description" content={`Begin a ritual dialogue with ${companion.title}`} />
+        <title>{companion.title} – Chat Chamber</title>
+        <meta name="description" content={`Speak with ${companion.title}, your ${companion.essence}`} />
       </Head>
 
-      <main className="min-h-screen bg-amber-50 dark:bg-zinc-900 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-serif text-amber-700">
-              Sohbat with {companion.title}
+      <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-zinc-800 dark:to-zinc-900 px-4 sm:px-8 py-10">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center">
+            {companion.glyph && (
+              <img
+                src={companion.glyph}
+                alt={`${companion.title} glyph`}
+                className="mx-auto h-12 w-12 mb-3 opacity-90"
+              />
+            )}
+            <h1 className="text-2xl sm:text-3xl font-serif text-amber-700 dark:text-amber-300">
+              Whisper with {companion.title}
             </h1>
-            <p className="text-sm italic text-gray-600 dark:text-gray-300">
-              You are in a dialogue chamber — not a chatbot. Speak slow. Speak true.
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Your thoughts, doubts, and dreams are welcome here.
             </p>
-            <Link href={`/companions/${slug}`} className="text-xs text-amber-600 underline">
-              ← Return to Companion Scroll
-            </Link>
           </div>
 
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-lg p-6 border border-amber-300">
-            <CompanionChat
-              companionSlug={slug}
-              title={companion.title}
-              apiPath={apiPath}
-            />
+          <CompanionChat companionSlug={slug} title={companion.title} apiPath={`/api/summon/${slug}`} />
+
+          <div className="text-center pt-6">
+            <Link href={`/companions/${slug}`}>
+              <a className="text-amber-600 hover:underline dark:text-amber-400">
+                ← Return to {companion.title}'s Scroll
+              </a>
+            </Link>
           </div>
         </div>
       </main>

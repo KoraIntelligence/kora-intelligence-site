@@ -10,19 +10,19 @@ type Message = {
 interface CompanionChatProps {
   companionSlug: string; // e.g., 'ccc', 'fmc'
   title?: string;
-  apiPath: string; // e.g., '/api/summon/salar'
+  apiPath: string; // e.g., '/api/summon/[slug]'
 }
 
 export default function CompanionChat({ companionSlug, title, apiPath }: CompanionChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    setTimeout(() => {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 250); // Slight delay for fluid UX
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -38,10 +38,10 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       id: Date.now(),
       sender: 'user',
       content: input,
-      timestamp
+      timestamp,
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInput('');
     setLoading(true);
 
@@ -49,30 +49,32 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ message: input }),
       });
 
       const data = await res.json();
-      const responseText = res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.';
-      
-      setMessages(prev => [
+      const responseText = res.ok
+        ? data.reply
+        : '⚠️ The Companion fell silent. Please try again.';
+
+      setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: 'companion',
           content: responseText,
-          timestamp: new Date().toLocaleTimeString()
-        }
+          timestamp: new Date().toLocaleTimeString(),
+        },
       ]);
     } catch (err) {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: 'companion',
           content: '💥 A ritual disruption occurred. Try again soon.',
-          timestamp: new Date().toLocaleTimeString()
-        }
+          timestamp: new Date().toLocaleTimeString(),
+        },
       ]);
     } finally {
       setLoading(false);
@@ -80,39 +82,40 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   };
 
   return (
-    <div className="bg-white/90 rounded-xl shadow-lg p-6 space-y-4 max-w-3xl mx-auto border border-amber-300">
+    <div className="bg-white/90 dark:bg-zinc-900 rounded-xl shadow-lg p-6 space-y-6 max-w-3xl mx-auto border border-amber-300 dark:border-zinc-700">
       {title && (
-        <h2 className="text-center text-xl font-serif text-amber-700">
+        <h2 className="text-center text-xl font-serif text-amber-700 dark:text-amber-400">
           Speak with {title}
         </h2>
       )}
 
-      <div className="max-h-[400px] overflow-y-auto space-y-3 p-3 border rounded bg-white/80">
+      <div
+        ref={chatContainerRef}
+        className="overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
+        style={{ height: '450px', scrollBehavior: 'smooth' }}
+      >
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`text-sm font-serif p-2 rounded-lg whitespace-pre-wrap ${
+            className={`text-sm font-serif p-3 rounded-xl whitespace-pre-wrap ${
               msg.sender === 'user'
                 ? 'bg-amber-100 text-right'
-                : 'bg-amber-50 text-left border-l-4 border-amber-400'
+                : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700 dark:border-amber-500'
             }`}
           >
             <p>{msg.content}</p>
-            <span className="block text-gray-500 text-xs mt-1">
-              {msg.timestamp}
-            </span>
+            <span className="block text-gray-500 text-xs mt-1">{msg.timestamp}</span>
           </div>
         ))}
-        <div ref={chatEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-3">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type your whisper..."
-          className="flex-1 px-4 py-2 border rounded shadow-inner"
+          className="flex-1 px-4 py-2 border rounded shadow-inner dark:bg-zinc-800 dark:text-white"
           disabled={loading}
         />
         <button
