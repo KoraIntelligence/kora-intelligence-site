@@ -19,12 +19,8 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +35,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       timestamp
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
@@ -51,22 +47,16 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       });
 
       const data = await res.json();
+      const botMsg: Message = {
+        id: Date.now() + 1,
+        sender: 'companion',
+        content: res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.',
+        timestamp: new Date().toLocaleTimeString()
+      };
 
-      if (res.ok) {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            sender: 'companion',
-            content: data.reply,
-            timestamp: new Date().toLocaleTimeString()
-          }
-        ]);
-      } else {
-        throw new Error(data.error || 'Companion fell silent.');
-      }
-    } catch (err) {
-      setMessages(prev => [
+      setMessages((prev) => [...prev, botMsg]);
+    } catch {
+      setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
@@ -81,45 +71,45 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900/90 rounded-xl shadow-xl p-6 space-y-4 w-full max-w-5xl mx-auto border border-amber-300">
+    <div className="bg-white dark:bg-zinc-900/90 rounded-xl shadow-xl px-8 py-6 max-w-5xl mx-auto border border-amber-300 space-y-6">
       {title && (
-        <h2 className="text-center text-xl font-serif text-amber-700 dark:text-amber-300">
+        <h2 className="text-center text-2xl font-serif text-amber-700 dark:text-amber-400">
           Speak with {title}
         </h2>
       )}
 
-      <div className="max-h-[600px] overflow-y-auto space-y-3 p-4 border border-amber-100 rounded-lg bg-white/70 dark:bg-zinc-800/60 scroll-smooth">
+      <div className="h-[500px] overflow-y-auto space-y-4 p-4 border rounded-lg bg-white/70 dark:bg-zinc-800/70 transition-all">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`text-sm font-serif p-3 rounded-md ${
+            className={`max-w-3xl px-4 py-3 rounded-lg text-sm font-serif shadow-sm ${
               msg.sender === 'user'
-                ? 'bg-amber-100 text-right'
-                : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700/50'
+                ? 'ml-auto bg-amber-100 dark:bg-amber-900 text-right'
+                : 'mr-auto bg-amber-50 dark:bg-zinc-700 border-l-4 border-amber-400'
             }`}
           >
             <p>{msg.content}</p>
-            <span className="block text-gray-500 text-xs mt-1">{msg.timestamp}</span>
+            <div className="text-xs text-gray-500 mt-1">{msg.timestamp}</div>
           </div>
         ))}
         <div ref={chatEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-3">
+      <form onSubmit={handleSubmit} className="flex items-center gap-3">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type your whisper..."
-          className="flex-1 px-4 py-3 border border-amber-300 rounded shadow-inner dark:bg-zinc-800 dark:text-white"
+          className="flex-1 px-4 py-3 border border-amber-300 dark:border-zinc-600 rounded-lg shadow-inner dark:bg-zinc-800"
           disabled={loading}
         />
         <button
           type="submit"
           disabled={loading}
-          className="bg-amber-700 text-white px-5 py-2 rounded hover:bg-amber-800 transition"
+          className="bg-amber-700 text-white px-5 py-2 rounded-lg hover:bg-amber-800 disabled:opacity-50 transition"
         >
-          {loading ? 'Whispering...' : 'Send'}
+          {loading ? 'Listening...' : 'Send'}
         </button>
       </form>
     </div>
