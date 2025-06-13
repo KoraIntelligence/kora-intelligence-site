@@ -128,7 +128,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
                   <img
                     src={`/assets/glyphs/glyph-${companionSlug}.png`}
                     className="w-6 h-6 animate-pulse opcity-5"
-                    alt="glyph"
+                    alt={'${companionSlug} glyph'}
                   />
                 </span>
               )}
