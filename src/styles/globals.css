@@ -1,3 +1,52 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=EB+Garamond&family=Spline+Sans+Mono&display=swap');
+
+body {
+  @apply font-sans;
+  background-color: #f9f7f5;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.02) 0,
+      rgba(0, 0, 0, 0.02) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+}
+
+.bg-grain {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.02) 0,
+      rgba(0, 0, 0, 0.02) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+}
+
+.dark body {
+  background: linear-gradient(to bottom, #0f0e11, #1a181e);
+}
+
+.filter-glow {
+  filter: drop-shadow(0 0 3px #c29b46aa);
+}
+
+.scroll-reveal {
+  animation: unfurl 1.2s ease-out;
+}
+
+@keyframes unfurl {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
