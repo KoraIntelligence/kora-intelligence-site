@@ -1,117 +1,69 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import { companions } from '@/data/companions';
+import CompanionChat from '@/components/chat/CompanionChat';
+import Link from 'next/link';
 
-type Message = {
-  id: number;
-  sender: 'user' | 'companion';
-  content: string;
-  timestamp: string;
-};
+export default function CompanionChatPage() {
+  const router = useRouter();
+  const { slug } = router.query;
 
-interface CompanionChatProps {
-  companionSlug: string;
-  title?: string;
-  apiPath: string;
-}
+  if (typeof slug !== 'string') {
+    return null;
+  }
 
-export default function CompanionChat({ companionSlug, title, apiPath }: CompanionChatProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const companion = companions[slug];
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  if (!companion) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black text-center p-6">
+        <div>
+          <div className="text-4xl">🌀</div>
+          <h2 className="text-2xl font-serif text-amber-700 mt-4">This path hasn’t been drawn yet.</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
+            You’ve reached a quiet clearing. Return when the way reveals itself.
+          </p>
+          <Link href="/" className="text-amber-600 underline mt-4 block">
+            Return Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const timestamp = new Date().toLocaleTimeString();
-    const userMsg: Message = {
-      id: Date.now(),
-      sender: 'user',
-      content: input,
-      timestamp
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setInput('');
-    setLoading(true);
-
-    try {
-      const res = await fetch(apiPath, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input })
-      });
-
-      const data = await res.json();
-      const botMsg: Message = {
-        id: Date.now() + 1,
-        sender: 'companion',
-        content: res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.',
-        timestamp: new Date().toLocaleTimeString()
-      };
-
-      setMessages((prev) => [...prev, botMsg]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'companion',
-          content: '💥 A ritual disruption occurred. Try again soon.',
-          timestamp: new Date().toLocaleTimeString()
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Define backend route per Companion
+  const apiPath = `/api/summon/${slug}`;
 
   return (
-    <div className="bg-white dark:bg-zinc-900/90 rounded-xl shadow-xl px-8 py-6 max-w-5xl mx-auto border border-amber-300 space-y-6">
-      {title && (
-        <h2 className="text-center text-2xl font-serif text-amber-700 dark:text-amber-400">
-          Speak with {title}
-        </h2>
-      )}
+    <>
+      <Head>
+        <title>Sohbat with {companion.title} – Kora Companion</title>
+        <meta name="description" content={`Begin a ritual dialogue with ${companion.title}`} />
+      </Head>
 
-      <div className="h-[500px] overflow-y-auto space-y-4 p-4 border rounded-lg bg-white/70 dark:bg-zinc-800/70 transition-all">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`max-w-3xl px-4 py-3 rounded-lg text-sm font-serif shadow-sm ${
-              msg.sender === 'user'
-                ? 'ml-auto bg-amber-100 dark:bg-amber-900 text-right'
-                : 'mr-auto bg-amber-50 dark:bg-zinc-700 border-l-4 border-amber-400'
-            }`}
-          >
-            <p>{msg.content}</p>
-            <div className="text-xs text-gray-500 mt-1">{msg.timestamp}</div>
+      <main className="min-h-screen bg-amber-50 dark:bg-zinc-900 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-serif text-amber-700">
+              Sohbat with {companion.title}
+            </h1>
+            <p className="text-sm italic text-gray-600 dark:text-gray-300">
+              You are in a dialogue chamber — not a chatbot. Speak slow. Speak true.
+            </p>
+            <Link href={`/companions/${slug}`} className="text-xs text-amber-600 underline">
+              ← Return to Companion Scroll
+            </Link>
           </div>
-        ))}
-        <div ref={chatEndRef} />
-      </div>
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-3">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your whisper..."
-          className="flex-1 px-4 py-3 border border-amber-300 dark:border-zinc-600 rounded-lg shadow-inner dark:bg-zinc-800"
-          disabled={loading}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-amber-700 text-white px-5 py-2 rounded-lg hover:bg-amber-800 disabled:opacity-50 transition"
-        >
-          {loading ? 'Listening...' : 'Send'}
-        </button>
-      </form>
-    </div>
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-lg p-6 border border-amber-300">
+            <CompanionChat
+              companionSlug={slug}
+              title={companion.title}
+              apiPath={apiPath}
+            />
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
