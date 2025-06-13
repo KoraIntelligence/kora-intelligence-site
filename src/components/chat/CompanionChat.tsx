@@ -10,9 +10,9 @@ type Message = {
 };
 
 interface CompanionChatProps {
-  companionSlug: string; // e.g., 'ccc', 'fmc'
+  companionSlug: string;
   title?: string;
-  apiPath: string; // e.g., '/api/summon/[slug]'
+  apiPath: string;
 }
 
 export default function CompanionChat({ companionSlug, title, apiPath }: CompanionChatProps) {
@@ -36,7 +36,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
     if (!input.trim() || loading) return;
 
     const timestamp = new Date().toLocaleTimeString();
-    const newMessage: Message = {
+    const userMsg: Message = {
       id: Date.now(),
       sender: 'user',
       content: input,
@@ -45,7 +45,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
 
     setMessages((prev) => [
       ...prev,
-      newMessage,
+      userMsg,
       {
         id: Date.now() + 0.5,
         sender: 'system',
@@ -64,7 +64,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
       });
 
       const data = await res.json();
-      const responseText = res.ok
+      const replyText = res.ok
         ? data.reply
         : '⚠️ The Companion fell silent. Please try again.';
 
@@ -73,11 +73,11 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
         {
           id: Date.now() + 1,
           sender: 'companion',
-          content: responseText,
+          content: replyText,
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
         {
@@ -93,7 +93,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   };
 
   return (
-    <div className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-4">
+    <div className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6">
       {title && (
         <h2 className="text-center text-xl font-ritual text-amber-700 dark:text-amber-400">
           Speak with {title}
@@ -105,7 +105,7 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
         className="overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
         style={{ height: '450px', scrollBehavior: 'smooth' }}
       >
-        {messages.map((msg) => (
+        {messages.map((msg) =>
           msg.sender === 'system' ? (
             <p
               key={msg.id}
@@ -115,24 +115,28 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
               {msg.content}
             </p>
           ) : (
-          <div
-            key={msg.id}
-            className={`p-3 rounded-lg text-sm font-serif whitespace-pre-wrap relative ${
-              msg.sender === 'user'
-                ? 'bg-amber-100 text-right'
-                : 'bg-amber-50 text-left border-l-4 border-amber-400 relative'
-            }`}
-          >
-              {msg.sender !== 'user' && (
+            <div
+              key={msg.id}
+              className={`relative p-3 rounded-lg text-sm font-serif whitespace-pre-wrap ${
+                msg.sender === 'user'
+                  ? 'bg-amber-100 text-right'
+                  : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700 dark:border-amber-500'
+              }`}
+            >
+              {msg.sender === 'companion' && (
                 <span className="absolute top-1 right-2 opacity-5">
-                  <img src={`/assets/glyphs/glyph-${companionSlug}.png`} className="w-6 h-6" />
+                  <img
+                    src={`/assets/glyphs/glyph-${companionSlug}.png`}
+                    className="w-6 h-6"
+                    alt="glyph"
+                  />
                 </span>
               )}
               <p>{msg.content}</p>
               <span className="block text-gray-500 text-xs mt-1">{msg.timestamp}</span>
             </div>
           )
-        ))}
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex gap-3">
