@@ -3,7 +3,7 @@ export type Companion = {
   title: string;
   glyph: string;
   essence: string;
-  mode: 'prompt' | 'chat' | 'hybrid';
+  mode: 'hybrid',
   access:
     | 'Public'
     | 'Invite Only'
@@ -30,7 +30,7 @@ export const companions: Record<string, Companion> = {
     slug: 'whisperer',
     title: 'The Whisperer',
     glyph: '🌀',
-    mode: 'chat',
+    mode: 'hybrid',
     essence: 'Listens into the emotional tone of systems, projects, and teams.',
     access: 'Ritual Access',
     translation:
@@ -101,7 +101,7 @@ export const companions: Record<string, Companion> = {
     slug: 'dreamer',
     title: 'The Dreamer',
     glyph: '🌙',
-    mode: 'chat',
+    mode: 'hybrid',
     essence:
       'Holds the poetic north for your vision — stretching timelines beyond strategy.',
     access: 'Invite Only',

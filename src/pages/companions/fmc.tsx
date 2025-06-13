@@ -23,17 +23,7 @@ export default function FMCPage() {
           />
         )}
 
-        {companion.mode === 'chat' && (
-          <section>
-            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">
-              Whisper with {companion.title}
-            </h2>
-            <iframe
-              src="https://chatgpt.com/g/g-68169c8a8e6c81919f98f1688b3ce682-full-spectrum-marketing-companion"
-              className="w-full h-[500px] border rounded-md"
-            />
-          </section>
-        )}
+        
 
         {companion.mode === 'hybrid' && (
           <section className="space-y-8">
@@ -47,13 +37,14 @@ export default function FMCPage() {
               />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">
-                Chat with {companion.title}
-              </h2>
-              <iframe
-                src="https://chat.openai.com/embed?model=gpt-4"
-                className="w-full h-[500px] border rounded-md"
-              />
+              <div className="mt-6 text-center">
+               <a
+              href={`/companions/${companion.slug}/chat`}
+              className="text-amber-700 underline hover:text-amber-800 transition font-serif"
+              >
+              → Enter Sohbat with {companion.title}
+              </a>
+            </div>
             </div>
           </section>
         )}

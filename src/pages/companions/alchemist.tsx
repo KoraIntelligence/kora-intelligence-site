@@ -14,7 +14,7 @@ export default function AlchemistPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        {/* Whisper Ritual & Chat Scrolls */}
+        {/* Whisper Ritual*/}
         {companion.mode === 'prompt' && companion.questions && companion.webhookUrl && (
           <CompanionInvocation
             companionSlug={companion.slug}
@@ -22,18 +22,6 @@ export default function AlchemistPage() {
             webhookUrl={companion.webhookUrl!}
             questions={companion.questions}
           />
-        )}
-
-        {companion.mode === 'chat' && (
-          <section>
-            <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">
-              Whisper with {companion.title}
-            </h2>
-            <iframe
-              src="https://chat.openai.com/embed?model=gpt-4"
-              className="w-full h-[500px] border rounded-md"
-            />
-          </section>
         )}
 
         {companion.mode === 'hybrid' && (
@@ -48,13 +36,14 @@ export default function AlchemistPage() {
               />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">
-                Chat with {companion.title}
-              </h2>
-              <iframe
-                src="https://chat.openai.com/embed?model=gpt-4"
-                className="w-full h-[500px] border rounded-md"
-              />
+             <div className="mt-6 text-center">
+               <a
+              href={`/companions/${companion.slug}/chat`}
+              className="text-amber-700 underline hover:text-amber-800 transition font-serif"
+              >
+              → Enter Sohbat with {companion.title}
+              </a>
+            </div>
             </div>
           </section>
         )}

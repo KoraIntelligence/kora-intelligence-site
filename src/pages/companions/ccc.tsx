@@ -39,12 +39,14 @@ export default function CCCPage() {
               />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
-              <CompanionChat
-                companionSlug="ccc"
-                title="CCC"
-                apiPath="/api/summon/salar"
-              />
+              <div className="mt-6 text-center">
+               <a
+              href={`/companions/${companion.slug}/chat`}
+              className="text-amber-700 underline hover:text-amber-800 transition font-serif"
+              >
+              → Enter Sohbat with {companion.title}
+              </a>
+            </div>
             </div>
           </section>
         )}
