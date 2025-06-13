@@ -9,18 +9,23 @@
 body {
   @apply font-sans text-gray-800;
   background-color: #f9f7f5;
-  background-image:
-    url('/textures/paper-grain.png'),
-    repeating-linear-gradient(
-      45deg,
-      rgba(0, 0, 0, 0.02) 0,
-      rgba(0, 0, 0, 0.02) 1px,
-      transparent 1px,
-      transparent 4px
-    );
-  background-size: cover;
 }
 
+/* 🌤️ Light Mode Only – Scroll Overlay */
+@media (prefers-color-scheme: light) {
+  body::before {
+    content: '';
+    @apply fixed inset-0 pointer-events-none;
+    background-image: url('/assets/textures/paper-grain.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.06;
+    z-index: -1;
+  }
+}
+
+/* 🌒 Dark Mode */
 .dark body {
   @apply text-scroll;
   background: linear-gradient(to bottom, #0f0e11, #1a181e);
@@ -28,6 +33,7 @@ body {
   background-size: cover;
   background-position: center;
 }
+
 
 /* 🌾 Grain Utility */
 
