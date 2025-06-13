@@ -126,9 +126,9 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
               {msg.sender === 'companion' && (
                 <span className="absolute top-1 right-2 opacity-5">
                   <img
-                    src={`/assets/glyphs/glyph-ccc.png`}
+                    src={`/assets/glyphs/glyph-${companionSlug}.png`}
                     className="w-6 h-6 animate-pulse opcity-5"
-                    alt="Test CCC glyph"
+                    alt={`${companionSlug} glyph`}
                   />
                 </span>
               )}
