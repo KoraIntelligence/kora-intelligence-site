@@ -29,7 +29,7 @@ export default function CompanionPage() {
         {['ccc', 'fmc', 'builder'].includes(companion.slug) && (
           <CompanionRitual companion={companion} />
         )}
-        {companion.mode === 'prompt' && companion.questions && companion.webhookUrl && (
+        {companion.mode === 'hybrid' && companion.questions && companion.webhookUrl && (
           <CompanionInvocation
             companionSlug={companion.slug}
             companionTitle={companion.title}
@@ -37,7 +37,7 @@ export default function CompanionPage() {
             questions={companion.questions}
           />
         )}
-        {companion.mode === 'chat' && (
+        {companion.mode === 'hybrid' && (
           <section>
             <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Whisper with {companion.title}</h2>
             <iframe
