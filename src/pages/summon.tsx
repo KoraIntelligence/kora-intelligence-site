@@ -19,7 +19,9 @@ export default function SummonPage() {
       <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-amber-100 py-20 px-6 flex flex-col items-center justify-start text-center space-y-8">
         {!selected && (
           <>
-            <h1 className="text-3xl md:text-4xl font-serif text-gray-800">Who would you like to summon?</h1>
+            <h1 className="text-3xl md:text-4xl font-serif text-gray-800">
+              Who would you like to summon?
+            </h1>
             <div className="grid gap-6 md:grid-cols-2 max-w-3xl">
               {Object.values(companions)
                 .filter((c) => c.mode === 'hybrid')
@@ -29,7 +31,11 @@ export default function SummonPage() {
                     onClick={() => router.push(`/summon?companion=${c.slug}`)}
                     className="p-6 bg-white rounded-xl shadow-md border border-amber-200 hover:shadow-lg transition flex flex-col items-center space-y-2"
                   >
-                    <div className="text-4xl">{c.glyph}</div>
+                    <img
+                      src={`/assets/glyphs/glyph-${c.slug}.png`}
+                      alt={`${c.title} glyph`}
+                      className="h-10 w-10"
+                    />
                     <h2 className="text-xl font-semibold">{c.title}</h2>
                     <p className="text-sm italic text-gray-600">{c.essence}</p>
                   </button>
@@ -43,9 +49,12 @@ export default function SummonPage() {
             <h1 className="text-3xl md:text-4xl font-serif text-amber-800">
               You have summoned {selected.title}
             </h1>
-            <p className="italic text-gray-600 text-sm mb-4">
-              {selected.essence}
-            </p>
+            <img
+              src={`/assets/glyphs/glyph-${selected.slug}.png`}
+              alt={`${selected.title} glyph`}
+              className="mx-auto h-12 w-12 opacity-90"
+            />
+            <p className="italic text-gray-600 text-sm mb-4">{selected.essence}</p>
             <iframe
               src={selected.chatEmbed}
               className="w-full h-[600px] border border-amber-300 rounded-xl shadow-lg"

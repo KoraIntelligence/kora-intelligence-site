@@ -6,69 +6,67 @@ import { companions } from '@/data/companions';
 
 export default function CompanionEngine() {
   const [showChoice, setShowChoice] = useState(false);
-  const [beginFullRitual, setBeginFullRitual] = useState(false);
   const [formData, setFormData] = useState({
     journey: '',
-    need: '',
+    need: [] as string[],
     feel: ''
   });
   const [suggestedCompanions, setSuggestedCompanions] = useState<CompanionSuggestion[]>([]);
+  const [whisper, setWhisper] = useState<string | null>(null);
   const [revealedAt, setRevealedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [whisper, setWhisper] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const companionMap: Record<string, string[]> = {
-    funding: ['ccc', 'pathbreaker'],
-    tone: ['whisperer', 'fmc'],
-    clarity: ['cartographer', 'builder'],
-    vision: ['dreamer'],
-    frontend: ['builder']
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, options } = e.target as HTMLSelectElement;
+    if (name === 'need') {
+      const selected = Array.from(options).filter(o => o.selected).map(o => o.value);
+      setFormData(prev => ({ ...prev, need: selected }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const sendToWebhook = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('https://koraintelligence.app.n8n.cloud/webhook/companion-invoke', {
+      const res = await fetch('/api/kainat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          q1: formData.journey,
-          q2: formData.need,
-          q3: formData.feel
+          journey: formData.journey,
+          support: formData.need,
+          feeling: formData.feel
         })
       });
       const data = await res.json();
-      setWhisper(data.response?.whisper || 'No whisper returned.');
+      setWhisper(data.scroll || 'No scroll returned.');
     } catch (err) {
       console.error(err);
-      setError('Something went wrong retrieving the whisper.');
+      setError('Something went wrong retrieving the scroll.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSubmit = () => {
+    setRevealedAt(new Date().toLocaleTimeString());
+    sendToWebhook();
+  };
+
   return (
     <>
       <Head>
-        <title>The Companion Engine – Kainat OS (Early Ritual Prototype)</title>
-        <meta
-          name="description"
-          content="Enter the divining pool. Begin your ritual. The Companion Engine offers soft triage and soul-aligned guidance, powered by Kainat OS."
-        />
+        <title>The Companion Engine – Kainat OS</title>
+        <meta name="description" content="Begin your ritual. The Companion Engine listens through Kainat OS." />
       </Head>
 
       <main className="min-h-screen w-full bg-gradient-to-br from-green-900 via-white to-amber-100 flex flex-col items-center justify-center p-8 lg:px-16 space-y-8">
         <AnimatePresence>
           {!showChoice && (
             <motion.div
-              key="welcome"
+              key="intro"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -79,7 +77,7 @@ export default function CompanionEngine() {
                 “Each output is a whisper.”<br />
                 “Each Companion is a mirror.”
               </p>
-              <motion.div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-4">
                 <button
                   onClick={() => setShowChoice(true)}
                   className="bg-amber-600 text-white font-semibold px-6 py-3 rounded-md shadow-md hover:bg-amber-700 transition"
@@ -92,7 +90,7 @@ export default function CompanionEngine() {
                 >
                   Or skip ritual and browse directly
                 </button>
-              </motion.div>
+              </div>
             </motion.div>
           )}
 
@@ -122,16 +120,19 @@ export default function CompanionEngine() {
                 What do you most need help with?
                 <select
                   name="need"
+                  multiple
                   value={formData.need}
                   onChange={handleChange}
-                  className="mt-1 w-full px-4 py-2 rounded border border-gray-300"
+                  className="mt-1 w-full px-4 py-2 rounded border border-gray-300 h-40"
                 >
-                  <option value="">Select one</option>
-                  <option value="funding">Funding Strategy</option>
-                  <option value="tone">Brand Tone</option>
-                  <option value="clarity">Structural Clarity</option>
-                  <option value="vision">Vision Work</option>
-                  <option value="frontend">Interface/UX</option>
+                  {[
+                    "Funding Strategy", "Grant Support", "Pricing Clarity", "Brand Tone", "Structural Clarity",
+                    "Vision Work", "Investor Fit / Exit Planning", "Narrative Development", "Storytelling Support",
+                    "Proposal Crafting", "Interface/UX", "Dispatch / Zine Creation", "Team Alignment",
+                    "Ethical Framing", "Emotional Clarity"
+                  ].map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
                 </select>
               </label>
 
@@ -148,22 +149,7 @@ export default function CompanionEngine() {
               </label>
 
               <motion.button
-                onClick={() => {
-                  const slugs = companionMap[formData.need] || [];
-                  const picks = slugs.slice(0, 3).map((slug) => {
-                    const c = companions[slug];
-                    return {
-                      slug: c.slug,
-                      title: c.title,
-                      glyph: c.glyph,
-                      essence: c.essence,
-                      outputs: c.services ? c.services.slice(0, 2) : []
-                    } as CompanionSuggestion;
-                  });
-                  setSuggestedCompanions(picks);
-                  setRevealedAt(new Date().toLocaleTimeString());
-                  sendToWebhook();
-                }}
+                onClick={handleSubmit}
                 className="bg-amber-700 text-white font-semibold px-5 py-2 rounded-md hover:bg-amber-800 transition w-full"
               >
                 Reflect and Continue →
@@ -184,9 +170,27 @@ export default function CompanionEngine() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-amber-50 border border-amber-300 p-6 rounded-lg font-serif text-gray-800 shadow-md prose max-w-3xl mx-auto whitespace-pre-line mt-8"
+            className="relative bg-[url('/assets/textures/parchment.png')] bg-cover bg-center border border-amber-300 p-8 rounded-lg font-serif text-gray-800 shadow-lg max-w-3xl mx-auto whitespace-pre-wrap mt-8 space-y-4"
           >
-            {whisper}
+            <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-100">
+              {whisper.split('\n').map((line, idx) => (
+                <p key={idx}>{line}</p>
+              ))}
+            </div>
+            {Object.values(companions).map((companion) => {
+              const nameLower = companion.title.toLowerCase();
+              const matched = whisper.toLowerCase().includes(nameLower);
+              return matched ? (
+                <div key={companion.slug} className="text-center mt-6">
+                  <a
+                    href={`/companions/${companion.slug}`}
+                    className="inline-block bg-amber-700 hover:bg-amber-800 text-white font-semibold px-6 py-3 rounded shadow transition"
+                  >
+                    Meet {companion.title}
+                  </a>
+                </div>
+              ) : null;
+            })}
           </motion.div>
         )}
 
