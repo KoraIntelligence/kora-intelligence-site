@@ -13,7 +13,7 @@ export default function CompanionEngine() {
   });
   const [suggestedCompanions, setSuggestedCompanions] = useState<CompanionSuggestion[]>([]);
   const [whisper, setWhisper] = useState<string | null>(null);
-  const [revealedAt, setRevealedAt] = useState<string | null>(null);
+  const [matchedSlugs, setMatchedSlugs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,9 +27,10 @@ export default function CompanionEngine() {
     }
   };
 
-  const sendToWebhook = async () => {
+  const sendToKainat = async () => {
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch('/api/kainat', {
         method: 'POST',
@@ -40,8 +41,17 @@ export default function CompanionEngine() {
           feeling: formData.feel
         })
       });
+
       const data = await res.json();
-      setWhisper(data.scroll || 'No scroll returned.');
+      const scroll = data.scroll || 'No scroll returned.';
+      setWhisper(scroll);
+
+      // Match any companions mentioned in the scroll
+      const mentioned = Object.values(companions).filter(c =>
+        scroll.toLowerCase().includes(c.title.toLowerCase())
+      ).map(c => c.slug);
+
+      setMatchedSlugs(mentioned);
     } catch (err) {
       console.error(err);
       setError('Something went wrong retrieving the scroll.');
@@ -51,8 +61,7 @@ export default function CompanionEngine() {
   };
 
   const handleSubmit = () => {
-    setRevealedAt(new Date().toLocaleTimeString());
-    sendToWebhook();
+    sendToKainat();
   };
 
   return (
@@ -170,43 +179,37 @@ export default function CompanionEngine() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="relative bg-[url('/assets/textures/parchment.png')] bg-cover bg-center border border-amber-300 p-8 rounded-lg font-serif text-gray-800 shadow-lg max-w-3xl mx-auto whitespace-pre-wrap mt-8 space-y-4"
+            className="relative bg-[url('/assets/textures/paper-grain.png')] bg-cover bg-center border border-amber-300 p-8 rounded-lg font-serif text-gray-800 shadow-lg max-w-3xl mx-auto whitespace-pre-wrap mt-8 space-y-4"
           >
             <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-100">
               {whisper.split('\n').map((line, idx) => (
                 <p key={idx}>{line}</p>
               ))}
             </div>
-            {Object.values(companions).map((companion) => {
-              const nameLower = companion.title.toLowerCase();
-              const matched = whisper.toLowerCase().includes(nameLower);
-              return matched ? (
-                <div key={companion.slug} className="text-center mt-6">
-                  <a
-                    href={`/companions/${companion.slug}`}
-                    className="inline-block bg-amber-700 hover:bg-amber-800 text-white font-semibold px-6 py-3 rounded shadow transition"
-                  >
-                    Meet {companion.title}
-                  </a>
-                </div>
-              ) : null;
-            })}
-          </motion.div>
-        )}
 
-        {suggestedCompanions.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-12 w-full max-w-4xl"
-          >
-            {revealedAt && (
-              <p className="text-center text-sm text-gray-600 mb-4">
-                Companions revealed at: {revealedAt}
-              </p>
+            {matchedSlugs.length > 0 && (
+              <div className="mt-8 space-y-4">
+                <h4 className="text-lg font-medium text-center text-amber-700">Those named in the scroll:</h4>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {matchedSlugs.map(slug => {
+                    const c = companions[slug];
+                    return (
+                      <div key={slug} className="bg-white/90 border border-amber-200 rounded-lg p-4 shadow-md text-center space-y-2">
+                        <img src={`/assets/glyphs/glyph-${slug}.png`} alt={`${c.title} glyph`} className="h-12 w-12 mx-auto opacity-90" />
+                        <h5 className="text-lg font-semibold">{c.title}</h5>
+                        <a
+                          href={`/companions/${slug}`}
+                          className="inline-block bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
+                        >
+                          Meet {c.title}
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-            <SuggestedCompanions companions={suggestedCompanions} />
-          </motion.section>
+          </motion.div>
         )}
       </main>
     </>
