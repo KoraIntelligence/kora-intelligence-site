@@ -104,3 +104,14 @@ body {
 .glyph-watermark {
   @apply absolute opacity-5 top-1 right-2 w-6 h-6 pointer-events-none;
 }
+
+/* Dark mode readability improvements */
+.dark input,
+.dark textarea,
+.dark select {
+  @apply bg-neutral-800 border-gray-600 text-gray-100 placeholder-gray-400;
+}
+
+.dark .prose {
+  @apply text-gray-100;
+}
