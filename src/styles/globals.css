@@ -115,3 +115,33 @@ body {
 .dark .prose {
   @apply text-gray-100;
 }
+
+/* General typography harmony */
+h1 {
+  @apply text-3xl sm:text-4xl md:text-5xl font-serif font-semibold text-amber-600 mb-6;
+}
+
+h2 {
+  @apply text-2xl sm:text-3xl font-serif text-amber-700 dark:text-amber-300 mt-8 mb-4;
+}
+
+h3 {
+  @apply text-xl sm:text-2xl font-serif text-amber-700 dark:text-amber-300 mt-6 mb-2;
+}
+
+p {
+  @apply leading-relaxed;
+}
+
+a {
+  @apply underline text-amber-700 hover:text-amber-800;
+}
+
+.dark a {
+  @apply text-amber-400 hover:text-amber-300;
+}
+
+label {
+  @apply text-gray-700 dark:text-gray-300;
+}
+
