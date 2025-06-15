@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 
-// SohbatChalice – Companion chat interface
-
 type Message = {
   id: number;
   sender: 'user' | 'companion' | 'system';
@@ -14,12 +12,20 @@ interface CompanionChatProps {
   companionSlug: string;
   title?: string;
   apiPath: string;
+  persistentCTA?: boolean; // New prop to enable floating CTA
 }
 
-export default function CompanionChat({ companionSlug, title, apiPath }: CompanionChatProps) {
+export default function CompanionChat(props: CompanionChatProps) {
+  const {
+    companionSlug,
+    title,
+    apiPath,
+    persistentCTA = false, // ✅ apply default here
+  } = props;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(!persistentCTA); // Default open if not CTA
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -94,69 +100,103 @@ export default function CompanionChat({ companionSlug, title, apiPath }: Compani
   };
 
   return (
-    <div className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6">
-      {title && (
-        <h2 className="text-center text-xl font-ritual text-amber-700 dark:text-amber-400">
-          Speak with {title}
-        </h2>
-      )}
-
-      <div
-        ref={chatContainerRef}
-        className="overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
-        style={{ height: '450px', scrollBehavior: 'smooth' }}
+  <>
+    {persistentCTA && !isOpen && (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 z-40 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full shadow-lg transition"
       >
-        {messages.map((msg) =>
-          msg.sender === 'system' ? (
-            <p
-              key={msg.id}
-              className="text-xs font-system text-zinc-500 flex items-center gap-1"
-            >
-              <Image src="/icons/scroll.svg" alt="scroll" width={16} height={16} />
-              {msg.content}
-            </p>
-          ) : (
-            <div
-              key={msg.id}
-              className={`relative p-3 rounded-lg text-sm font-serif whitespace-pre-wrap ${
-                msg.sender === 'user'
-                  ? 'bg-amber-100 text-right'
-                  : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700 dark:border-amber-500'
-              }`}
-            >
-              {msg.sender === 'companion' && (
-                <span className="absolute top-1 right-2 opacity-5">
-                  <img
-                    src={`/assets/glyphs/glyph-${companionSlug}.png`}
-                    alt={`${companionSlug} glyph`}
-                    className="h-12 w-12"
-                  />
-                </span>
-              )}
-              <p>{msg.content}</p>
-              <span className="block text-gray-500 text-xs mt-1">{msg.timestamp}</span>
-            </div>
-          )
-        )}
-      </div>
+        Speak with a Companion
+      </button>
+    )}
 
-      <form onSubmit={handleSubmit} className="flex gap-3">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your whisper..."
-          className="flex-1 px-4 py-2 border rounded shadow-inner dark:bg-zinc-800 dark:text-white"
-          disabled={loading}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
-        >
-          {loading ? 'Summoning...' : 'Send'}
-        </button>
-      </form>
-    </div>
-  );
+    {(!persistentCTA || isOpen) && (
+      <div
+        className={`${
+          persistentCTA
+            ? 'fixed bottom-20 right-6 z-50 w-full max-w-md animate-fadeIn'
+            : ''
+        }`}
+      >
+        {persistentCTA && (
+          <div className="flex justify-end mb-1">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-xs text-amber-500 underline mr-1"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        <div className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6">
+          {title && (
+            <h2 className="text-center text-xl font-ritual text-amber-700 dark:text-amber-400">
+              Speak with {title}
+            </h2>
+          )}
+
+          <div
+            ref={chatContainerRef}
+            className="overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
+            style={{ height: '450px', scrollBehavior: 'smooth' }}
+          >
+            {messages.map((msg) =>
+              msg.sender === 'system' ? (
+                <p
+                  key={msg.id}
+                  className="text-xs font-system text-zinc-500 flex items-center gap-1"
+                >
+                  <Image src="/icons/scroll.svg" alt="scroll" width={16} height={16} />
+                  {msg.content}
+                </p>
+              ) : (
+                <div
+                  key={msg.id}
+                  className={`relative p-3 rounded-lg text-sm font-serif whitespace-pre-wrap ${
+                    msg.sender === 'user'
+                      ? 'bg-amber-100 text-gray-800 text-right dark:bg-amber-200'
+                      : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700 dark:border-amber-500 dark:text-gray-100'
+                  }`}
+                >
+                  {msg.sender === 'companion' && (
+                    <span className="absolute top-1 right-2 opacity-10">
+                      <img
+                        src={`/assets/glyphs/glyph-${companionSlug}.png`}
+                        alt={`${companionSlug} glyph`}
+                        className="h-12 w-12"
+                      />
+                    </span>
+                  )}
+                  <p>{msg.content}</p>
+                  <span className="block text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    {msg.timestamp}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your whisper..."
+              className="flex-1 px-4 py-2 border rounded shadow-inner bg-white dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
+              disabled={loading}
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+            >
+              {loading ? 'Summoning...' : 'Send'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )}
+  </>
+);
 }

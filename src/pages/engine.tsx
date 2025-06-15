@@ -6,12 +6,7 @@ import { companions } from '@/data/companions';
 
 export default function CompanionEngine() {
   const [showChoice, setShowChoice] = useState(false);
-  const [formData, setFormData] = useState({
-    journey: '',
-    need: [] as string[],
-    feel: ''
-  });
-  const [suggestedCompanions, setSuggestedCompanions] = useState<CompanionSuggestion[]>([]);
+  const [formData, setFormData] = useState({ journey: '', need: [] as string[], feel: '' });
   const [whisper, setWhisper] = useState<string | null>(null);
   const [matchedSlugs, setMatchedSlugs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,19 +33,17 @@ export default function CompanionEngine() {
         body: JSON.stringify({
           journey: formData.journey,
           support: formData.need,
-          feeling: formData.feel
-        })
+          feeling: formData.feel,
+        }),
       });
 
       const data = await res.json();
       const scroll = data.scroll || 'No scroll returned.';
       setWhisper(scroll);
 
-      // Match any companions mentioned in the scroll
-      const mentioned = Object.values(companions).filter(c =>
-        scroll.toLowerCase().includes(c.title.toLowerCase())
-      ).map(c => c.slug);
-
+      const mentioned = Object.values(companions)
+        .filter(c => scroll.toLowerCase().includes(c.title.toLowerCase()))
+        .map(c => c.slug);
       setMatchedSlugs(mentioned);
     } catch (err) {
       console.error(err);
@@ -71,7 +64,7 @@ export default function CompanionEngine() {
         <meta name="description" content="Begin your ritual. The Companion Engine listens through Kainat OS." />
       </Head>
 
-      <main className="min-h-screen w-full bg-gradient-to-br from-green-900 via-white to-amber-100 flex flex-col items-center justify-center p-8 lg:px-16 space-y-8">
+      <main className="min-h-screen w-full bg-gradient-to-br from-green-900 via-white to-amber-100 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-700 flex flex-col items-center justify-center p-8 lg:px-16 space-y-8">
         <AnimatePresence>
           {!showChoice && (
             <motion.div
@@ -81,7 +74,7 @@ export default function CompanionEngine() {
               exit={{ opacity: 0 }}
               className="text-center space-y-6 max-w-4xl"
             >
-              <p className="text-4xl md:text-5xl font-serif text-gray-800 leading-relaxed">
+              <p className="text-4xl md:text-5xl font-serif text-gray-800 dark:text-gray-200 leading-relaxed">
                 “Each portal entry is a breath.”<br />
                 “Each output is a whisper.”<br />
                 “Each Companion is a mirror.”
@@ -95,7 +88,7 @@ export default function CompanionEngine() {
                 </button>
                 <button
                   onClick={() => window.location.href = '/companions'}
-                  className="text-sm text-amber-800 underline"
+                  className="text-sm text-amber-800 dark:text-amber-400 underline"
                 >
                   Or skip ritual and browse directly
                 </button>
@@ -109,11 +102,11 @@ export default function CompanionEngine() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="bg-white/90 p-6 rounded-xl shadow-lg max-w-xl w-full space-y-6"
+              className="bg-white/90 dark:bg-zinc-800 p-6 rounded-xl shadow-lg max-w-xl w-full space-y-6"
             >
-              <h2 className="text-2xl font-semibold text-amber-700 font-serif text-center">Ritual Intake</h2>
+              <h2 className="text-2xl font-semibold text-amber-700 dark:text-amber-400 font-serif text-center">Ritual Intake</h2>
 
-              <label className="block text-gray-700 text-sm font-medium">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 Where are you in your journey?
                 <input
                   type="text"
@@ -125,14 +118,14 @@ export default function CompanionEngine() {
                 />
               </label>
 
-              <label className="block text-gray-700 text-sm font-medium">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 What do you most need help with?
                 <select
                   name="need"
                   multiple
                   value={formData.need}
                   onChange={handleChange}
-                  className="mt-1 w-full px-4 py-2 rounded border border-gray-300 h-40"
+                  className="mt-1 w-full px-4 py-2 rounded border border-gray-300 h-40 dark:bg-zinc-900 dark:border-zinc-600"
                 >
                   {[
                     "Funding Strategy", "Grant Support", "Pricing Clarity", "Brand Tone", "Structural Clarity",
@@ -145,7 +138,7 @@ export default function CompanionEngine() {
                 </select>
               </label>
 
-              <label className="block text-gray-700 text-sm font-medium">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                 How do you want to feel at the end?
                 <input
                   type="text"
@@ -167,13 +160,8 @@ export default function CompanionEngine() {
           )}
         </AnimatePresence>
 
-        {loading && (
-          <p className="text-center text-amber-800 italic mt-6">The Grove is listening...</p>
-        )}
-
-        {error && (
-          <p className="text-center text-red-600 mt-6">{error}</p>
-        )}
+        {loading && <p className="text-center text-amber-800 dark:text-amber-400 italic mt-6">The Grove is listening...</p>}
+        {error && <p className="text-center text-red-600 mt-6">{error}</p>}
 
         {whisper && (
           <div className="max-w-3xl mx-auto mt-8">
@@ -183,37 +171,35 @@ export default function CompanionEngine() {
               className="relative bg-[url('/assets/textures/paper-grain.png')] bg-cover bg-center border border-amber-300 dark:border-amber-600 p-8 rounded-lg shadow-lg font-scroll text-gray-800 dark:text-gray-100 space-y-4 scroll-reveal"
             >
               {whisper.split('\n').map((line, idx) => (
-                <p
-                  key={idx}
-                  className={idx === 0 ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2' : 'italic'}
-                >
+                <p key={idx} className={idx === 0 ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2' : 'italic'}>
                   {line}
                 </p>
               ))}
 
-            {matchedSlugs.length > 0 && (
-              <div className="mt-8 space-y-4">
-                <h4 className="text-lg font-medium text-center text-amber-700">Those named in the scroll:</h4>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {matchedSlugs.map(slug => {
-                    const c = companions[slug];
-                    return (
-                      <div key={slug} className="bg-white/90 border border-amber-200 rounded-lg p-4 shadow-md text-center space-y-2">
-                        <img src={`/assets/glyphs/glyph-${slug}.png`} alt={`${c.title} glyph`} className="h-12 w-12 mx-auto opacity-90" />
-                        <h5 className="text-lg font-semibold">{c.title}</h5>
-                        <a
-                          href={`/companions/${slug}`}
-                          className="inline-block bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
-                        >
-                          Meet {c.title}
-                        </a>
-                      </div>
-                    );
-                  })}
+              {matchedSlugs.length > 0 && (
+                <div className="mt-8 space-y-4">
+                  <h4 className="text-lg font-medium text-center text-amber-700 dark:text-amber-400">Those named in the scroll:</h4>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {matchedSlugs.map(slug => {
+                      const c = companions[slug];
+                      if (!c) return null;
+                      return (
+                        <div key={slug} className="bg-white/90 dark:bg-zinc-900 border border-amber-200 dark:border-amber-700 rounded-lg p-4 shadow-md text-center space-y-2">
+                          <img src={`/assets/glyphs/glyph-${slug}.png`} alt={`${c.title} glyph`} className="h-12 w-12 mx-auto opacity-90" />
+                          <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{c.title}</h5>
+                          <a
+                            href={`/companions/${slug}`}
+                            className="inline-block bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
+                          >
+                            Meet {c.title}
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </motion.div>
+              )}
+            </motion.div>
           </div>
         )}
       </main>
