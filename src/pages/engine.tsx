@@ -176,16 +176,20 @@ export default function CompanionEngine() {
         )}
 
         {whisper && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="relative bg-[url('/assets/textures/paper-grain.png')] bg-cover bg-center border border-amber-300 p-8 rounded-lg font-serif text-gray-800 shadow-lg max-w-3xl mx-auto whitespace-pre-wrap mt-8 space-y-4"
-          >
-            <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-100">
+          <div className="max-w-3xl mx-auto mt-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="relative bg-[url('/assets/textures/paper-grain.png')] bg-cover bg-center border border-amber-300 dark:border-amber-600 p-8 rounded-lg shadow-lg font-scroll text-gray-800 dark:text-gray-100 space-y-4 scroll-reveal"
+            >
               {whisper.split('\n').map((line, idx) => (
-                <p key={idx}>{line}</p>
+                <p
+                  key={idx}
+                  className={idx === 0 ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2' : 'italic'}
+                >
+                  {line}
+                </p>
               ))}
-            </div>
 
             {matchedSlugs.length > 0 && (
               <div className="mt-8 space-y-4">
@@ -210,6 +214,7 @@ export default function CompanionEngine() {
               </div>
             )}
           </motion.div>
+          </div>
         )}
       </main>
     </>

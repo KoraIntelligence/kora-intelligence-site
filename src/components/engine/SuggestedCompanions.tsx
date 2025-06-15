@@ -11,7 +11,7 @@ export type CompanionSuggestion = {
 export default function SuggestedCompanions({ companions }: { companions: CompanionSuggestion[] }) {
   return (
     <section className="space-y-6 mt-12">
-      <h3 className="text-2xl font-serif text-center text-amber-700">
+      <h3 className="text-2xl font-serif text-center text-amber-700 dark:text-amber-400">
         These Companions have answered your call
       </h3>
 
@@ -22,7 +22,7 @@ export default function SuggestedCompanions({ companions }: { companions: Compan
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * (idx + 1), type: 'tween' }}
-            className="rounded-xl shadow-md bg-white p-6 text-center space-y-4 border border-amber-200 hover:shadow-lg transition"
+            className="rounded-xl shadow-md bg-white/90 dark:bg-neutral-800 p-6 text-center space-y-4 border border-amber-200 dark:border-amber-600 hover:shadow-lg transition"
           >
             <img
               src={`/assets/glyphs/glyph-${companion.slug}.png`}
@@ -31,7 +31,7 @@ export default function SuggestedCompanions({ companions }: { companions: Compan
             />
 
             <div>
-              <h4 className="text-xl font-semibold text-gray-900">{companion.title}</h4>
+              <h4 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{companion.title}</h4>
               <p className="text-sm italic text-gray-600 mt-1">{companion.essence}</p>
             </div>
 
