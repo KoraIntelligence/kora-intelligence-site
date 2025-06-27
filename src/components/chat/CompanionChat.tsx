@@ -102,32 +102,39 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🌿 NEW: Save Scroll Handler with html2canvas + jsPDF
+  // 🌿 NEW: Save Scroll Handler with hidden clone
   const handleSaveScroll = async () => {
     if (!chatContainerRef.current) return;
 
-    const container = chatContainerRef.current.querySelector(
+    const original = chatContainerRef.current.querySelector(
       '.overflow-y-auto'
     ) as HTMLElement;
 
-    if (!container) return;
+    if (!original) return;
 
-    // Remove height & overflow to capture full scroll area
-    const originalHeight = container.style.height;
-    const originalOverflow = container.style.overflow;
+    // Clone the container
+    const clone = original.cloneNode(true) as HTMLElement;
 
-    container.style.height = 'auto';
-    container.style.overflow = 'visible';
+    // Remove scroll constraints
+    clone.style.height = 'auto';
+    clone.style.overflow = 'visible';
 
-    const canvas = await html2canvas(container, {
+    // Hide off-screen
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+
+    document.body.appendChild(clone);
+
+    const canvas = await html2canvas(clone, {
       scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
     });
 
     const imgData = canvas.toDataURL('image/png');
-
     const pdf = new jsPDF('p', 'mm', 'a4');
+
     const imgProps = pdf.getImageProperties(imgData);
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -135,9 +142,7 @@ export default function CompanionChat(props: CompanionChatProps) {
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     pdf.save(`${title || 'Sohbat'}.pdf`);
 
-    // Restore styles
-    container.style.height = originalHeight;
-    container.style.overflow = originalOverflow;
+    document.body.removeChild(clone);
   };
 
   return (
