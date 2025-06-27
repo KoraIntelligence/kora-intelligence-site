@@ -100,23 +100,23 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🌿 NEW: Save Scroll Handler (Client-side PDF)
+  // 🌿 NEW: Save Scroll Handler (Safe for Static Build)
   const handleSaveScroll = async () => {
-  if (!chatContainerRef.current) return;
+    if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
-  const html2pdf = (await import('html2pdf.js')).default;
+    const html2pdf = (await import('html2pdf.js')).default;
 
-  html2pdf()
-    .from(chatContainerRef.current)
-    .set({
-      margin: 0.5,
-      filename: `${title || 'Sohbat'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-    })
-    .save();
-};
+    html2pdf()
+      .from(chatContainerRef.current)
+      .set({
+        margin: 0.5,
+        filename: `${title || 'Sohbat'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+      })
+      .save();
+  };
 
   return (
     <>
@@ -148,7 +148,6 @@ export default function CompanionChat(props: CompanionChatProps) {
             </div>
           )}
 
-          {/* 🌿 Wrap chat + messages in the ref */}
           <div
             ref={chatContainerRef}
             className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6"
