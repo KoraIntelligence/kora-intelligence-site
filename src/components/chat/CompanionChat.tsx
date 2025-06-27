@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import html2pdf from 'html2pdf.js';
 
 type Message = {
   id: number;
@@ -100,32 +101,20 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🌿 NEW: Save Scroll Handler
-  const handleSaveScroll = async () => {
-    if (messages.length === 0) return;
+  // 🌿 NEW: Save Scroll Handler (Client-side PDF)
+  const handleSaveScroll = () => {
+    if (!chatContainerRef.current) return;
 
-    const res = await fetch('/api/scroll', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        companionSlug,
-        title,
-      }),
-    });
-
-    if (!res.ok) {
-      alert('Failed to save scroll.');
-      return;
-    }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title || 'Sohbat'}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    html2pdf()
+      .from(chatContainerRef.current)
+      .set({
+        margin: 0.5,
+        filename: `${title || 'Sohbat'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+      })
+      .save();
   };
 
   return (
@@ -158,7 +147,11 @@ export default function CompanionChat(props: CompanionChatProps) {
             </div>
           )}
 
-          <div className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6">
+          {/* 🌿 Wrap chat + messages in the ref */}
+          <div
+            ref={chatContainerRef}
+            className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6"
+          >
             {title && (
               <h2 className="text-center text-xl font-ritual text-amber-700 dark:text-amber-400">
                 Speak with {title}
@@ -166,7 +159,6 @@ export default function CompanionChat(props: CompanionChatProps) {
             )}
 
             <div
-              ref={chatContainerRef}
               className="overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
               style={{ height: '450px', scrollBehavior: 'smooth' }}
             >
@@ -224,7 +216,6 @@ export default function CompanionChat(props: CompanionChatProps) {
               </button>
             </form>
 
-            {/* 🌿 NEW: Save as Scroll Button */}
             {messages.length > 0 && (
               <button
                 onClick={handleSaveScroll}
@@ -236,7 +227,11 @@ export default function CompanionChat(props: CompanionChatProps) {
 
             {title && (
               <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
-                Powered by <span className="font-semibold text-amber-700 dark:text-amber-400">{title}</span> • Companion of the Grove
+                Powered by{' '}
+                <span className="font-semibold text-amber-700 dark:text-amber-400">
+                  {title}
+                </span>{' '}
+                • Companion of the Grove
               </div>
             )}
           </div>
