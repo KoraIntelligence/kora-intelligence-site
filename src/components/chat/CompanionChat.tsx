@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import html2pdf from 'html2pdf.js';
 
 type Message = {
   id: number;
@@ -102,20 +101,22 @@ export default function CompanionChat(props: CompanionChatProps) {
   };
 
   // 🌿 NEW: Save Scroll Handler (Client-side PDF)
-  const handleSaveScroll = () => {
-    if (!chatContainerRef.current) return;
+  const handleSaveScroll = async () => {
+  if (!chatContainerRef.current) return;
 
-    html2pdf()
-      .from(chatContainerRef.current)
-      .set({
-        margin: 0.5,
-        filename: `${title || 'Sohbat'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-      })
-      .save();
-  };
+  const html2pdf = (await import('html2pdf.js')).default;
+
+  html2pdf()
+    .from(chatContainerRef.current)
+    .set({
+      margin: 0.5,
+      filename: `${title || 'Sohbat'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+    })
+    .save();
+};
 
   return (
     <>
