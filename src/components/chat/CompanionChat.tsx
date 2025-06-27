@@ -100,6 +100,34 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
+  // 🌿 NEW: Save Scroll Handler
+  const handleSaveScroll = async () => {
+    if (messages.length === 0) return;
+
+    const res = await fetch('/api/scroll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages,
+        companionSlug,
+        title,
+      }),
+    });
+
+    if (!res.ok) {
+      alert('Failed to save scroll.');
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || 'Sohbat'}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       {persistentCTA && !isOpen && (
@@ -195,6 +223,16 @@ export default function CompanionChat(props: CompanionChatProps) {
                 {loading ? 'Summoning...' : 'Send'}
               </button>
             </form>
+
+            {/* 🌿 NEW: Save as Scroll Button */}
+            {messages.length > 0 && (
+              <button
+                onClick={handleSaveScroll}
+                className="text-center text-sm text-amber-700 hover:underline mt-4 block"
+              >
+                📜 Save this Sohbat as a Scroll
+              </button>
+            )}
 
             {title && (
               <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
