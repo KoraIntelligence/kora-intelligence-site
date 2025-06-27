@@ -100,14 +100,25 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🌿 NEW: Save Scroll Handler (Safe for Static Build)
+  // 🌿 NEW: Save Scroll Handler — removes scroll height limit before saving
   const handleSaveScroll = async () => {
     if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
     const html2pdf = (await import('html2pdf.js')).default;
 
+    const container = chatContainerRef.current;
+
+    // Store original styles
+    const originalHeight = container.style.height;
+    const originalOverflow = container.style.overflow;
+
+    // Remove scroll constraints
+    container.style.height = 'auto';
+    container.style.overflow = 'visible';
+
+    // Generate PDF
     html2pdf()
-      .from(chatContainerRef.current)
+      .from(container)
       .set({
         margin: 0.5,
         filename: `${title || 'Sohbat'}.pdf`,
@@ -115,7 +126,12 @@ export default function CompanionChat(props: CompanionChatProps) {
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
       })
-      .save();
+      .save()
+      .finally(() => {
+        // Restore original styles
+        container.style.height = originalHeight;
+        container.style.overflow = originalOverflow;
+      });
   };
 
   return (

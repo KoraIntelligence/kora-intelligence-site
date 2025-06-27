@@ -8,7 +8,7 @@ const assistantMap: Record<string, string> = {
   fmc: 'asst_ElMMOYXEEs2RqLc1zPqDWHqK',
   dreamer: 'asst_YNZOhXEhj1QIam6Ehg4G3wbT',
   alchemist: 'asst_fOy8Tx4GDgaUf7K3NSBtU0Z3',
-  pathbreaker: 'asst_fOy8Tx4GDgaUf7K3NSBtU0Z3',
+  pathbreaker: 'asst_0D8ZsGWJAOMHwitKrMBp6rZa',
   builder: 'asst_1y1exmpzEKy4n6j2AwKtrS3Y',
   cartographer: 'asst_HWxq4UpDd9djjDqVvmELgwQk',
   whisperer: 'asst_F2lkMOpHBfZyATNrQiHITWA1',
