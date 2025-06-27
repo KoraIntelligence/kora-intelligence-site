@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 type Message = {
   id: number;
@@ -100,38 +102,42 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🌿 NEW: Save Scroll Handler — removes scroll height limit before saving
+  // 🌿 NEW: Save Scroll Handler with html2canvas + jsPDF
   const handleSaveScroll = async () => {
-    if (typeof window === 'undefined' || !chatContainerRef.current) return;
+    if (!chatContainerRef.current) return;
 
-    const html2pdf = (await import('html2pdf.js')).default;
+    const container = chatContainerRef.current.querySelector(
+      '.overflow-y-auto'
+    ) as HTMLElement;
 
-    const container = chatContainerRef.current;
+    if (!container) return;
 
-    // Store original styles
+    // Remove height & overflow to capture full scroll area
     const originalHeight = container.style.height;
     const originalOverflow = container.style.overflow;
 
-    // Remove scroll constraints
     container.style.height = 'auto';
     container.style.overflow = 'visible';
 
-    // Generate PDF
-    html2pdf()
-      .from(container)
-      .set({
-        margin: 0.5,
-        filename: `${title || 'Sohbat'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-      })
-      .save()
-      .finally(() => {
-        // Restore original styles
-        container.style.height = originalHeight;
-        container.style.overflow = originalOverflow;
-      });
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${title || 'Sohbat'}.pdf`);
+
+    // Restore styles
+    container.style.height = originalHeight;
+    container.style.overflow = originalOverflow;
   };
 
   return (
