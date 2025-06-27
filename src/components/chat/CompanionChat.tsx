@@ -161,7 +161,7 @@ export default function CompanionChat(props: CompanionChatProps) {
                     }`}
                   >
                     {msg.sender === 'companion' && (
-                      <span className="absolute top-1 right-2 opacity-20 dark:opacity-40">
+                      <span className="absolute top-1 right-2 opacity-30 dark:opacity-60 filter dark:brightness-150">
                         <img
                           src={`/assets/glyphs/glyph-${companionSlug}.png`}
                           alt={`${companionSlug} glyph`}
