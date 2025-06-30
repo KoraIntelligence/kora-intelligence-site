@@ -29,9 +29,10 @@ export default function CompanionChat(props: CompanionChatProps) {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(!persistentCTA);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // 🗝️ Gate: Set session cookie on mount if not present
+  // ✅ Gate: 3 hour session cookie
   useEffect(() => {
     if (!Cookies.get('sohbat_access')) {
       Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3 hours
@@ -109,7 +110,7 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🪶 Save Scroll Handler with no-print safety
+  // ✅ Save Scroll — clean capture, no-print safe
   const handleSaveScroll = async () => {
     if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
@@ -130,6 +131,7 @@ export default function CompanionChat(props: CompanionChatProps) {
         html2canvas: {
           scale: 1,
           svgRendering: true,
+          scrollY: 0,
         },
         jsPDF: {
           unit: 'in',
@@ -149,7 +151,7 @@ export default function CompanionChat(props: CompanionChatProps) {
       });
   };
 
-  // 🌿 Handle Feedback submit
+  // ✅ Feedback submit (just logs for now)
   const handleFeedbackSubmit = () => {
     console.log('Feedback:', feedback);
     alert('Thank you for your feedback!');
@@ -274,7 +276,7 @@ export default function CompanionChat(props: CompanionChatProps) {
             )}
           </div>
 
-          {/* 🌿 Feedback Box BELOW Sohbat */}
+          {/* ✅ Feedback area outside PDF capture */}
           <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700 no-print">
             <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">
               ✍️ Feedback for this Sohbat
