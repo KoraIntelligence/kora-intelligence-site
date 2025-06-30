@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 type Message = {
   id: number;
@@ -32,7 +34,7 @@ export default function CompanionChat(props: CompanionChatProps) {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Gate: 3 hour session cookie
+  // ✅ Gate: 3-hour session cookie
   useEffect(() => {
     if (!Cookies.get('sohbat_access')) {
       Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3 hours
@@ -110,48 +112,31 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // ✅ Save Scroll — clean capture, no-print safe
+  // ✅ Clean Save Scroll Handler (html2canvas + jsPDF)
   const handleSaveScroll = async () => {
     if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
-    const html2pdf = (await import('html2pdf.js')).default;
+    const messagesDiv = chatContainerRef.current.querySelector('.messages');
+    if (!messagesDiv) {
+      console.error('No .messages element found for export.');
+      return;
+    }
 
-    const container = chatContainerRef.current;
-    const originalHeight = container.style.height;
-    const originalOverflow = container.style.overflow;
+    const canvas = await html2canvas(messagesDiv as HTMLElement, {
+      scale: 2,
+      useCORS: true,
+    });
 
-    container.style.height = 'auto';
-    container.style.overflow = 'visible';
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
 
-    html2pdf()
-      .from(container)
-      .set({
-        margin: 0.5,
-        filename: `${title || 'Sohbat'}.pdf`,
-        html2canvas: {
-          scale: 1,
-          svgRendering: true,
-          scrollY: 0,
-        },
-        jsPDF: {
-          unit: 'in',
-          format: 'letter',
-          orientation: 'portrait',
-          font: 'helvetica',
-        },
-        pagebreak: {
-          mode: ['avoid-all'],
-          before: '.no-print',
-        },
-      })
-      .save()
-      .finally(() => {
-        container.style.height = originalHeight;
-        container.style.overflow = originalOverflow;
-      });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${title || 'Sohbat'}.pdf`);
   };
 
-  // ✅ Feedback submit (just logs for now)
   const handleFeedbackSubmit = () => {
     console.log('Feedback:', feedback);
     alert('Thank you for your feedback!');
@@ -198,8 +183,8 @@ export default function CompanionChat(props: CompanionChatProps) {
               </h2>
             )}
 
-            <div
-              className="overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
+            {/* 🗒️ Messages only */}
+            <div className="messages overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
               style={{ height: '450px', scrollBehavior: 'smooth' }}
             >
               {messages.map((msg) =>
@@ -276,7 +261,7 @@ export default function CompanionChat(props: CompanionChatProps) {
             )}
           </div>
 
-          {/* ✅ Feedback area outside PDF capture */}
+          {/* ✅ Feedback below */}
           <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700 no-print">
             <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">
               ✍️ Feedback for this Sohbat
