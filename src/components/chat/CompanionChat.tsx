@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Cookies from 'js-cookie';
 
 type Message = {
   id: number;
@@ -12,7 +13,7 @@ interface CompanionChatProps {
   companionSlug: string;
   title?: string;
   apiPath: string;
-  persistentCTA?: boolean;
+  persistentCTA?: boolean; // Floating CTA toggle
 }
 
 export default function CompanionChat(props: CompanionChatProps) {
@@ -25,20 +26,15 @@ export default function CompanionChat(props: CompanionChatProps) {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(!persistentCTA);
-  const [hasAccess, setHasAccess] = useState(false);
-  const [promoCode, setPromoCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [feedback, setFeedback] = useState('');
-
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // 🔒 Check cookie on mount
+  // 🗝️ Gate: Set session cookie on mount if not present
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const match = document.cookie.match('(^|;)\\s*hasAccess\\s*=\\s*true');
-      if (match) setHasAccess(true);
+    if (!Cookies.get('sohbat_access')) {
+      Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3 hours
     }
   }, []);
 
@@ -51,15 +47,6 @@ export default function CompanionChat(props: CompanionChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const handleLogin = () => {
-    if (promoCode.trim() === 'SECRET123' && email.includes('@')) {
-      document.cookie = 'hasAccess=true; max-age=3600'; // 1 hour expiry
-      setHasAccess(true);
-    } else {
-      alert('Invalid email or code.');
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,13 +109,13 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
+  // 🪶 Save Scroll Handler with no-print safety
   const handleSaveScroll = async () => {
     if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
     const html2pdf = (await import('html2pdf.js')).default;
 
     const container = chatContainerRef.current;
-
     const originalHeight = container.style.height;
     const originalOverflow = container.style.overflow;
 
@@ -162,33 +149,12 @@ export default function CompanionChat(props: CompanionChatProps) {
       });
   };
 
-  if (!hasAccess) {
-    return (
-      <div className="max-w-md mx-auto mt-12 p-6 border rounded-lg shadow-md">
-        <h2 className="text-xl mb-4 font-serif">Enter Sohbat</h2>
-        <input
-          type="email"
-          placeholder="Your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border mb-2 p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Promo code"
-          value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value)}
-          className="w-full border mb-4 p-2 rounded"
-        />
-        <button
-          onClick={handleLogin}
-          className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
-        >
-          Enter
-        </button>
-      </div>
-    );
-  }
+  // 🌿 Handle Feedback submit
+  const handleFeedbackSubmit = () => {
+    console.log('Feedback:', feedback);
+    alert('Thank you for your feedback!');
+    setFeedback('');
+  };
 
   return (
     <>
@@ -209,6 +175,17 @@ export default function CompanionChat(props: CompanionChatProps) {
               : ''
           }`}
         >
+          {persistentCTA && (
+            <div className="flex justify-end mb-1 no-print">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-xs text-amber-500 underline mr-1"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
           <div
             ref={chatContainerRef}
             className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6"
@@ -257,54 +234,64 @@ export default function CompanionChat(props: CompanionChatProps) {
                   </div>
                 )
               )}
+            </div>
 
-              {/* Optional Feedback */}
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Any whispers or reflections?"
-                className="w-full mt-4 p-2 rounded border dark:bg-zinc-800 dark:text-white dark:border-zinc-700 no-print"
+            <form onSubmit={handleSubmit} className="flex gap-3 no-print">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your whisper..."
+                className="flex-1 px-4 py-2 border rounded shadow-inner bg-white dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
+                disabled={loading}
               />
-            </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+              >
+                {loading ? 'Summoning...' : 'Send'}
+              </button>
+            </form>
 
-            <div className="no-print">
-              <form onSubmit={handleSubmit} className="flex gap-3 mt-4">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your whisper..."
-                  className="flex-1 px-4 py-2 border rounded shadow-inner bg-white dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
-                  disabled={loading}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
-                >
-                  {loading ? 'Summoning...' : 'Send'}
-                </button>
-              </form>
+            {messages.length > 0 && (
+              <button
+                onClick={handleSaveScroll}
+                className="text-center text-sm text-amber-700 hover:underline mt-4 block no-print"
+              >
+                📜 Save this Sohbat as a Scroll
+              </button>
+            )}
 
-              {messages.length > 0 && (
-                <button
-                  onClick={handleSaveScroll}
-                  className="text-center text-sm text-amber-700 hover:underline mt-4 block"
-                >
-                  📜 Save this Sohbat as a Scroll
-                </button>
-              )}
+            {title && (
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
+                Powered by{' '}
+                <span className="font-semibold text-amber-700 dark:text-amber-400">
+                  {title}
+                </span>{' '}
+                • Companion of the Grove
+              </div>
+            )}
+          </div>
 
-              {title && (
-                <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
-                  Powered by{' '}
-                  <span className="font-semibold text-amber-700 dark:text-amber-400">
-                    {title}
-                  </span>{' '}
-                  • Companion of the Grove
-                </div>
-              )}
-            </div>
+          {/* 🌿 Feedback Box BELOW Sohbat */}
+          <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700 no-print">
+            <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">
+              ✍️ Feedback for this Sohbat
+            </h3>
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Leave your thoughts..."
+              rows={2}
+              className="w-full p-2 rounded border border-gray-300 dark:border-zinc-600"
+            />
+            <button
+              onClick={handleFeedbackSubmit}
+              className="mt-2 bg-amber-700 text-white px-4 py-1 rounded hover:bg-amber-800 transition"
+            >
+              Submit Feedback
+            </button>
           </div>
         </div>
       )}
