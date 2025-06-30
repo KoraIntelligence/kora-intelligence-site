@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 type Message = {
   id: number;
@@ -29,7 +27,28 @@ export default function CompanionChat(props: CompanionChatProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(!persistentCTA);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [email, setEmail] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Check if user already unlocked Sohbat
+    const allowed = localStorage.getItem('sohbat_access');
+    if (allowed === 'true') {
+      setIsUnlocked(true);
+    }
+  }, []);
+
+  const handleUnlock = () => {
+    if (promoCode.trim() === 'PATHSGROVE2024') {
+      localStorage.setItem('sohbat_access', 'true');
+      setIsUnlocked(true);
+    } else {
+      alert('Invalid promo code — try again.');
+    }
+  };
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -102,55 +121,82 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // 🌿 NEW: Save Scroll Handler with hidden clone
+  // 🌿 Save Scroll Handler — optimised for file size
   const handleSaveScroll = async () => {
-    if (!chatContainerRef.current) return;
+    if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
-    const original = chatContainerRef.current.querySelector(
-      '.overflow-y-auto'
-    ) as HTMLElement;
+    const html2pdf = (await import('html2pdf.js')).default;
 
-    if (!original) return;
+    const container = chatContainerRef.current;
 
-    // Clone the container
-    const clone = original.cloneNode(true) as HTMLElement;
+    const originalHeight = container.style.height;
+    const originalOverflow = container.style.overflow;
 
-    // Remove scroll constraints
-    clone.style.height = 'auto';
-    clone.style.overflow = 'visible';
+    container.style.height = 'auto';
+    container.style.overflow = 'visible';
 
-    // Hide off-screen
-    clone.style.position = 'absolute';
-    clone.style.left = '-9999px';
-    clone.style.top = '0';
-
-    document.body.appendChild(clone);
-
-    const canvas = await html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${title || 'Sohbat'}.pdf`);
-
-    document.body.removeChild(clone);
+    html2pdf()
+      .from(container)
+      .set({
+        margin: 0.5,
+        filename: `${title || 'Sohbat'}.pdf`,
+        html2canvas: {
+          scale: 1,
+          svgRendering: true,
+        },
+        jsPDF: {
+          unit: 'in',
+          format: 'letter',
+          orientation: 'portrait',
+          font: 'helvetica',
+        },
+        pagebreak: {
+          mode: ['avoid-all'],
+          before: '.no-print',
+        },
+      })
+      .save()
+      .finally(() => {
+        container.style.height = originalHeight;
+        container.style.overflow = originalOverflow;
+      });
   };
+
+  // 🌿 If not unlocked, show the gate
+  if (!isUnlocked) {
+    return (
+      <div className="p-6 rounded-xl bg-white/90 dark:bg-zinc-800 border border-amber-200 text-center space-y-4">
+        <p className="text-lg font-serif">🌿 This Sohbat is for invited Seekers only.</p>
+        <input
+          type="email"
+          placeholder="Your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="block w-full mt-2 px-4 py-2 border rounded shadow-inner bg-white dark:bg-zinc-700"
+        />
+        <input
+          type="text"
+          placeholder="Promo code"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value)}
+          className="block w-full mt-2 px-4 py-2 border rounded shadow-inner bg-white dark:bg-zinc-700"
+        />
+        <button
+          onClick={handleUnlock}
+          className="mt-4 bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+        >
+          Enter the Grove →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
       {persistentCTA && !isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full shadow-lg transition"
+          className="fixed bottom-6 right-6 z-40 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full shadow-lg transition no-print"
         >
           Speak with a Companion
         </button>
@@ -165,7 +211,7 @@ export default function CompanionChat(props: CompanionChatProps) {
           }`}
         >
           {persistentCTA && (
-            <div className="flex justify-end mb-1">
+            <div className="flex justify-end mb-1 no-print">
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-xs text-amber-500 underline mr-1"
@@ -225,7 +271,7 @@ export default function CompanionChat(props: CompanionChatProps) {
               )}
             </div>
 
-            <form onSubmit={handleSubmit} className="flex gap-3">
+            <form onSubmit={handleSubmit} className="flex gap-3 no-print">
               <input
                 type="text"
                 value={input}
@@ -246,7 +292,7 @@ export default function CompanionChat(props: CompanionChatProps) {
             {messages.length > 0 && (
               <button
                 onClick={handleSaveScroll}
-                className="text-center text-sm text-amber-700 hover:underline mt-4 block"
+                className="text-center text-sm text-amber-700 hover:underline mt-4 block no-print"
               >
                 📜 Save this Sohbat as a Scroll
               </button>
