@@ -34,10 +34,15 @@ export default function CompanionChat(props: CompanionChatProps) {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Gate: 3-hour session cookie
+  // ✅ Hybrid Gate: Session cookie + expiry timestamp
   useEffect(() => {
-    if (!Cookies.get('sohbat_access')) {
-      Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3 hours
+    const cookie = Cookies.get('sohbat_access');
+    const expiry = localStorage.getItem('sohbat_expiry');
+    const now = Date.now();
+
+    if (!cookie || !expiry || now > parseInt(expiry)) {
+      Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // 3 hours
+      localStorage.setItem('sohbat_expiry', `${now + 3 * 60 * 60 * 1000}`);
     }
   }, []);
 
@@ -84,9 +89,7 @@ export default function CompanionChat(props: CompanionChatProps) {
       });
 
       const data = await res.json();
-      const replyText = res.ok
-        ? data.reply
-        : '⚠️ The Companion fell silent. Please try again.';
+      const replyText = res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.';
 
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
@@ -183,7 +186,6 @@ export default function CompanionChat(props: CompanionChatProps) {
               </h2>
             )}
 
-            {/* 🗒️ Messages only */}
             <div className="messages overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
               style={{ height: '450px', scrollBehavior: 'smooth' }}
             >
