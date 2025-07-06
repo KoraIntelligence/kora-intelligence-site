@@ -15,16 +15,16 @@ interface CompanionChatProps {
   companionSlug: string;
   title?: string;
   apiPath: string;
-  persistentCTA?: boolean; // Floating CTA toggle
+  persistentCTA?: boolean;
 }
 
 export default function CompanionChat(props: CompanionChatProps) {
-  const {
-    companionSlug,
-    title,
-    apiPath,
-    persistentCTA = false,
-  } = props;
+  const { companionSlug, title, apiPath, persistentCTA = false } = props;
+
+  // 🗝️ Gate state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [email, setEmail] = useState('');
+  const [promoCode, setPromoCode] = useState('');
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -34,17 +34,27 @@ export default function CompanionChat(props: CompanionChatProps) {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Hybrid Gate: Session cookie + expiry timestamp
+  // 🌿 Check session gate
   useEffect(() => {
-    const cookie = Cookies.get('sohbat_access');
-    const expiry = localStorage.getItem('sohbat_expiry');
-    const now = Date.now();
-
-    if (!cookie || !expiry || now > parseInt(expiry)) {
-      Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // 3 hours
-      localStorage.setItem('sohbat_expiry', `${now + 3 * 60 * 60 * 1000}`);
+    const access = Cookies.get('sohbat_access');
+    if (access) {
+      setIsLoggedIn(true);
     }
   }, []);
+
+  const handleLogin = () => {
+    const promoValid = promoCode.trim().toUpperCase() === 'KORA2024';
+    const emailValid = email.includes('@') && email.includes('.');
+
+    if (promoValid && emailValid) {
+      Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3h
+      localStorage.setItem('sohbat_expiry', Date.now().toString());
+      setIsLoggedIn(true);
+      alert('Access granted. Welcome to the Sohbat.');
+    } else {
+      alert('Invalid email or promo code.');
+    }
+  };
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -89,7 +99,9 @@ export default function CompanionChat(props: CompanionChatProps) {
       });
 
       const data = await res.json();
-      const replyText = res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.';
+      const replyText = res.ok
+        ? data.reply
+        : '⚠️ The Companion fell silent. Please try again.';
 
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
@@ -115,13 +127,13 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // ✅ Clean Save Scroll Handler (html2canvas + jsPDF)
+  // ✅ Save as Scroll
   const handleSaveScroll = async () => {
     if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
     const messagesDiv = chatContainerRef.current.querySelector('.messages');
     if (!messagesDiv) {
-      console.error('No .messages element found for export.');
+      console.error('No .messages element found.');
       return;
     }
 
@@ -132,7 +144,6 @@ export default function CompanionChat(props: CompanionChatProps) {
 
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
-
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
@@ -145,6 +156,37 @@ export default function CompanionChat(props: CompanionChatProps) {
     alert('Thank you for your feedback!');
     setFeedback('');
   };
+
+  // 🌙 Gated Ritual
+  if (!isLoggedIn) {
+    return (
+      <div className="max-w-md mx-auto p-6 bg-white dark:bg-zinc-900 border border-amber-100 dark:border-zinc-700 rounded-lg shadow space-y-4">
+        <h2 className="text-xl font-ritual text-amber-700 dark:text-amber-400 text-center">
+          Sohbat Ritual Gate
+        </h2>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Your email"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-zinc-800 dark:border-zinc-600"
+        />
+        <input
+          type="text"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value)}
+          placeholder="Promo Code"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-zinc-800 dark:border-zinc-600"
+        />
+        <button
+          onClick={handleLogin}
+          className="w-full bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+        >
+          Enter Sohbat →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -191,16 +233,12 @@ export default function CompanionChat(props: CompanionChatProps) {
             >
               {messages.map((msg) =>
                 msg.sender === 'system' ? (
-                  <p
-                    key={msg.id}
-                    className="text-xs font-system text-zinc-500 flex items-center gap-1"
-                  >
+                  <p key={msg.id} className="text-xs font-system text-zinc-500 flex items-center gap-1">
                     <Image src="/icons/scroll.svg" alt="scroll" width={16} height={16} />
                     {msg.content}
                   </p>
                 ) : (
-                  <div
-                    key={msg.id}
+                  <div key={msg.id}
                     className={`relative p-3 rounded-lg text-sm font-serif whitespace-pre-wrap ${
                       msg.sender === 'user'
                         ? 'bg-amber-100 text-gray-800 text-right dark:bg-amber-200'
@@ -263,7 +301,6 @@ export default function CompanionChat(props: CompanionChatProps) {
             )}
           </div>
 
-          {/* ✅ Feedback below */}
           <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700 no-print">
             <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">
               ✍️ Feedback for this Sohbat
