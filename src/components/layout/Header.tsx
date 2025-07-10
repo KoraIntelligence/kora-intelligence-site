@@ -5,22 +5,27 @@ import ThemeToggle from '../ui/ThemeToggle';
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <header className="bg-white dark:bg-gray-900 shadow">
       <div className="flex justify-between items-center p-4 max-w-6xl mx-auto">
-        <div className="flex items-center space-x-3">
+        {/* 🔗 Logo + Title wrapped in a single Link */}
+        <Link href="/" className="flex items-center space-x-3 group">
           <Image
             src="/kora-logo.png"
             alt="Kora Intelligence logo"
             width={32}
             height={32}
+            className="transition-transform group-hover:scale-105"
           />
-          <span className="text-lg font-serif text-gray-900 dark:text-white">
+          <span className="text-lg font-serif font-bold tracking-wide text-gray-900 dark:text-white">
             Kora Intelligence
           </span>
-        </div>
+        </Link>
+
         <div className="flex items-center space-x-4">
           <ThemeToggle />
+
           <button
             className="sm:hidden text-gray-800 dark:text-gray-200"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -36,7 +41,8 @@ export default function Header() {
               </svg>
             )}
           </button>
-          <div className="hidden sm:flex space-x-6 text-sm font-medium text-gray-800 dark:text-gray-200">
+
+          <div className="hidden sm:flex space-x-6 text-sm font-semibold text-gray-800 dark:text-gray-200">
             <Link href="/">Home</Link>
             <Link href="/our-story">Our Story</Link>
             <Link href="/companions">Meet the Companions</Link>
@@ -51,9 +57,10 @@ export default function Header() {
           </div>
         </div>
       </div>
+
       {mobileOpen && (
         <nav className="sm:hidden px-4 pb-4" aria-label="Mobile navigation">
-          <ul className="space-y-4 text-gray-800 dark:text-gray-200 text-sm font-medium">
+          <ul className="space-y-4 text-gray-800 dark:text-gray-200 text-sm font-semibold">
             <li><Link href="/">Home</Link></li>
             <li><Link href="/our-story">Our Story</Link></li>
             <li><Link href="/companions">Meet the Companions</Link></li>
