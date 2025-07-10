@@ -15,13 +15,12 @@ interface CompanionChatProps {
   companionSlug: string;
   title?: string;
   apiPath: string;
-  persistentCTA?: boolean;
+  persistentCTA?: boolean; // Floating CTA toggle
 }
 
 export default function CompanionChat(props: CompanionChatProps) {
   const { companionSlug, title, apiPath, persistentCTA = false } = props;
 
-  // 🗝️ Gate state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [promoCode, setPromoCode] = useState('');
@@ -34,7 +33,7 @@ export default function CompanionChat(props: CompanionChatProps) {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // 🌿 Check session gate
+  // 🔑 Check cookie gate
   useEffect(() => {
     const access = Cookies.get('sohbat_access');
     if (access) {
@@ -48,7 +47,6 @@ export default function CompanionChat(props: CompanionChatProps) {
 
     if (promoValid && emailValid) {
       Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3h
-      localStorage.setItem('sohbat_expiry', Date.now().toString());
       setIsLoggedIn(true);
       alert('Access granted. Welcome to the Sohbat.');
     } else {
@@ -127,7 +125,7 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  // ✅ Save as Scroll
+  // ✅ Save Scroll — html2canvas + jsPDF
   const handleSaveScroll = async () => {
     if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
@@ -157,11 +155,11 @@ export default function CompanionChat(props: CompanionChatProps) {
     setFeedback('');
   };
 
-  // 🌙 Gated Ritual
+  // 🕯️ Gate Ritual
   if (!isLoggedIn) {
     return (
-      <div className="max-w-md mx-auto p-6 bg-white dark:bg-zinc-900 border border-amber-100 dark:border-zinc-700 rounded-lg shadow space-y-4">
-        <h2 className="text-xl font-ritual text-amber-700 dark:text-amber-400 text-center">
+      <div className="max-w-md mx-auto p-6 bg-grain dark:bg-dark border border-bronze rounded-lg shadow space-y-4">
+        <h2 className="text-xl font-ritual text-dusk dark:text-scroll text-center">
           Sohbat Ritual Gate
         </h2>
         <input
@@ -169,14 +167,14 @@ export default function CompanionChat(props: CompanionChatProps) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-zinc-800 dark:border-zinc-600"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
         />
         <input
           type="text"
           value={promoCode}
           onChange={(e) => setPromoCode(e.target.value)}
           placeholder="Promo Code"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-zinc-800 dark:border-zinc-600"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
         />
         <button
           onClick={handleLogin}
@@ -220,15 +218,15 @@ export default function CompanionChat(props: CompanionChatProps) {
 
           <div
             ref={chatContainerRef}
-            className="bg-gradient-to-br from-white/80 to-amber-50/20 ring-1 ring-amber-100/20 rounded-xl shadow-md p-6 space-y-6"
+            className="bg-grain dark:bg-grove text-gray-800 dark:text-scroll border border-amber-100 dark:border-bronze rounded-xl shadow-md p-6 space-y-6"
           >
             {title && (
-              <h2 className="text-center text-xl font-ritual text-amber-700 dark:text-amber-400">
+              <h2 className="text-center text-xl font-ritual text-dusk dark:text-scroll">
                 Speak with {title}
               </h2>
             )}
 
-            <div className="messages overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700"
+            <div className="messages overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-grove border border-amber-100 dark:border-bronze"
               style={{ height: '450px', scrollBehavior: 'smooth' }}
             >
               {messages.map((msg) =>
@@ -242,7 +240,7 @@ export default function CompanionChat(props: CompanionChatProps) {
                     className={`relative p-3 rounded-lg text-sm font-serif whitespace-pre-wrap ${
                       msg.sender === 'user'
                         ? 'bg-amber-100 text-gray-800 text-right dark:bg-amber-200'
-                        : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-zinc-700 dark:border-amber-500 dark:text-gray-100'
+                        : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-grove dark:border-bronze dark:text-scroll'
                     }`}
                   >
                     {msg.sender === 'companion' && (
@@ -255,7 +253,7 @@ export default function CompanionChat(props: CompanionChatProps) {
                       </span>
                     )}
                     <p>{msg.content}</p>
-                    <span className="block text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    <span className="block text-xs text-gray-600 dark:text-scroll mt-1">
                       {msg.timestamp}
                     </span>
                   </div>
@@ -269,7 +267,7 @@ export default function CompanionChat(props: CompanionChatProps) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your whisper..."
-                className="flex-1 px-4 py-2 border rounded shadow-inner bg-white dark:bg-zinc-800 dark:text-white dark:border-zinc-700"
+                className="flex-1 px-4 py-2 border rounded shadow-inner bg-white dark:bg-dark dark:text-scroll dark:border-bronze"
                 disabled={loading}
               />
               <button
@@ -291,9 +289,9 @@ export default function CompanionChat(props: CompanionChatProps) {
             )}
 
             {title && (
-              <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
+              <div className="text-center text-xs text-gray-500 dark:text-scroll mt-4">
                 Powered by{' '}
-                <span className="font-semibold text-amber-700 dark:text-amber-400">
+                <span className="font-semibold text-amber-700 dark:text-bronze">
                   {title}
                 </span>{' '}
                 • Companion of the Grove
@@ -301,8 +299,8 @@ export default function CompanionChat(props: CompanionChatProps) {
             )}
           </div>
 
-          <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-zinc-800 border border-amber-100 dark:border-zinc-700 no-print">
-            <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">
+          <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-dark border border-amber-100 dark:border-bronze no-print">
+            <h3 className="text-sm font-semibold text-amber-700 dark:text-bronze mb-2">
               ✍️ Feedback for this Sohbat
             </h3>
             <textarea
@@ -310,7 +308,7 @@ export default function CompanionChat(props: CompanionChatProps) {
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Leave your thoughts..."
               rows={2}
-              className="w-full p-2 rounded border border-gray-300 dark:border-zinc-600"
+              className="w-full p-2 rounded border border-gray-300 dark:border-bronze"
             />
             <button
               onClick={handleFeedbackSubmit}
