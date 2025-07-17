@@ -7,9 +7,18 @@ import { companions, Companion } from '@/data/companions';
 export default function CompanionGrove() {
   return (
     <section
-      aria-label="Companion Grid"
+      aria-label="Meet the Companions"
       className="bg-neutral-50 dark:bg-gray-900 pt-24 pb-32 px-6 sm:px-12 transition-colors ease-in-out duration-500"
     >
+      <div className="max-w-3xl mx-auto text-center mb-12 space-y-4">
+        <h2 className="text-3xl sm:text-4xl font-ritual text-gray-900 dark:text-gray-100">
+          Meet Your Companion
+        </h2>
+        <p className="text-md sm:text-lg font-serif text-gray-700 dark:text-gray-300">
+          Each Companion supports a distinct path — from grant writing and brand tone to financial planning.
+        </p>
+      </div>
+
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {Object.values(companions).map((companion: Companion) => (
           <Link
@@ -19,11 +28,10 @@ export default function CompanionGrove() {
           >
             <Image
               src={`/assets/glyphs/glyph-${companion.slug}.png`}
-              alt={`${companion.title} glyph`}
+              alt={`${companion.title} – AI Companion glyph`}
               width={128}
               height={128}
               className="mx-auto mb-3 rounded-full"
-
             />
             <h3 className="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
               {companion.title}
@@ -36,6 +44,7 @@ export default function CompanionGrove() {
           </Link>
         ))}
       </div>
+
       <CompanionEngineCTA />
     </section>
   );

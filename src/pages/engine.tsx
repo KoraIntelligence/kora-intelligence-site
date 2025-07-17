@@ -9,6 +9,7 @@ export default function CompanionEngine() {
   const [formData, setFormData] = useState({ journey: '', need: [] as string[], feel: '' });
   const [whisper, setWhisper] = useState<string | null>(null);
   const [matchedSlugs, setMatchedSlugs] = useState<string[]>([]);
+  const [primaryCompanion, setPrimaryCompanion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +46,15 @@ export default function CompanionEngine() {
         .filter(c => scroll.toLowerCase().includes(c.title.toLowerCase()))
         .map(c => c.slug);
       setMatchedSlugs(mentioned);
+
+      const suggestionMatch = scroll.match(/Companion Suggested: ([\w\s]+)/);
+      const primarySlug = suggestionMatch
+        ? Object.values(companions).find(c =>
+            suggestionMatch[1].toLowerCase().includes(c.title.toLowerCase())
+          )?.slug
+        : null;
+
+      setPrimaryCompanion(primarySlug || null);
     } catch (err) {
       console.error(err);
       setError('Something went wrong retrieving the scroll.');
@@ -128,10 +138,14 @@ export default function CompanionEngine() {
                   className="mt-1 w-full px-4 py-2 rounded border border-gray-300 h-40 dark:bg-zinc-900 dark:border-zinc-600"
                 >
                   {[
-                    "Funding Strategy", "Grant Support", "Pricing Clarity", "Brand Tone", "Structural Clarity",
-                    "Vision Work", "Investor Fit / Exit Planning", "Narrative Development", "Storytelling Support",
-                    "Proposal Crafting", "Interface/UX", "Dispatch / Zine Creation", "Team Alignment",
-                    "Ethical Framing", "Emotional Clarity"
+                    "Funding Clarity and Grant Navigation",
+                    "Pricing Confidence & Value Mapping",
+                    "Brand Tone & Voice Alignment",
+                    "Storytelling & Narrative Craft",
+                    "Interface & Ritual Design",
+                    "Team Alignment & Structural Clarity",
+                    "Emotional Pulse & Reflection",
+                    "Strategic Invention & System Architecture"
                   ].map(option => (
                     <option key={option} value={option}>{option}</option>
                   ))}
@@ -168,13 +182,25 @@ export default function CompanionEngine() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="relative bg-[url('/assets/textures/paper-grain.png')] bg-cover bg-center border border-amber-300 dark:border-amber-600 p-8 rounded-lg shadow-lg font-scroll text-gray-800 dark:text-gray-100 space-y-4 scroll-reveal"
+              className="relative bg-[url('/assets/textures/parchment-soft.png')] bg-contain bg-top bg-no-repeat border border-amber-200 dark:border-amber-600 p-8 rounded-lg shadow-md font-scroll text-gray-800 dark:text-gray-100 space-y-4"
             >
-              {whisper.split('\n').map((line, idx) => (
-                <p key={idx} className={idx === 0 ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2' : 'italic'}>
-                  {line}
-                </p>
-              ))}
+              {whisper.split('\n').map((line, idx) => {
+                const isSuggestion = line.includes('Companion Suggested: ');
+                return (
+                  <p
+                    key={idx}
+                    className={
+                      isSuggestion
+                        ? 'text-lg font-semibold text-amber-700 dark:text-amber-400 mt-4'
+                        : idx === 0
+                        ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2'
+                        : 'italic'
+                    }
+                  >
+                    {line}
+                  </p>
+                );
+              })}
 
               {matchedSlugs.length > 0 && (
                 <div className="mt-8 space-y-4">
@@ -184,9 +210,14 @@ export default function CompanionEngine() {
                       const c = companions[slug];
                       if (!c) return null;
                       return (
-                        <div key={slug} className="bg-white/90 dark:bg-zinc-900 border border-amber-200 dark:border-amber-700 rounded-lg p-4 shadow-md text-center space-y-2">
+                        <div key={slug} className={`bg-white/90 dark:bg-zinc-900 border rounded-lg p-4 shadow text-center space-y-2 ${
+                          primaryCompanion === slug ? 'border-amber-500 dark:border-amber-400' : 'border-amber-200 dark:border-zinc-700'
+                        }`}>
                           <img src={`/assets/glyphs/glyph-${slug}.png`} alt={`${c.title} glyph`} className="h-12 w-12 mx-auto opacity-90" />
-                          <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{c.title}</h5>
+                          <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                            {c.title}
+                            {primaryCompanion === slug && <span className="ml-1 text-amber-500 font-bold">★</span>}
+                          </h5>
                           <a
                             href={`/companions/${slug}`}
                             className="inline-block bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
