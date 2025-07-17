@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
-import SuggestedCompanions, { CompanionSuggestion } from '@/components/engine/SuggestedCompanions';
 import { companions } from '@/data/companions';
 
 export default function CompanionEngine() {
@@ -23,52 +22,48 @@ export default function CompanionEngine() {
     }
   };
 
-const sendToKainat = async () => {
-  setLoading(true);
-  setError(null);
+  const sendToKainat = async () => {
+    setLoading(true);
+    setError(null);
 
-  try {
-    const res = await fetch('/api/kainat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        journey: formData.journey,
-        support: formData.need,
-        feeling: formData.feel,
-      }),
-    });
+    try {
+      const res = await fetch('/api/kainat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journey: formData.journey,
+          support: formData.need,
+          feeling: formData.feel,
+        }),
+      });
 
-    const data = await res.json();
-    const scroll = data.scroll || 'No scroll returned.';
-    setWhisper(scroll);
+      const data = await res.json();
+      const scroll = data.scroll || 'No scroll returned.';
+      setWhisper(scroll);
 
-    const mentioned = Object.values(companions)
-      .filter(c =>
-        scroll.toLowerCase().includes(c.title.toLowerCase())
-      )
-      .map(c => c.slug);
+      const mentioned = Object.values(companions)
+        .filter(c => scroll.toLowerCase().includes(c.title.toLowerCase()))
+        .map(c => c.slug);
+      setMatchedSlugs(mentioned);
 
-    setMatchedSlugs(mentioned);
+      const suggestionMatches = [...scroll.matchAll(/Companion Suggested: ([\w\s\-]+)/g)];
+      const suggestedTitles = suggestionMatches.map(match => match[1]?.trim().replace(/[^\w\s\-]/g, ''));
+      const suggestedSlug = suggestedTitles
+        .map(title =>
+          Object.values(companions).find(c =>
+            title.toLowerCase().includes(c.title.toLowerCase())
+          )?.slug
+        )
+        .find(Boolean);
 
-    const suggestionMatches = [...scroll.matchAll(/Companion Suggested: ([\w\s\-]+)/g)];
-    const suggestedTitles = suggestionMatches.map(match => match[1]?.trim().replace(/[^\w\s\-]/g, ''));
-
-    const suggestedSlug = suggestedTitles
-      .map(title =>
-        Object.values(companions).find(c =>
-          title.toLowerCase().includes(c.title.toLowerCase())
-        )?.slug
-      )
-      .find(Boolean); // First valid match
-
-    setPrimaryCompanion(suggestedSlug || null);
-  } catch (err) {
-    console.error(err);
-    setError('Something went wrong retrieving the scroll.');
-  } finally {
-    setLoading(false);
-  }
-};
+      setPrimaryCompanion(suggestedSlug || null);
+    } catch (err) {
+      console.error(err);
+      setError('Something went wrong retrieving the scroll.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = () => {
     sendToKainat();
@@ -185,74 +180,47 @@ const sendToKainat = async () => {
         {error && <p className="text-center text-red-600 mt-6">{error}</p>}
 
         {whisper && (
-  <div className="max-w-3xl mx-auto mt-8">
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="relative bg-[url('/assets/textures/parchment-soft.png')] bg-contain bg-top bg-no-repeat border border-amber-200 dark:border-amber-600 p-8 rounded-lg shadow-md font-scroll text-gray-800 dark:text-gray-100 space-y-4"
-    >
-      {whisper.split('\n').map((line, idx) => {
-        const isSuggestion = line.includes('Companion Suggested: ');
-        return (
-          <p
-            key={idx}
-            className={
-              isSuggestion
-                ? 'text-lg font-semibold text-amber-700 dark:text-amber-400 mt-4'
-                : idx === 0
-                ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2'
-                : 'italic'
-            }
-          >
-            {line}
-          </p>
-        );
-      })}
-
-      {matchedSlugs.length > 0 && (
-        <div className="mt-8 space-y-4">
-          <h4 className="text-lg font-medium text-center text-amber-700 dark:text-amber-400">
-            Those named in the scroll:
-          </h4>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {matchedSlugs.map(slug => {
-              const c = companions[slug];
-              if (!c) return null;
-              return (
-                <div
-                  key={slug}
-                  className={`bg-white/90 dark:bg-zinc-900 border rounded-lg p-4 shadow text-center space-y-2 ${
-                    primaryCompanion === slug
-                      ? 'border-amber-500 dark:border-amber-400'
-                      : 'border-amber-200 dark:border-zinc-700'
-                  }`}
-                >
-                  <img
-                    src={`/assets/glyphs/glyph-${slug}.png`}
-                    alt={`${c.title} glyph`}
-                    className="h-12 w-12 mx-auto opacity-90"
-                  />
-                  <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                    {c.title}
-                    {primaryCompanion === slug && (
-                      <span className="ml-1 text-amber-500 font-bold">★</span>
-                    )}
-                  </h5>
-                  <a
-                    href={`/companions/${slug}`}
-                    className="inline-block bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
+          <div className="max-w-3xl mx-auto mt-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="relative bg-[url('/assets/textures/parchment-soft.png')] bg-contain bg-top bg-no-repeat border border-amber-200 dark:border-amber-600 p-8 rounded-lg shadow-md font-scroll text-gray-800 dark:text-gray-100 space-y-4"
+            >
+              {whisper.split('\n').map((line, idx) => {
+                const isSuggestion = line.includes('Companion Suggested: ');
+                return (
+                  <p
+                    key={idx}
+                    className={
+                      isSuggestion
+                        ? 'text-lg font-semibold text-amber-700 dark:text-amber-400 mt-4'
+                        : idx === 0
+                          ? 'text-xl sm:text-2xl font-semibold text-amber-700 dark:text-amber-400 mb-2'
+                          : 'italic'
+                    }
                   >
-                    Meet {c.title}
-                  </a>
-                </div>
-              );
-            })}
+                    {line}
+                  </p>
+                );
+              })}
+
+              <div className="mt-8 text-center space-y-4">
+                <h4 className="text-lg font-medium text-amber-700 dark:text-amber-400">
+                  Your scroll has named the Companions.
+                </h4>
+                <p className="text-base text-gray-700 dark:text-gray-300 max-w-prose mx-auto italic">
+                  Step into the Grove to meet them. Each Companion awaits with a voice and presence of their own.
+                </p>
+                <a
+                  href="/companions"
+                  className="inline-block bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-md transition font-medium"
+                >
+                  Meet the Companions →
+                </a>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
-    </motion.div>
-  </div>
-)}
+        )}
       </main>
     </>
   );
