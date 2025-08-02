@@ -14,6 +14,6 @@ export const Dispatch = defineDocumentType(() => ({
 }));
 
 export default makeSource({
-  contentDirPath: 'content/dispatch', // 👈 updated folder name
+  contentDirPath: 'content', // 👈 updated folder name
   documentTypes: [Dispatch],
 });
