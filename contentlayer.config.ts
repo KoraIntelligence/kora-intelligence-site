@@ -5,7 +5,7 @@ import { defineDocumentType, makeSource } from 'contentlayer/source-files';
 
 export const Dispatch = defineDocumentType(() => ({
   name: 'Dispatch',
-  filePathPattern: `dispatch/*.mdx`,
+  filePathPattern: `dispatches/*.mdx`,
   contentType: 'mdx',
   fields: {
     title: { type: 'string', required: true },
@@ -20,7 +20,7 @@ export default makeSource({
   contentDirPath: 'content',
   documentTypes: [Dispatch],
   mdx: {
-    remarkPlugins: [[remarkGfm]],
-    rehypePlugins: [[rehypePrettyCode]],
+    remarkPlugins: [[remarkGfm]] as any,
+    rehypePlugins: [[rehypePrettyCode]] as any,
   },
 });
