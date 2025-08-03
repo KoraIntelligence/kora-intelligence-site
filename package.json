@@ -24,7 +24,9 @@
     "openai": "^5.3.0",
     "react": "latest",
     "react-dom": "latest",
-    "react-simple-typewriter": "^2.0.5"
+    "react-simple-typewriter": "^2.0.5",
+    "rehype-pretty-code": "^0.14.1",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",

@@ -1,3 +1,7 @@
+// @ts-expect-error: no types available 
+import rehypePrettyCode from 'rehype-pretty-code';
+// @ts-expect-error: no types available
+import remarkGfm from 'remark-gfm';
 import { defineDocumentType, makeSource } from 'contentlayer/source-files';
 
 export const Dispatch = defineDocumentType(() => ({
@@ -14,6 +18,10 @@ export const Dispatch = defineDocumentType(() => ({
 }));
 
 export default makeSource({
-  contentDirPath: 'content', // 👈 updated folder name
+  contentDirPath: 'content',
   documentTypes: [Dispatch],
+  mdx: {
+    remarkPlugins: [[remarkGfm]],
+    rehypePlugins: [[rehypePrettyCode]],
+  },
 });
