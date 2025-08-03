@@ -5,7 +5,7 @@ import { defineDocumentType, makeSource } from 'contentlayer/source-files';
 
 export const Dispatch = defineDocumentType(() => ({
   name: 'Dispatch',
-  filePathPattern: `dispatches/*.mdx`,
+  filePathPattern: `dispatch/*.mdx`,
   contentType: 'mdx',
   fields: {
     title: { type: 'string', required: true },
