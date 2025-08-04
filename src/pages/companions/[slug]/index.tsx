@@ -2,7 +2,6 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { companions } from '@/data/companions';
 import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
-import CompanionInvocation from '@/components/companions/CompanionInvocation';
 import CompanionRitual from '@/components/invocation/CompanionRitual';
 
 export default function CompanionPage() {
@@ -29,14 +28,7 @@ export default function CompanionPage() {
         {['ccc', 'fmc', 'builder'].includes(companion.slug) && (
           <CompanionRitual companion={companion} />
         )}
-        {companion.mode === 'hybrid' && companion.questions && companion.webhookUrl && (
-          <CompanionInvocation
-            companionSlug={companion.slug}
-            companionTitle={companion.title}
-            webhookUrl={companion.webhookUrl!}
-            questions={companion.questions}
-          />
-        )}
+        {/* Removed empty conditional block that caused error */}
         {companion.mode === 'hybrid' && (
           <section>
             <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Whisper with {companion.title}</h2>
@@ -50,12 +42,7 @@ export default function CompanionPage() {
           <section className="space-y-8">
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
-              <CompanionInvocation
-                companionSlug={companion.slug}
-                companionTitle={companion.title}
-                webhookUrl={companion.webhookUrl!}
-                questions={companion.questions || []}
-              />
+
             </div>
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Chat with {companion.title}</h2>
