@@ -1,18 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
-// Define message type
-export type Message = {
+interface Message {
   id: number;
   sender: 'user' | 'companion' | 'system';
   content: string;
   timestamp: string;
-};
+}
 
-// Define props for CompanionChat component
 interface CompanionChatProps {
   companionSlug: string;
   title?: string;
@@ -29,19 +25,35 @@ export default function CompanionChat({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [promoCode, setPromoCode] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [feedback, setFeedback] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const [isOpen, setIsOpen] = useState(!persistentCTA);
-  const [generatedImage, setGeneratedImage] = useState<{ url: string; prompt: string } | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<null | {
+    url: string;
+    prompt: string;
+  }>(null);
+  const [imageCount, setImageCount] = useState(0);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const access = Cookies.get('sohbat_access');
-    if (access) setIsLoggedIn(true);
+    if (access) {
+      setIsLoggedIn(true);
+    }
   }, []);
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleLogin = async () => {
     const promoValid = promoCode.trim().toUpperCase() === 'KORA2024';
@@ -51,45 +63,30 @@ export default function CompanionChat({
       try {
         const startSession = await fetch('/api/session/start', { method: 'POST' });
         const { sessionId } = await startSession.json();
-
         Cookies.set('sohbat_access', 'true', { expires: 0.125 });
         Cookies.set('sohbat_session_id', sessionId);
         setIsLoggedIn(true);
         alert('Access granted. Welcome to the Sohbat.');
       } catch (error) {
-        console.error('Session start failed:', error);
-        alert('Something went wrong while starting your session.');
+        alert('Session start failed.');
       }
     } else {
       alert('Invalid email or promo code.');
     }
   };
 
-  const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  };
-
-  useEffect(scrollToBottom, [messages]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
     const timestamp = new Date().toLocaleTimeString();
-    const userMsg: Message = {
-      id: Date.now(),
-      sender: 'user',
-      content: input,
-      timestamp,
-    };
-
-    setMessages((prev) => [
-      ...prev,
-      userMsg,
-      { id: Date.now() + 0.5, sender: 'system', content: 'Summoning reply...', timestamp },
-    ]);
+    const userMsg: Message = { id: Date.now(), sender: 'user', content: input, timestamp };
+    setMessages((prev) => [...prev, userMsg, {
+      id: Date.now() + 1,
+      sender: 'system',
+      content: 'Summoning reply...',
+      timestamp
+    }]);
     setInput('');
     setLoading(true);
 
@@ -99,24 +96,14 @@ export default function CompanionChat({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: input }),
       });
-
       const data = await res.json();
-      let replyText = '⚠️ The Companion fell silent. Please try again.';
-
-      if (res.ok) {
-        replyText = data.reply;
-        if (data.imageUrl && data.promptUsed) {
-          setGeneratedImage({ url: data.imageUrl, prompt: data.promptUsed });
-        } else {
-          setGeneratedImage(null);
-        }
-      } else {
-        setGeneratedImage(null);
-      }
+      let replyText = res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.';
 
       if (data.tool_call === 'generate_image' && data.tool_args?.prompt) {
-        try {
-          const imageRes = await fetch('/api/images/generate', {
+        if (imageCount >= 3) {
+          replyText += '\n(⚠️ Image limit reached for this session)';
+        } else {
+          const imgRes = await fetch('/api/images/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -125,8 +112,9 @@ export default function CompanionChat({
               styleHints: data.tool_args.styleHints || [],
             }),
           });
-
-          const imageData = await imageRes.json();
+          const imgData = await imgRes.json();
+          setGeneratedImage({ url: imgData.imageUrl, prompt: imgData.promptUsed });
+          setImageCount((count) => count + 1);
 
           setMessages((prev) => [
             ...prev.filter((m) => m.sender !== 'system'),
@@ -134,21 +122,20 @@ export default function CompanionChat({
             {
               id: Date.now() + 2,
               sender: 'companion',
-              content: `🖼️ Image generated: ${imageData.promptUsed}\n\n![Generated Image](${imageData.imageUrl})`,
+              content: `🖼️ Image generated: ${imgData.promptUsed}\n\n![Generated Image](${imgData.imageUrl})`,
               timestamp: new Date().toLocaleTimeString(),
             },
           ]);
           return;
-        } catch (error) {
-          console.error('Image generation failed:', error);
         }
       }
 
+      setGeneratedImage(null);
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
         { id: Date.now() + 1, sender: 'companion', content: replyText, timestamp: new Date().toLocaleTimeString() },
       ]);
-    } catch {
+    } catch (err) {
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
         {
@@ -158,36 +145,47 @@ export default function CompanionChat({
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
-  const handleSaveScroll = async () => {
-    if (typeof window === 'undefined' || !chatContainerRef.current) return;
-
-    const messagesDiv = chatContainerRef.current.querySelector('.messages');
-    if (!messagesDiv) return;
-
-    const canvas = await html2canvas(messagesDiv as HTMLElement, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${title || 'Sohbat'}.pdf`);
-  };
-
-  const handleFeedbackSubmit = () => {
-    console.log('Feedback:', feedback);
-    alert('Thank you for your feedback!');
-    setFeedback('');
-  };
-
-  // Show gate if not logged in
   if (!isLoggedIn) {
-    return <div>/* Gate UI remains unchanged */</div>;
+    return (
+      <div>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+        <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Promo" />
+        <button onClick={handleLogin}>Enter Sohbat →</button>
+      </div>
+    );
   }
 
-  return <div>/* Chat UI remains unchanged */</div>;
+  return (
+    <div>
+      <div ref={chatContainerRef} style={{ height: '400px', overflowY: 'auto' }}>
+        {messages.map((msg) => (
+          <div key={msg.id}>
+            <strong>{msg.sender}:</strong> {msg.content}
+          </div>
+        ))}
+      </div>
+
+      {generatedImage && (
+        <div>
+          <h4>🎨 AI Image</h4>
+          <img src={generatedImage.url} alt="Generated" style={{ width: '100%' }} />
+          <p>Prompt: {generatedImage.prompt}</p>
+          <a href={generatedImage.url} download>Download</a>
+          <button onClick={() => setGeneratedImage(null)}>Clear</button>
+          <button disabled>Use in document (coming soon)</button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type..." disabled={loading} />
+        <button type="submit" disabled={loading}>{loading ? 'Summoning...' : 'Send'}</button>
+      </form>
+
+      <p>🖼️ Image slots remaining: {3 - imageCount}</p>
+    </div>
+  );
 }
