@@ -18,8 +18,12 @@ interface CompanionChatProps {
   persistentCTA?: boolean; // Floating CTA toggle
 }
 
-export default function CompanionChat(props: CompanionChatProps) {
-  const { companionSlug, title, apiPath, persistentCTA = false } = props;
+export default function CompanionChat({
+  companionSlug,
+  title,
+  apiPath,
+  persistentCTA = false,
+}: CompanionChatProps) {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
@@ -30,6 +34,10 @@ export default function CompanionChat(props: CompanionChatProps) {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(!persistentCTA);
+  const [generatedImage, setGeneratedImage] = useState<{
+  url: string;
+  prompt: string;
+} | null>(null);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -41,18 +49,28 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   }, []);
 
-  const handleLogin = () => {
-    const promoValid = promoCode.trim().toUpperCase() === 'KORA2024';
-    const emailValid = email.includes('@') && email.includes('.');
+const handleLogin = async () => {
+  const promoValid = promoCode.trim().toUpperCase() === 'KORA2024';
+  const emailValid = email.includes('@') && email.includes('.');
 
-    if (promoValid && emailValid) {
+  if (promoValid && emailValid) {
+    try {
+      const startSession = await fetch('/api/session/start', { method: 'POST' });
+      const { sessionId } = await startSession.json();
+
       Cookies.set('sohbat_access', 'true', { expires: 0.125 }); // ~3h
+      Cookies.set('sohbat_session_id', sessionId); // store session ID
       setIsLoggedIn(true);
+
       alert('Access granted. Welcome to the Sohbat.');
-    } else {
-      alert('Invalid email or promo code.');
+    } catch (error) {
+      console.error('Session start failed:', error);
+      alert('Something went wrong while starting your session.');
     }
-  };
+  } else {
+    alert('Invalid email or promo code.');
+  }
+};
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -89,17 +107,46 @@ export default function CompanionChat(props: CompanionChatProps) {
     setInput('');
     setLoading(true);
 
+try {
+  const res = await fetch(apiPath, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: input }),
+  });
+
+  const data = await res.json();
+let replyText = '⚠️ The Companion fell silent. Please try again.';
+
+if (res.ok) {
+  replyText = data.reply;
+
+  // If an image was included, extract and store it
+  if (data.imageUrl && data.promptUsed) {
+    setGeneratedImage({
+      url: data.imageUrl,
+      prompt: data.promptUsed,
+    });
+  } else {
+    setGeneratedImage(null); // reset if no image
+  }
+} else {
+  setGeneratedImage(null);
+}
+
+  // 🖼️ Optional: Check if image generation was triggered
+  if (data.tool_call === 'generate_image' && data.tool_args?.prompt) {
     try {
-      const res = await fetch(apiPath, {
+      const imageRes = await fetch('/api/images/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({
+          prompt: data.tool_args.prompt,
+          size: data.tool_args.size || '512x512',
+          styleHints: data.tool_args.styleHints || [],
+        }),
       });
 
-      const data = await res.json();
-      const replyText = res.ok
-        ? data.reply
-        : '⚠️ The Companion fell silent. Please try again.';
+      const imageData = await imageRes.json();
 
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
@@ -109,21 +156,41 @@ export default function CompanionChat(props: CompanionChatProps) {
           content: replyText,
           timestamp: new Date().toLocaleTimeString(),
         },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev.filter((m) => m.sender !== 'system'),
         {
-          id: Date.now() + 1,
+          id: Date.now() + 2,
           sender: 'companion',
-          content: '💥 A ritual disruption occurred. Try again soon.',
+          content: `🖼️ Image generated: ${imageData.promptUsed}\n\n![Generated Image](${imageData.imageUrl})`,
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
-    } finally {
-      setLoading(false);
+      return; // prevent double message
+    } catch (error) {
+      console.error('Image generation failed:', error);
+      // Fallback to just the reply text
     }
-  };
+  }
+
+  // Default: No image was generated
+  setMessages((prev) => [
+    ...prev.filter((m) => m.sender !== 'system'),
+    {
+      id: Date.now() + 1,
+      sender: 'companion',
+      content: replyText,
+      timestamp: new Date().toLocaleTimeString(),
+    },
+  ]);
+} catch (error) {
+  setMessages((prev) => [
+    ...prev.filter((m) => m.sender !== 'system'),
+    {
+      id: Date.now() + 1,
+      sender: 'companion',
+      content: '💥 A ritual disruption occurred. Try again soon.',
+      timestamp: new Date().toLocaleTimeString(),
+    },
+  ]);
+}
 
   // ✅ Save Scroll — html2canvas + jsPDF
   const handleSaveScroll = async () => {
@@ -134,7 +201,36 @@ export default function CompanionChat(props: CompanionChatProps) {
       console.error('No .messages element found.');
       return;
     }
-
+    {generatedImage && (
+  <div className="mt-4 p-4 bg-white dark:bg-grove border border-amber-100 dark:border-bronze rounded-lg">
+    <h3 className="text-sm font-semibold text-amber-700 dark:text-bronze mb-2">
+      🎨 AI‑Generated Image
+    </h3>
+    <img
+      src={generatedImage.url}
+      alt="Generated visual"
+      className="w-full rounded-md shadow mb-2"
+    />
+    <p className="text-xs text-gray-500 dark:text-scroll italic">
+      Prompt: <span className="not-italic">{generatedImage.prompt}</span>
+    </p>
+    <div className="mt-2 flex gap-4">
+      <a
+        href={generatedImage.url}
+        download
+        className="text-amber-700 dark:text-bronze underline text-sm"
+      >
+        Download
+      </a>
+      <button
+        className="text-amber-700 dark:text-bronze underline text-sm"
+        onClick={() => setGeneratedImage(null)}
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+)}
     const canvas = await html2canvas(messagesDiv as HTMLElement, {
       scale: 2,
       useCORS: true,
@@ -321,4 +417,5 @@ export default function CompanionChat(props: CompanionChatProps) {
       )}
     </>
   );
+}
 }

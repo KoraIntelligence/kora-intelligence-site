@@ -10,6 +10,7 @@
     "@mdx-js/loader": "^3.1.0",
     "@next/mdx": "^15.4.1",
     "@tailwindcss/postcss": "^4.1.8",
+    "@upstash/redis": "^1.35.3",
     "contentlayer": "^0.3.4",
     "framer-motion": "^12.16.0",
     "gray-matter": "^4.0.3",
@@ -26,7 +27,8 @@
     "react-dom": "latest",
     "react-simple-typewriter": "^2.0.5",
     "rehype-pretty-code": "^0.14.1",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
