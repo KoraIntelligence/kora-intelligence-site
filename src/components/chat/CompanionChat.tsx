@@ -1,13 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
-
-interface Message {
-  id: number;
-  sender: 'user' | 'companion' | 'system';
-  content: string;
-  timestamp: string;
-}
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface CompanionChatProps {
   companionSlug: string;
@@ -15,6 +10,13 @@ interface CompanionChatProps {
   apiPath: string;
   persistentCTA?: boolean;
 }
+
+type Message = {
+  id: number;
+  sender: 'user' | 'companion' | 'system';
+  content: string;
+  timestamp: string;
+};
 
 export default function CompanionChat({
   companionSlug,
@@ -25,16 +27,14 @@ export default function CompanionChat({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [promoCode, setPromoCode] = useState('');
-  const [input, setInput] = useState('');
+
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(!persistentCTA);
-  const [generatedImage, setGeneratedImage] = useState<null | {
-    url: string;
-    prompt: string;
-  }>(null);
-  const [imageCount, setImageCount] = useState(0);
+  const [generatedImage, setGeneratedImage] = useState<{ url: string; prompt: string } | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +44,28 @@ export default function CompanionChat({
       setIsLoggedIn(true);
     }
   }, []);
+
+  const handleLogin = async () => {
+    const promoValid = promoCode.trim().toUpperCase() === 'KORA2024';
+    const emailValid = email.includes('@') && email.includes('.');
+
+    if (promoValid && emailValid) {
+      try {
+        const startSession = await fetch('/api/session/start', { method: 'POST' });
+        const { sessionId } = await startSession.json();
+
+        Cookies.set('sohbat_access', 'true', { expires: 0.125 });
+        Cookies.set('sohbat_session_id', sessionId);
+        setIsLoggedIn(true);
+        alert('Access granted. Welcome to the Sohbat.');
+      } catch (error) {
+        console.error('Session start failed:', error);
+        alert('Something went wrong while starting your session.');
+      }
+    } else {
+      alert('Invalid email or promo code.');
+    }
+  };
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -55,38 +77,28 @@ export default function CompanionChat({
     scrollToBottom();
   }, [messages]);
 
-  const handleLogin = async () => {
-    const promoValid = promoCode.trim().toUpperCase() === 'KORA2024';
-    const emailValid = email.includes('@') && email.includes('.');
-
-    if (promoValid && emailValid) {
-      try {
-        const startSession = await fetch('/api/session/start', { method: 'POST' });
-        const { sessionId } = await startSession.json();
-        Cookies.set('sohbat_access', 'true', { expires: 0.125 });
-        Cookies.set('sohbat_session_id', sessionId);
-        setIsLoggedIn(true);
-        alert('Access granted. Welcome to the Sohbat.');
-      } catch (error) {
-        alert('Session start failed.');
-      }
-    } else {
-      alert('Invalid email or promo code.');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
     const timestamp = new Date().toLocaleTimeString();
-    const userMsg: Message = { id: Date.now(), sender: 'user', content: input, timestamp };
-    setMessages((prev) => [...prev, userMsg, {
-      id: Date.now() + 1,
-      sender: 'system',
-      content: 'Summoning reply...',
-      timestamp
-    }]);
+    const userMsg: Message = {
+      id: Date.now(),
+      sender: 'user',
+      content: input,
+      timestamp,
+    };
+
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      {
+        id: Date.now() + 0.5,
+        sender: 'system',
+        content: 'Summoning reply...',
+        timestamp,
+      },
+    ]);
     setInput('');
     setLoading(true);
 
@@ -96,46 +108,71 @@ export default function CompanionChat({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: input }),
       });
+
       const data = await res.json();
-      let replyText = res.ok ? data.reply : '⚠️ The Companion fell silent. Please try again.';
+      let replyText = '⚠️ The Companion fell silent. Please try again.';
 
-      if (data.tool_call === 'generate_image' && data.tool_args?.prompt) {
-        if (imageCount >= 3) {
-          replyText += '\n(⚠️ Image limit reached for this session)';
+      if (res.status === 429) {
+        setRateLimited(true);
+        replyText = '⏳ You have reached the rate limit. Please wait before continuing.';
+      } else if (res.ok) {
+        replyText = data.reply;
+        setRateLimited(false);
+
+        if (data.imageUrl && data.promptUsed) {
+          setGeneratedImage({ url: data.imageUrl, prompt: data.promptUsed });
         } else {
-          const imgRes = await fetch('/api/images/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: data.tool_args.prompt,
-              size: data.tool_args.size || '512x512',
-              styleHints: data.tool_args.styleHints || [],
-            }),
-          });
-          const imgData = await imgRes.json();
-          setGeneratedImage({ url: imgData.imageUrl, prompt: imgData.promptUsed });
-          setImageCount((count) => count + 1);
-
-          setMessages((prev) => [
-            ...prev.filter((m) => m.sender !== 'system'),
-            { id: Date.now() + 1, sender: 'companion', content: replyText, timestamp: new Date().toLocaleTimeString() },
-            {
-              id: Date.now() + 2,
-              sender: 'companion',
-              content: `🖼️ Image generated: ${imgData.promptUsed}\n\n![Generated Image](${imgData.imageUrl})`,
-              timestamp: new Date().toLocaleTimeString(),
-            },
-          ]);
-          return;
+          setGeneratedImage(null);
         }
+
+        if (data.tool_call === 'generate_image' && data.tool_args?.prompt) {
+          try {
+            const imageRes = await fetch('/api/images/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: data.tool_args.prompt,
+                size: data.tool_args.size || '512x512',
+                styleHints: data.tool_args.styleHints || [],
+              }),
+            });
+
+            const imageData = await imageRes.json();
+
+            setMessages((prev) => [
+              ...prev.filter((m) => m.sender !== 'system'),
+              {
+                id: Date.now() + 1,
+                sender: 'companion',
+                content: replyText,
+                timestamp: new Date().toLocaleTimeString(),
+              },
+              {
+                id: Date.now() + 2,
+                sender: 'companion',
+                content: `🖼️ Image generated: ${imageData.promptUsed}\n\n![Generated Image](${imageData.imageUrl})`,
+                timestamp: new Date().toLocaleTimeString(),
+              },
+            ]);
+            return;
+          } catch (error) {
+            console.error('Image generation failed:', error);
+          }
+        }
+      } else {
+        setGeneratedImage(null);
       }
 
-      setGeneratedImage(null);
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
-        { id: Date.now() + 1, sender: 'companion', content: replyText, timestamp: new Date().toLocaleTimeString() },
+        {
+          id: Date.now() + 1,
+          sender: 'companion',
+          content: replyText,
+          timestamp: new Date().toLocaleTimeString(),
+        },
       ]);
-    } catch (err) {
+    } catch (error) {
       setMessages((prev) => [
         ...prev.filter((m) => m.sender !== 'system'),
         {
@@ -149,43 +186,106 @@ export default function CompanionChat({
     setLoading(false);
   };
 
+  const handleSaveScroll = async () => {
+    if (typeof window === 'undefined' || !chatContainerRef.current) return;
+    const messagesDiv = chatContainerRef.current.querySelector('.messages');
+    if (!messagesDiv) return;
+
+    const canvas = await html2canvas(messagesDiv as HTMLElement, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${title || 'Sohbat'}.pdf`);
+  };
+
+  const handleFeedbackSubmit = () => {
+    console.log('Feedback:', feedback);
+    alert('Thank you for your feedback!');
+    setFeedback('');
+  };
+
   if (!isLoggedIn) {
     return (
-      <div>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-        <input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Promo" />
-        <button onClick={handleLogin}>Enter Sohbat →</button>
+      <div className="max-w-md mx-auto p-6 bg-grain dark:bg-dark border border-bronze rounded-lg shadow space-y-4">
+        <h2 className="text-xl font-ritual text-dusk dark:text-scroll text-center">
+          Sohbat Ritual Gate
+        </h2>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Your email"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+        />
+        <input
+          type="text"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value)}
+          placeholder="Promo Code"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+        />
+        <button
+          onClick={handleLogin}
+          className="w-full bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+        >
+          Enter Sohbat →
+        </button>
       </div>
     );
   }
 
   return (
     <div>
-      <div ref={chatContainerRef} style={{ height: '400px', overflowY: 'auto' }}>
+      <div ref={chatContainerRef} className="messages overflow-y-auto max-h-[400px]">
         {messages.map((msg) => (
-          <div key={msg.id}>
-            <strong>{msg.sender}:</strong> {msg.content}
+          <div key={msg.id} className={`p-2 my-2 rounded ${msg.sender === 'user' ? 'text-right bg-amber-100' : 'text-left bg-white'}`}>
+            <p>{msg.content}</p>
+            <p className="text-xs text-gray-400">{msg.timestamp}</p>
           </div>
         ))}
+        {generatedImage && (
+          <div className="mt-4">
+            <p>🎨 Generated Image Prompt: {generatedImage.prompt}</p>
+            <img src={generatedImage.url} alt="Generated" className="max-w-full h-auto" />
+            <a href={generatedImage.url} download className="text-blue-500 underline text-sm">Download</a>
+          </div>
+        )}
+        {rateLimited && <p className="text-red-500 text-sm mt-2">Rate limit reached. Try again later.</p>}
       </div>
 
-      {generatedImage && (
-        <div>
-          <h4>🎨 AI Image</h4>
-          <img src={generatedImage.url} alt="Generated" style={{ width: '100%' }} />
-          <p>Prompt: {generatedImage.prompt}</p>
-          <a href={generatedImage.url} download>Download</a>
-          <button onClick={() => setGeneratedImage(null)}>Clear</button>
-          <button disabled>Use in document (coming soon)</button>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type..." disabled={loading} />
-        <button type="submit" disabled={loading}>{loading ? 'Summoning...' : 'Send'}</button>
+      <form onSubmit={handleSubmit} className="flex gap-2 mt-4">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={loading}
+          className="flex-1 border p-2 rounded"
+          placeholder="Type your whisper..."
+        />
+        <button disabled={loading} className="bg-amber-700 text-white px-4 py-2 rounded">
+          {loading ? 'Summoning...' : 'Send'}
+        </button>
       </form>
 
-      <p>🖼️ Image slots remaining: {3 - imageCount}</p>
+      <button onClick={handleSaveScroll} className="mt-4 text-blue-600 underline">📜 Save this Sohbat as a Scroll</button>
+
+      <div className="mt-4">
+        <h3 className="text-sm font-bold">✍️ Feedback for this Sohbat</h3>
+        <textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          placeholder="Leave your thoughts..."
+          rows={2}
+          className="w-full border p-2 rounded"
+        />
+        <button
+          onClick={handleFeedbackSubmit}
+          className="mt-2 bg-amber-700 text-white px-4 py-1 rounded"
+        >
+          Submit Feedback
+        </button>
+      </div>
     </div>
   );
 }
