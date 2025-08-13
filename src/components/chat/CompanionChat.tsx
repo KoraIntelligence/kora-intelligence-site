@@ -20,7 +20,7 @@ interface CompanionChatProps {
 
 export default function CompanionChat(props: CompanionChatProps) {
   const { companionSlug, title, apiPath, persistentCTA = false } = props;
-
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [promoCode, setPromoCode] = useState('');
@@ -240,7 +240,18 @@ export default function CompanionChat(props: CompanionChatProps) {
       </div>
     );
   }
-
+    {previewImage && (
+  <div
+    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+    onClick={() => setPreviewImage(null)}
+  >
+    <img
+      src={previewImage}
+      alt="Full"
+      className="max-w-[90%] max-h-[90%] rounded shadow-lg border-2 border-white"
+    />
+  </div>
+)}
   return (
     <>
       {persistentCTA && !isOpen && (
@@ -308,6 +319,44 @@ export default function CompanionChat(props: CompanionChatProps) {
                       </span>
                     )}
                     <p>{msg.content}</p>
+
+{msg.content.includes('http') && (
+  <>
+    <img
+      src={msg.content.trim()}
+      alt="Generated"
+      onClick={() => setPreviewImage(msg.content.trim())}
+      className="cursor-pointer rounded border border-gray-300 shadow max-w-full mt-2"
+    />
+
+    {previewImage && (
+      <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+        <div className="relative bg-white p-4 rounded-lg max-w-3xl w-full shadow-lg">
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-2 right-2 text-black text-lg font-bold"
+          >
+            ✖
+          </button>
+
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="w-full h-auto max-h-[80vh] object-contain"
+          />
+
+          <a
+            href={previewImage}
+            download="sohbat-image.png"
+            className="block mt-4 text-center bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
+          >
+            📥 Download Image
+          </a>
+        </div>
+      </div>
+    )}
+  </>
+)}
                     <span className="block text-xs text-gray-600 dark:text-scroll mt-1">
                       {msg.timestamp}
                     </span>

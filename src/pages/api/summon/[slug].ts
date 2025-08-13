@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
+import { serialize } from 'cookie';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -7,10 +8,10 @@ const assistantMap: Record<string, string> = {
   ccc: 'asst_AGVgVCWCvNwXa150Qss8sFnI',
   fmc: 'asst_ElMMOYXEEs2RqLc1zPqDWHqK',
   dreamer: 'asst_YNZOhXEhj1QIam6Ehg4G3wbT',
-  alchemist: 'asst_fOy8Tx4GDgaUf7K3NSBtU0Z3',
+  alchemist: 'asst_fOy8Tx4GDgaUf7K3NSBtU023',
   pathbreaker: 'asst_0D8ZsGWJAOMHwitKrMBp6rZa',
   builder: 'asst_1y1exmpzEKy4n6j2AwKtrS3Y',
-  cartographer: 'asst_HWxq4UpDd9djjDqVvmELgwQk',
+  cartographer: 'asst_HLkuq4UpDdd9JjdQvWMELgwQk',
   whisperer: 'asst_F2lkMOpHBfZyATNrQiHITWA1',
 };
 
@@ -50,12 +51,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const messages = await openai.beta.threads.messages.list(thread.id);
     const assistantReply = messages.data.find((msg) => msg.role === 'assistant');
 
-    const content =
-      assistantReply?.content[0]?.type === 'text'
-        ? assistantReply.content[0].text.value
-        : 'No readable response.';
+    let content = 'No readable response.';
+    let imageUrl: string | null = null;
+    let promptUsed: string | null = null;
 
-    return res.status(200).json({ reply: content });
+    if (assistantReply && assistantReply.content?.[0]?.type === 'text') {
+      content = assistantReply.content[0].text.value;
+    }
+
+    if (assistantReply && 'tool_calls' in assistantReply && Array.isArray((assistantReply as any).tool_calls)) {
+      const toolCalls = (assistantReply as any).tool_calls;
+
+      for (const toolCall of toolCalls) {
+        if (toolCall.function?.name === 'generate_image') {
+          const args = JSON.parse(toolCall.function.arguments);
+          promptUsed = args.prompt;
+
+          const imageRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/images/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: args.prompt,
+              size: args.size || '512x512',
+              styleHints: args.styleHints || [],
+            }),
+          });
+
+          const imageData = await imageRes.json();
+          imageUrl = imageData?.imageUrl || null;
+          promptUsed = imageData?.promptUsed || promptUsed;
+        }
+      }
+    }
+
+    return res.status(200).json({
+      reply: content,
+      imageUrl,
+      promptUsed,
+    });
   } catch (error) {
     console.error('Invocation error:', error);
     return res.status(500).json({ error: 'Invocation failed' });
