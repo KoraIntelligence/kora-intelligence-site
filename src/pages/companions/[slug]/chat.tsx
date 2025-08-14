@@ -54,7 +54,7 @@ export default function CompanionChatPage() {
           <CompanionChat companionSlug={slug} title={companion.title} apiPath={`/api/summon/${slug}`} />
 
           <div className="text-center pt-6">
-            <Link href={`/companions/${slug}`}>
+            <Link href={`/companions/${slug}`} legacyBehavior>
               <a className="text-amber-600 hover:underline dark:text-amber-400">
                 ← Return to {companion.title}'s Scroll
               </a>
