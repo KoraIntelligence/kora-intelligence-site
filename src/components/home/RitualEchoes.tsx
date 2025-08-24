@@ -27,7 +27,7 @@ export default function RitualEchoes() {
               {latest.description}
             </p>
             <Link
-              href={`/dispatches/${latest.slug}`}
+              href={`/dispatch/${latest.slug}`}
               className="inline-block mt-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-2 rounded-md shadow transition"
             >
               Read Full Dispatch →
