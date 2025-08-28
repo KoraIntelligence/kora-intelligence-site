@@ -18,12 +18,14 @@ export default function DispatchPage({ post }: { post: any }) {
         <title>{post.title} – Kora Dispatch</title>
         <meta name="description" content={post.description} />
       </Head>
-      <div className="pt-24 pb-32 px-6 sm:px-12 max-w-3xl mx-auto font-serif text-gray-800 dark:text-gray-100 space-y-6 prose prose-amber dark:prose-invert">
+
+      <div className="pt-24 pb-32 px-6 sm:px-12 max-w-3xl mx-auto font-serif text-gray-800 dark:text-gray-100 space-y-6">
         <h1 className="text-4xl sm:text-5xl font-semibold text-amber-600">{post.title}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 italic">
           {post.date} — by {post.authors?.join(', ')}
         </p>
-        <article className="pt-6">
+
+        <article className="prose prose-amber dark:prose-invert max-w-none">
           <MDXContent />
         </article>
       </div>
