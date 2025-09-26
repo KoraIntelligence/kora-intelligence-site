@@ -138,28 +138,62 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-  const handleSaveScroll = async () => {
-    if (typeof window === 'undefined' || !chatContainerRef.current) return;
+const handleSaveScroll = async () => {
+  if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
-    const messagesDiv = chatContainerRef.current.querySelector('.messages');
-    if (!messagesDiv) {
-      console.error('No .messages element found.');
-      return;
-    }
+  const messagesDiv = chatContainerRef.current.querySelector('.messages') as HTMLElement;
 
-    const canvas = await html2canvas(messagesDiv as HTMLElement, {
-      scale: 2,
-      useCORS: true,
-    });
+  if (!messagesDiv) {
+    console.error('No .messages element found.');
+    return;
+  }
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+  // Save original styles
+  const originalHeight = messagesDiv.style.height;
+  const originalOverflow = messagesDiv.style.overflow;
 
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${title || 'Sohbat'}.pdf`);
-  };
+  // Expand to full height for snapshot
+  messagesDiv.style.height = 'auto';
+  messagesDiv.style.overflow = 'visible';
+
+  await new Promise((resolve) => setTimeout(resolve, 100)); // wait for DOM to update
+
+  const canvas = await html2canvas(messagesDiv, {
+    scale: 2,
+    useCORS: true,
+    windowWidth: document.body.scrollWidth,
+  });
+
+  // Restore original scroll settings
+  messagesDiv.style.height = originalHeight;
+  messagesDiv.style.overflow = originalOverflow;
+
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p', 'mm', 'a4');
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+
+  const imgWidth = pdfWidth;
+  const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  // Add first page
+  pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+  heightLeft -= pdfHeight;
+
+  // Add remaining pages
+  while (heightLeft > 0) {
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+  }
+
+  pdf.save(`${title || 'Sohbat'}.pdf`);
+};
 
   const handleFeedbackSubmit = () => {
     console.log('Feedback:', feedback);
