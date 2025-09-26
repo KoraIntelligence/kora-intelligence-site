@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Cookies from 'js-cookie';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import html2pdf from 'html2pdf.js';
+
 
 type Message = {
   id: number;
@@ -139,8 +139,10 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-const handleSaveScroll = () => {
+const handleSaveScroll = async () => {
   if (typeof window === 'undefined' || !chatContainerRef.current) return;
+
+  const html2pdf = (await import('html2pdf.js')).default;
 
   const element = chatContainerRef.current.querySelector('.messages');
   if (!element) {
@@ -153,7 +155,7 @@ const handleSaveScroll = () => {
     filename:     `${title || 'Sohbat'}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
   html2pdf().set(opt).from(element).save();
