@@ -11,7 +11,7 @@ const assistantMap: Record<string, string> = {
   alchemist: 'asst_fOy8Tx4GDgaUf7K3NSBtU023',
   pathbreaker: 'asst_0D8ZsGWJAOMHwitKrMBp6rZa',
   builder: 'asst_1y1exmpzEKy4n6j2AwKtrS3Y',
-  cartographer: 'asst_HLkuq4UpDdd9JjdQvWMELgwQk',
+  cartographer: 'asst_HWxq4UpDd9djjDqVvmELgwQk',
   whisperer: 'asst_F2lkMOpHBfZyATNrQiHITWA1',
 };
 

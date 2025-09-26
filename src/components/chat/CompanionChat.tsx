@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Cookies from 'js-cookie';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import html2pdf from 'html2pdf.js';
 
 type Message = {
   id: number;
@@ -138,61 +139,24 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-const handleSaveScroll = async () => {
+const handleSaveScroll = () => {
   if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
-  const messagesDiv = chatContainerRef.current.querySelector('.messages') as HTMLElement;
-
-  if (!messagesDiv) {
-    console.error('No .messages element found.');
+  const element = chatContainerRef.current.querySelector('.messages');
+  if (!element) {
+    console.error('No .messages element found for PDF export.');
     return;
   }
 
-  // Save original styles
-  const originalHeight = messagesDiv.style.height;
-  const originalOverflow = messagesDiv.style.overflow;
+  const opt = {
+    margin:       10,
+    filename:     `${title || 'Sohbat'}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
 
-  // Expand to full height for snapshot
-  messagesDiv.style.height = 'auto';
-  messagesDiv.style.overflow = 'visible';
-
-  await new Promise((resolve) => setTimeout(resolve, 100)); // wait for DOM to update
-
-  const canvas = await html2canvas(messagesDiv, {
-    scale: 2,
-    useCORS: true,
-    windowWidth: document.body.scrollWidth,
-  });
-
-  // Restore original scroll settings
-  messagesDiv.style.height = originalHeight;
-  messagesDiv.style.overflow = originalOverflow;
-
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('p', 'mm', 'a4');
-
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-
-  const imgWidth = pdfWidth;
-  const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-  let heightLeft = imgHeight;
-  let position = 0;
-
-  // Add first page
-  pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-  heightLeft -= pdfHeight;
-
-  // Add remaining pages
-  while (heightLeft > 0) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pdfHeight;
-  }
-
-  pdf.save(`${title || 'Sohbat'}.pdf`);
+  html2pdf().set(opt).from(element).save();
 };
 
   const handleFeedbackSubmit = () => {
@@ -352,7 +316,7 @@ const handleSaveScroll = async () => {
                         />
                       </span>
                     )}
-                    <p>{msg.content}</p>
+                    <div className="prose dark:prose-invert text-sm">{msg.content}</div>
 
 {msg.content.includes('http') && (
   <>
