@@ -3,7 +3,8 @@ import Image from 'next/image';
 import Cookies from 'js-cookie';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Message = {
   id: number;
@@ -142,23 +143,31 @@ export default function CompanionChat(props: CompanionChatProps) {
 const handleSaveScroll = async () => {
   if (typeof window === 'undefined' || !chatContainerRef.current) return;
 
+  const element = chatContainerRef.current.querySelector('.messages');
+  if (!element) return;
+
   const html2pdf = (await import('html2pdf.js')).default;
 
-  const element = chatContainerRef.current.querySelector('.messages');
-  if (!element) {
-    console.error('No .messages element found for PDF export.');
-    return;
-  }
+  // Ensure element is correctly typed
+  const target = element as HTMLElement;
+
+  // Temporarily remove scroll height restriction
+  const originalHeight = target.style.height;
+  target.style.height = 'auto';
 
   const opt = {
-    margin:       10,
-    filename:     `${title || 'Sohbat'}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    margin: 10,
+    filename: `${title || 'Sohbat'}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
   };
 
-  html2pdf().set(opt).from(element).save();
+  await html2pdf().set(opt).from(target).save();
+
+  // Restore original scroll height
+  target.style.height = originalHeight;
 };
 
   const handleFeedbackSubmit = () => {
@@ -318,7 +327,11 @@ const handleSaveScroll = async () => {
                         />
                       </span>
                     )}
-                    <div className="prose dark:prose-invert text-sm">{msg.content}</div>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                    </ReactMarkdown>
+                    </div>
 
 {msg.content.includes('http') && (
   <>

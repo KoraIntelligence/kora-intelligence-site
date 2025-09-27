@@ -1,11 +1,12 @@
+/* 1. Fonts must come first */
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=EB+Garamond&family=Spline+Sans+Mono&family=Source+Sans+Pro&display=swap');
+
+/* 2. Tailwind core directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=EB+Garamond&family=Spline+Sans+Mono&family=Source+Sans+Pro&display=swap');
-
 /* 🕯️ Body Backgrounds */
-
 body {
   @apply font-sans text-gray-800;
   background-color: #f9f7f5;
@@ -34,9 +35,7 @@ body {
   background-position: center;
 }
 
-
 /* 🌾 Grain Utility */
-
 .bg-grain {
   background-image:
     url('/textures/paper-grain.png'),
@@ -50,14 +49,12 @@ body {
   background-size: cover;
 }
 
-/* ✨ Glow Utility (for glyphs in dark mode) */
-
+/* ✨ Glow Utility */
 .filter-glow {
   filter: drop-shadow(0 0 3px #c29b46aa);
 }
 
 /* 📜 Scroll Unfurl Entrance */
-
 .scroll-reveal {
   animation: unfurl 1.2s ease-out;
 }
@@ -74,7 +71,6 @@ body {
 }
 
 /* 🎨 Typography Ritual Classes */
-
 .font-ritual {
   font-family: 'Marcellus', serif;
 }
@@ -92,7 +88,6 @@ body {
 }
 
 /* 🧱 Ritual Container – For Scroll Sections */
-
 .scroll-frame {
   @apply rounded-3xl border-dashed border-2 border-amber-200 p-6 shadow-md bg-white/90 dark:bg-zinc-800;
   background-image: url('/textures/paper-grain.png');
@@ -100,12 +95,11 @@ body {
 }
 
 /* 🪶 Glyph Watermark Layer */
-
 .glyph-watermark {
   @apply absolute opacity-5 top-1 right-2 w-6 h-6 pointer-events-none;
 }
 
-/* Dark mode readability improvements */
+/* Dark mode readability */
 .dark input,
 .dark textarea,
 .dark select {
@@ -145,3 +139,9 @@ label {
   @apply text-gray-700 dark:text-gray-300;
 }
 
+/* 🖨️ Print-specific tweaks */
+@media print {
+  .messages > * {
+    page-break-inside: avoid;
+  }
+}
