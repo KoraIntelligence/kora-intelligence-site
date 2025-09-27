@@ -141,33 +141,34 @@ export default function CompanionChat(props: CompanionChatProps) {
   };
 
 const handleSaveScroll = async () => {
-  if (typeof window === 'undefined' || !chatContainerRef.current) return;
+  if (typeof window === 'undefined') return;
 
-  const element = chatContainerRef.current.querySelector('.messages');
-  if (!element) return;
+  const element = document.querySelector('.messages') as HTMLElement | null;
+  if (!element) {
+    console.error('📜 No element with class `.messages` found.');
+    return;
+  }
 
+  // Dynamically import to ensure client-side usage only
   const html2pdf = (await import('html2pdf.js')).default;
 
-  // Ensure element is correctly typed
-  const target = element as HTMLElement;
-
-  // Temporarily remove scroll height restriction
-  const originalHeight = target.style.height;
-  target.style.height = 'auto';
+  // Temporarily expand the container to fit all content
+  const originalHeight = element.style.height;
+  element.style.height = 'auto';
 
   const opt = {
-    margin: 10,
-    filename: `${title || 'Sohbat'}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    margin:       10,
+    filename:     `${title || 'Sohbat'}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
   };
 
-  await html2pdf().set(opt).from(target).save();
+  await html2pdf().set(opt).from(element).save();
 
-  // Restore original scroll height
-  target.style.height = originalHeight;
+  // Reset scroll height after export
+  element.style.height = originalHeight;
 };
 
   const handleFeedbackSubmit = () => {
