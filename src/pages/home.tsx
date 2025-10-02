@@ -3,6 +3,7 @@ import {
   WhisperOfArrival,
   CompassFlame,
   CompanionGrove,
+  ComparisonTable,
   RitualEchoes,
   ZebraCovenant,
   CallToPresence,
@@ -18,6 +19,7 @@ export default function HomePage() {
         <WhisperOfArrival />
         <CompassFlame />
         <CompanionGrove />
+        <ComparisonTable />        
         <RitualEchoes />
         <ZebraCovenant />
         <CallToPresence />

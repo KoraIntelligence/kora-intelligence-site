@@ -9,7 +9,7 @@ export default function Header() {
   return (
     <header className="bg-white dark:bg-gray-900 shadow">
       <div className="flex justify-between items-center p-4 max-w-6xl mx-auto">
-        {/* 🔗 Logo + Title wrapped in a single Link */}
+        {/* Logo + Title */}
         <Link href="/" className="flex items-center space-x-3 group">
           <Image
             src="/kora-logo.png"
@@ -18,7 +18,7 @@ export default function Header() {
             height={32}
             className="transition-transform group-hover:scale-105"
           />
-          <span className="text-lg font-serif font-bold tracking-wide text-gray-900 dark:text-white">
+          <span className="text-lg font-bold tracking-wide text-gray-900 dark:text-white">
             Kora Intelligence
           </span>
         </Link>
@@ -26,6 +26,7 @@ export default function Header() {
         <div className="flex items-center space-x-4">
           <ThemeToggle />
 
+          {/* Mobile toggle */}
           <button
             className="sm:hidden text-gray-800 dark:text-gray-200"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -42,32 +43,32 @@ export default function Header() {
             )}
           </button>
 
-          <div className="hidden sm:flex space-x-6 text-sm font-semibold text-gray-800 dark:text-gray-200">
-            <Link href="/">Home</Link>
-            <Link href="/our-story">Our Story</Link>
-            <Link href="/companions">Meet the Companions</Link>
-            <Link href="/engine" className="text-amber-700 font-serif hover:underline">Companion Engine</Link>
-            <Link href="/labs" className="font-ritual hover:text-amber-700 dark:hover:text-amber-300 transition">Labs</Link>
-            <Link href="/dispatch">Dispatch</Link>
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex space-x-6 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <Link href="/" className="hover:opacity-70 transition">Home</Link>
+            <Link href="/our-story" className="hover:opacity-70 transition">Our Story</Link>
+            <Link href="/companions" className="hover:opacity-70 transition">Companions</Link>
+            <Link href="/labs" className="hover:opacity-70 transition">Labs</Link>
+            <Link href="/dispatches" className="hover:opacity-70 transition">Dispatches</Link>
             <Link href="/contact" className="inline-block">
-              <span className="bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700">
+              <span className="bg-amber-600 text-white px-3 py-1 rounded-md hover:bg-amber-700 transition">
                 Begin Your Journey
               </span>
             </Link>
-          </div>
+          </nav>
         </div>
       </div>
 
+      {/* Mobile nav */}
       {mobileOpen && (
         <nav className="sm:hidden px-4 pb-4" aria-label="Mobile navigation">
-          <ul className="space-y-4 text-gray-800 dark:text-gray-200 text-sm font-semibold">
-            <li><Link href="/">Home</Link></li>
-            <li><Link href="/our-story">Our Story</Link></li>
-            <li><Link href="/companions">Meet the Companions</Link></li>
-            <li><Link href="/engine" className="text-amber-700 font-serif hover:underline">Companion Engine</Link></li>
-            <li><Link href="/labs" className="font-ritual hover:text-amber-700 dark:hover:text-amber-300">Labs</Link></li>
-            <li><Link href="/dispatch">Dispatch</Link></li>
-            <li><Link href="/contact">Begin Your Journey</Link></li>
+          <ul className="space-y-4 text-gray-800 dark:text-gray-200 text-sm font-medium">
+            <li><Link href="/" className="hover:opacity-70 transition">Home</Link></li>
+            <li><Link href="/our-story" className="hover:opacity-70 transition">Our Story</Link></li>
+            <li><Link href="/companions" className="hover:opacity-70 transition">Companions</Link></li>
+            <li><Link href="/labs" className="hover:opacity-70 transition">Labs</Link></li>
+            <li><Link href="/dispatches" className="hover:opacity-70 transition">Dispatches</Link></li>
+            <li><Link href="/contact" className="hover:opacity-70 transition">Begin Your Journey</Link></li>
           </ul>
         </nav>
       )}

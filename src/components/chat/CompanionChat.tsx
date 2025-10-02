@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas'; // kept (existing import)
+import jsPDF from 'jspdf'; // kept (existing import)
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -22,6 +22,7 @@ interface CompanionChatProps {
 
 export default function CompanionChat(props: CompanionChatProps) {
   const { companionSlug, title, apiPath, persistentCTA = false } = props;
+
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
@@ -43,9 +44,7 @@ export default function CompanionChat(props: CompanionChatProps) {
 
   useEffect(() => {
     const access = Cookies.get('sohbat_access');
-    if (access) {
-      setIsLoggedIn(true);
-    }
+    if (access) setIsLoggedIn(true);
   }, []);
 
   const handleLogin = () => {
@@ -101,13 +100,8 @@ export default function CompanionChat(props: CompanionChatProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: input,
-          memory: {
-            name,
-            role,
-            purpose,
-            tone,
-          },
+          message: userMsg.content,
+          memory: { name, role, purpose, tone },
         }),
       });
 
@@ -140,66 +134,101 @@ export default function CompanionChat(props: CompanionChatProps) {
     }
   };
 
-const handleSaveScroll = async () => {
-  if (typeof window === 'undefined') return;
+  const handleSaveScroll = async () => {
+    if (typeof window === 'undefined') return;
 
-  const element = document.querySelector('.messages') as HTMLElement | null;
-  if (!element) {
-    console.error('📜 No element with class `.messages` found.');
+    const element = document.querySelector('.messages') as HTMLElement | null;
+    if (!element) {
+      console.error('📜 No element with class `.messages` found.');
+      return;
+    }
+
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    // Temporarily expand the container to fit all content
+    const originalHeight = element.style.height;
+    element.style.height = 'auto';
+
+    const opt = {
+      margin: 10,
+      filename: `${title || 'Sohbat'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    };
+
+    await html2pdf().set(opt).from(element).save();
+
+    // Reset height after export
+    element.style.height = originalHeight;
+  };
+const loadTally = () =>
+  new Promise<void>((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Tally) return resolve();
+    const script = document.createElement('script');
+    script.src = 'https://tally.so/widgets/embed.js'; // Tally widget
+    script.onload = () => resolve();
+    script.onerror = () => resolve(); // fail-safe: resolve anyway
+    document.body.appendChild(script);
+  });
+  const handleFeedbackSubmit = async () => {
+  if (!feedback.trim()) return;
+
+  await loadTally();
+  const Tally = (window as any).Tally;
+  if (!Tally) {
+    alert('Unable to load feedback form. Please try again.');
     return;
   }
 
-  // Dynamically import to ensure client-side usage only
-  const html2pdf = (await import('html2pdf.js')).default;
+  const FORM_ID = 'mRoDv3'; // 👈 replace with your real Tally Form ID
 
-  // Temporarily expand the container to fit all content
-  const originalHeight = element.style.height;
-  element.style.height = 'auto';
-
-  const opt = {
-    margin:       10,
-    filename:     `${title || 'Sohbat'}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
-  };
-
-  await html2pdf().set(opt).from(element).save();
-
-  // Reset scroll height after export
-  element.style.height = originalHeight;
+  Tally.openPopup(FORM_ID, {
+    layout: 'modal',
+    hideTitle: true,
+    overlay: true,
+    width: 600,
+    hiddenFields: {
+      feedback,                              // from your textarea
+      companion: title || 'Unknown Companion',
+      timestamp: new Date().toISOString(),
+      companionSlug,                         // optional extra context
+    },
+    onSubmit: () => {
+      // Called after the user submits the Tally form
+      alert('Thank you for your feedback!');
+      setFeedback('');
+      try { Tally.closePopup(FORM_ID); } catch {}
+    },
+  });
 };
 
-  const handleFeedbackSubmit = () => {
-    console.log('Feedback:', feedback);
-    alert('Thank you for your feedback!');
-    setFeedback('');
-  };
+  // --- Gates (styling only updated) ---
 
   if (!isLoggedIn) {
     return (
-      <div className="max-w-md mx-auto p-6 bg-grain dark:bg-dark border border-bronze rounded-lg shadow space-y-4">
-        <h2 className="text-xl font-ritual text-dusk dark:text-scroll text-center">
-          Sohbat Ritual Gate
+      <div className="max-w-md mx-auto p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow space-y-4">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center">
+          Sohbat Access
         </h2>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
         />
         <input
           type="text"
           value={promoCode}
           onChange={(e) => setPromoCode(e.target.value)}
           placeholder="Promo Code"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
         />
         <button
           onClick={handleLogin}
-          className="w-full bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+          className="w-full bg-amber-700 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition"
         >
           Enter Sohbat →
         </button>
@@ -209,59 +238,50 @@ const handleSaveScroll = async () => {
 
   if (!memoryCaptured) {
     return (
-      <div className="max-w-md mx-auto p-6 bg-grain dark:bg-dark border border-bronze rounded-lg shadow space-y-4">
-        <h2 className="text-xl font-ritual text-dusk dark:text-scroll text-center">
-          Share your whisper's shape
+      <div className="max-w-md mx-auto p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow space-y-4">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center">
+          Share your whisper&apos;s shape
         </h2>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="What is your name?"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
         />
         <input
           type="text"
           value={role}
           onChange={(e) => setRole(e.target.value)}
           placeholder="What role do you hold or seek?"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
         />
         <input
           type="text"
           value={purpose}
           onChange={(e) => setPurpose(e.target.value)}
           placeholder="What are you here to explore or build?"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
         />
         <input
           type="text"
           value={tone}
           onChange={(e) => setTone(e.target.value)}
           placeholder="What tone would you like this Companion to adopt?"
-          className="w-full px-4 py-2 rounded border border-gray-300 dark:bg-grove dark:border-bronze"
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
         />
         <button
           onClick={() => setMemoryCaptured(true)}
-          className="w-full bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+          className="w-full bg-amber-700 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition"
         >
           Begin Sohbat →
         </button>
       </div>
     );
   }
-    {previewImage && (
-  <div
-    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-    onClick={() => setPreviewImage(null)}
-  >
-    <img
-      src={previewImage}
-      alt="Full"
-      className="max-w-[90%] max-h-[90%] rounded shadow-lg border-2 border-white"
-    />
-  </div>
-)}
+
+  // --- Main Chat ---
+
   return (
     <>
       {persistentCTA && !isOpen && (
@@ -285,7 +305,7 @@ const handleSaveScroll = async () => {
             <div className="flex justify-end mb-1 no-print">
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-xs text-amber-500 underline mr-1"
+                className="text-xs text-amber-600 underline mr-1"
               >
                 Close
               </button>
@@ -294,29 +314,39 @@ const handleSaveScroll = async () => {
 
           <div
             ref={chatContainerRef}
-            className="bg-grain dark:bg-grove text-gray-800 dark:text-scroll border border-amber-100 dark:border-bronze rounded-xl shadow-md p-6 space-y-6"
+            className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border border-gray-200 dark:border-zinc-700 rounded-xl shadow-md p-6 space-y-6"
           >
             {title && (
-              <h2 className="text-center text-xl font-ritual text-dusk dark:text-scroll">
+              <h2 className="text-center text-xl font-semibold text-gray-900 dark:text-white">
                 Speak with {title}
               </h2>
             )}
 
-            <div className="messages overflow-y-auto space-y-4 p-4 rounded-lg bg-white/80 dark:bg-grove border border-amber-100 dark:border-bronze"
+            <div
+              className="messages overflow-y-auto space-y-4 p-4 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700"
               style={{ height: '450px', scrollBehavior: 'smooth' }}
             >
               {messages.map((msg) =>
                 msg.sender === 'system' ? (
-                  <p key={msg.id} className="text-xs font-system text-zinc-500 flex items-center gap-1">
-                    <Image src="/icons/scroll.svg" alt="scroll" width={16} height={16} />
+                  <p
+                    key={msg.id}
+                    className="text-xs text-zinc-500 flex items-center gap-1"
+                  >
+                    <Image
+                      src="/icons/scroll.svg"
+                      alt="scroll"
+                      width={16}
+                      height={16}
+                    />
                     {msg.content}
                   </p>
                 ) : (
-                  <div key={msg.id}
-                    className={`relative p-3 rounded-lg text-sm font-serif whitespace-pre-wrap ${
+                  <div
+                    key={msg.id}
+                    className={`relative p-3 rounded-2xl text-sm whitespace-pre-wrap ${
                       msg.sender === 'user'
-                        ? 'bg-amber-100 text-gray-800 text-right dark:bg-amber-200'
-                        : 'bg-amber-50 text-left border-l-4 border-amber-400 dark:bg-grove dark:border-bronze dark:text-scroll'
+                        ? 'bg-amber-100 text-gray-900 text-right dark:bg-amber-200'
+                        : 'bg-white dark:bg-zinc-900 text-left border-l-4 border-amber-500 dark:border-amber-400'
                     }`}
                   >
                     {msg.sender === 'companion' && (
@@ -328,50 +358,52 @@ const handleSaveScroll = async () => {
                         />
                       </span>
                     )}
+
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.content}
-                    </ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
 
-{msg.content.includes('http') && (
-  <>
-    <img
-      src={msg.content.trim()}
-      alt="Generated"
-      onClick={() => setPreviewImage(msg.content.trim())}
-      className="cursor-pointer rounded border border-gray-300 shadow max-w-full mt-2"
-    />
+                    {msg.content.includes('http') && (
+                      <>
+                        <img
+                          src={msg.content.trim()}
+                          alt="Generated"
+                          onClick={() => setPreviewImage(msg.content.trim())}
+                          className="cursor-pointer rounded border border-gray-300 shadow max-w-full mt-2"
+                        />
 
-    {previewImage && (
-      <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-        <div className="relative bg-white p-4 rounded-lg max-w-3xl w-full shadow-lg">
-          <button
-            onClick={() => setPreviewImage(null)}
-            className="absolute top-2 right-2 text-black text-lg font-bold"
-          >
-            ✖
-          </button>
+                        {previewImage && (
+                          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+                            <div className="relative bg-white p-4 rounded-lg max-w-3xl w-full shadow-lg">
+                              <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-2 right-2 text-black text-lg font-bold"
+                              >
+                                ✖
+                              </button>
 
-          <img
-            src={previewImage}
-            alt="Preview"
-            className="w-full h-auto max-h-[80vh] object-contain"
-          />
+                              <img
+                                src={previewImage}
+                                alt="Preview"
+                                className="w-full h-auto max-h-[80vh] object-contain"
+                              />
 
-          <a
-            href={previewImage}
-            download="sohbat-image.png"
-            className="block mt-4 text-center bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
-          >
-            📥 Download Image
-          </a>
-        </div>
-      </div>
-    )}
-  </>
-)}
-                    <span className="block text-xs text-gray-600 dark:text-scroll mt-1">
+                              <a
+                                href={previewImage}
+                                download="sohbat-image.png"
+                                className="block mt-4 text-center bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
+                              >
+                                📥 Download Image
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <span className="block text-xs text-gray-600 dark:text-zinc-400 mt-1">
                       {msg.timestamp}
                     </span>
                   </div>
@@ -385,13 +417,13 @@ const handleSaveScroll = async () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your whisper..."
-                className="flex-1 px-4 py-2 border rounded shadow-inner bg-white dark:bg-dark dark:text-scroll dark:border-bronze"
+                className="flex-1 px-4 py-2 border rounded-lg shadow-inner bg-white dark:bg-zinc-900 dark:text-white border-gray-300 dark:border-zinc-700"
                 disabled={loading}
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-amber-700 text-white px-4 py-2 rounded hover:bg-amber-800 transition"
+                className="bg-amber-700 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition"
               >
                 {loading ? 'Summoning...' : 'Send'}
               </button>
@@ -407,9 +439,9 @@ const handleSaveScroll = async () => {
             )}
 
             {title && (
-              <div className="text-center text-xs text-gray-500 dark:text-scroll mt-4">
+              <div className="text-center text-xs text-gray-500 dark:text-zinc-400 mt-4">
                 Powered by{' '}
-                <span className="font-semibold text-amber-700 dark:text-bronze">
+                <span className="font-semibold text-amber-700">
                   {title}
                 </span>{' '}
                 • Companion of the Grove
@@ -417,20 +449,20 @@ const handleSaveScroll = async () => {
             )}
           </div>
 
-          <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-dark border border-amber-100 dark:border-bronze no-print">
-            <h3 className="text-sm font-semibold text-amber-700 dark:text-bronze mb-2">
-              ✍️ Feedback for this Sohbat
+          <div className="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 no-print">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              ✍️ Feedback
             </h3>
             <textarea
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Leave your thoughts..."
               rows={2}
-              className="w-full p-2 rounded border border-gray-300 dark:border-bronze"
+              className="w-full p-2 rounded border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
             />
             <button
               onClick={handleFeedbackSubmit}
-              className="mt-2 bg-amber-700 text-white px-4 py-1 rounded hover:bg-amber-800 transition"
+              className="mt-2 bg-amber-700 text-white px-4 py-1 rounded-lg hover:bg-amber-800 transition"
             >
               Submit Feedback
             </button>
@@ -440,4 +472,5 @@ const handleSaveScroll = async () => {
     </>
   );
 }
+
 

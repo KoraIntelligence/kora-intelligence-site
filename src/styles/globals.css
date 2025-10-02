@@ -1,145 +1,54 @@
-/* 1. Fonts must come first */
-@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=EB+Garamond&family=Spline+Sans+Mono&family=Source+Sans+Pro&display=swap');
-
-/* 2. Tailwind core directives */
+/* 1. Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* 1. Tailwind core directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 🕯️ Body Backgrounds */
+/* 2. Global reset */
 body {
-  @apply font-sans text-gray-800;
-  background-color: #f9f7f5;
+  @apply font-sans bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100;
 }
 
-/* 🌤️ Light Mode Only – Scroll Overlay */
-@media (prefers-color-scheme: light) {
-  body::before {
-    content: '';
-    @apply fixed inset-0 pointer-events-none;
-    background-image: url('/assets/textures/paper-grain.png');
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-    opacity: 0.06;
-    z-index: -1;
-  }
+/* Typography */
+h1 {
+  @apply text-3xl sm:text-4xl md:text-5xl font-bold text-amber-600 mb-6;
 }
 
-/* 🌒 Dark Mode */
-.dark body {
-  @apply text-scroll;
-  background: linear-gradient(to bottom, #0f0e11, #1a181e);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
+h2 {
+  @apply text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4;
 }
 
-/* 🌾 Grain Utility */
-.bg-grain {
-  background-image:
-    url('/textures/paper-grain.png'),
-    repeating-linear-gradient(
-      45deg,
-      rgba(0, 0, 0, 0.02) 0,
-      rgba(0, 0, 0, 0.02) 1px,
-      transparent 1px,
-      transparent 4px
-    );
-  background-size: cover;
+h3 {
+  @apply text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2;
 }
 
-/* ✨ Glow Utility */
-.filter-glow {
-  filter: drop-shadow(0 0 3px #c29b46aa);
+p {
+  @apply leading-relaxed text-gray-700 dark:text-gray-300;
 }
 
-/* 📜 Scroll Unfurl Entrance */
-.scroll-reveal {
-  animation: unfurl 1.2s ease-out;
+/* Links */
+a {
+  @apply no-underline text-amber-600 hover:opacity-70 transition;
 }
 
-@keyframes unfurl {
-  from {
-    transform: scaleY(0);
-    opacity: 0;
-  }
-  to {
-    transform: scaleY(1);
-    opacity: 1;
-  }
+.dark a {
+  @apply text-amber-400 hover:opacity-80;
 }
 
-/* 🎨 Typography Ritual Classes */
-.font-ritual {
-  font-family: 'Marcellus', serif;
+/* Forms */
+input,
+textarea,
+select {
+  @apply bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 rounded;
 }
 
-.font-scroll {
-  font-family: 'EB Garamond', serif;
-}
-
-.font-system {
-  font-family: 'Spline Sans Mono', monospace;
-}
-
-.font-body {
-  font-family: 'Source Sans Pro', sans-serif;
-}
-
-/* 🧱 Ritual Container – For Scroll Sections */
-.scroll-frame {
-  @apply rounded-3xl border-dashed border-2 border-amber-200 p-6 shadow-md bg-white/90 dark:bg-zinc-800;
-  background-image: url('/textures/paper-grain.png');
-  background-size: cover;
-}
-
-/* 🪶 Glyph Watermark Layer */
-.glyph-watermark {
-  @apply absolute opacity-5 top-1 right-2 w-6 h-6 pointer-events-none;
-}
-
-/* Dark mode readability */
-.dark input,
-.dark textarea,
-.dark select {
-  @apply bg-neutral-800 border-gray-600 text-gray-100 placeholder-gray-400;
-}
-
+/* Prose in dark mode */
 .dark .prose {
   @apply text-gray-100;
 }
 
-/* General typography harmony */
-h1 {
-  @apply text-3xl sm:text-4xl md:text-5xl font-serif font-semibold text-amber-600 mb-6;
-}
-
-h2 {
-  @apply text-2xl sm:text-3xl font-serif text-amber-700 dark:text-amber-300 mt-8 mb-4;
-}
-
-h3 {
-  @apply text-xl sm:text-2xl font-serif text-amber-700 dark:text-amber-300 mt-6 mb-2;
-}
-
-p {
-  @apply leading-relaxed;
-}
-
-a {
-  @apply underline text-amber-700 hover:text-amber-800;
-}
-
-.dark a {
-  @apply text-amber-400 hover:text-amber-300;
-}
-
-label {
-  @apply text-gray-700 dark:text-gray-300;
-}
-
-/* 🖨️ Print-specific tweaks */
+/* Print-specific tweaks */
 @media print {
   .messages > * {
     page-break-inside: avoid;

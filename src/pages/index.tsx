@@ -3,6 +3,7 @@ import {
   WhisperOfArrival,
   CompassFlame,
   CompanionGrove,
+  ComparisonTable,
   RitualEchoes,
   ZebraCovenant,
   CallToPresence,
@@ -30,6 +31,7 @@ export default function Home() {
         <WhisperOfArrival />
         <CompassFlame />
         <CompanionGrove />
+        <ComparisonTable />
         <RitualEchoes />
         <ZebraCovenant />
         <CallToPresence />

@@ -8,47 +8,44 @@ module.exports = {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        serif: ['"EB Garamond"', 'serif'],
-        ritual: ['Marcellus', 'serif'],
-        system: ['Spline Sans Mono', 'monospace'],
-        sans: ['Source Sans Pro', 'sans-serif'],
-      },
+  fontFamily: {
+    sans: ['Inter', 'system-ui', 'sans-serif'],
+    mono: ['Spline Sans Mono', 'monospace'], // keep if you use monospace
+  },
       colors: {
-        dusk: '#6e6655',
-        bronze: '#a88d54',
-        grain: '#f9f7f5',
-      },
-      backgroundColor: {
-        dark: '#0f0e11',
-        grove: '#1a181e',
-      },
-      textColor: {
-        scroll: '#eae6dd',
+        // Keep Tailwind defaults, no more "grain/bronze/grove/scroll"
       },
       typography: (theme) => ({
-        amber: {
+        DEFAULT: {
           css: {
-            color: theme('colors.amber.800'),
-            a: { color: theme('colors.amber.700') },
-            strong: { color: theme('colors.amber.900') },
-            h1: { color: theme('colors.amber.800') },
-            h2: { color: theme('colors.amber.800') },
-            h3: { color: theme('colors.amber.800') },
-            blockquote: { color: theme('colors.amber.700') },
-            code: { color: theme('colors.amber.800') },
+            color: theme('colors.gray.700'),
+            a: {
+              color: theme('colors.amber.600'),
+              textDecoration: 'none',
+              '&:hover': { opacity: 0.7 },
+            },
+            strong: { color: theme('colors.gray.900') },
+            h1: { color: theme('colors.amber.600') },
+            h2: { color: theme('colors.gray.900') },
+            h3: { color: theme('colors.gray.900') },
+            blockquote: { color: theme('colors.gray.600') },
+            code: { color: theme('colors.pink.600') },
           },
         },
         dark: {
           css: {
-            color: theme('colors.amber.100'),
-            a: { color: theme('colors.amber.300') },
-            strong: { color: theme('colors.amber.200') },
-            h1: { color: theme('colors.amber.100') },
-            h2: { color: theme('colors.amber.100') },
-            h3: { color: theme('colors.amber.100') },
-            blockquote: { color: theme('colors.amber.300') },
-            code: { color: theme('colors.amber.200') },
+            color: theme('colors.gray.100'),
+            a: {
+              color: theme('colors.amber.400'),
+              textDecoration: 'none',
+              '&:hover': { opacity: 0.8 },
+            },
+            strong: { color: theme('colors.gray.100') },
+            h1: { color: theme('colors.amber.400') },
+            h2: { color: theme('colors.gray.100') },
+            h3: { color: theme('colors.gray.100') },
+            blockquote: { color: theme('colors.gray.300') },
+            code: { color: theme('colors.pink.400') },
           },
         },
       }),

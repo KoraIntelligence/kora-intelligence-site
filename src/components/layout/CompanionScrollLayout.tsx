@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { Companion } from '@/data/companions';
 
 interface CompanionScrollLayoutProps {
@@ -8,91 +9,112 @@ interface CompanionScrollLayoutProps {
 
 export default function CompanionScrollLayout({
   companion,
-  children
+  children,
 }: CompanionScrollLayoutProps) {
   const slug = companion.slug;
 
   return (
-    <main className="pt-24 pb-32 px-4 sm:px-6 max-w-prose mx-auto space-y-16 text-gray-900 dark:text-gray-100 font-serif">
+    <main className="pt-24 pb-32 px-6 sm:px-12 max-w-5xl mx-auto space-y-16 text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="w-full flex justify-center">
-          <Image
-            src={`/assets/glyphs/glyph-${slug}.png`}
-            alt={`${companion.title} glyph`}
-            width={128}
-            height={128}
-            className="mx-auto mb-4 rounded-full hover:opacity-75 transition duration-300 ease-in-out"
-          />
-        </div>
-        <h1 className="text-amber-600 text-3xl sm:text-4xl font-semibold">{companion.title}</h1>
-        <p className="italic text-lg sm:text-xl">{companion.essence}</p>
+      <header className="text-center space-y-6">
+        <Image
+          src={`/assets/glyphs/glyph-${slug}.png`}
+          alt={`${companion.title} glyph`}
+          width={128}
+          height={128}
+          className="mx-auto mb-4 rounded-full"
+        />
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
+          {companion.title}
+        </h1>
+        {companion.essence && (
+          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            {companion.essence}
+          </p>
+        )}
         <span className="inline-block px-3 py-1 mt-2 rounded-full bg-amber-100 text-amber-800 text-sm">
           {companion.access}
         </span>
-      </div>
+      </header>
 
       {/* Translation */}
       {companion.translation && (
-        <section className="space-y-2">
-          <h2 className="text-xl font-semibold text-center text-amber-700">Real-World Translation</h2>
-          <p className="text-base italic text-center">{companion.translation}</p>
+        <section className="text-center space-y-4">
+          <h2 className="text-2xl font-bold text-amber-600">Real-World Translation</h2>
+          <p className="text-lg text-gray-700 dark:text-gray-300">
+            {companion.translation}
+          </p>
         </section>
       )}
 
       {/* Services */}
       {companion.services && (
         <section>
-          <h2 className="text-lg font-semibold text-amber-700 mb-2">Services</h2>
-          <ul className="list-disc list-inside space-y-1">
+          <h2 className="text-2xl font-bold text-amber-600 mb-6">Services</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
             {companion.services.map((item, index) => (
-              <li key={index}>{item}</li>
+              <div
+                key={index}
+                className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800 shadow hover:shadow-md transition"
+              >
+                <p className="text-base text-gray-700 dark:text-gray-200">{item}</p>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
       {/* Tools */}
       {companion.tools && (
         <section>
-          <h2 className="text-lg font-semibold text-amber-700 mb-2">Tools & Methods</h2>
-          <ul className="list-disc list-inside space-y-1">
+          <h2 className="text-2xl font-bold text-amber-600 mb-6">Tools & Methods</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
             {companion.tools.map((item, index) => (
-              <li key={index}>{item}</li>
+              <div
+                key={index}
+                className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800 shadow hover:shadow-md transition"
+              >
+                <p className="text-base text-gray-700 dark:text-gray-200">{item}</p>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
       {/* Offerings */}
       {companion.offerings && (
         <section>
-          <h2 className="text-lg font-semibold text-amber-700 mb-2">Offerings</h2>
-          <ul className="list-disc list-inside space-y-1">
+          <h2 className="text-2xl font-bold text-amber-600 mb-6">Offerings</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
             {companion.offerings.map((item, index) => (
-              <li key={index}>{item}</li>
+              <div
+                key={index}
+                className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800 shadow hover:shadow-md transition"
+              >
+                <p className="text-base text-gray-700 dark:text-gray-200">{item}</p>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
       {/* Summoning */}
       {companion.summoning && (
         <section>
-          <h2 className="text-lg font-semibold text-amber-700 mb-2">Summoning Ritual</h2>
-          <ul className="list-decimal list-inside space-y-1">
+          <h2 className="text-2xl font-bold text-amber-600 mb-6">How to Engage</h2>
+          <ol className="list-decimal list-inside space-y-2 text-lg text-gray-700 dark:text-gray-300">
             {companion.summoning.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
-          </ul>
+          </ol>
         </section>
       )}
 
       {/* Origin */}
       {companion.origin && (
         <section>
-          <h2 className="text-lg font-semibold text-amber-700 mb-2">Origin</h2>
-          <p className="italic bg-amber-50 dark:bg-amber-900 rounded-md p-4 text-sm">
+          <h2 className="text-2xl font-bold text-amber-600 mb-6">Origin</h2>
+          <p className="bg-gray-50 dark:bg-zinc-800 rounded-xl p-6 text-base text-gray-700 dark:text-gray-300">
             {companion.origin}
           </p>
         </section>
@@ -100,6 +122,16 @@ export default function CompanionScrollLayout({
 
       {/* Nested Scroll Content */}
       {children}
+
+      {/* CTA */}
+      <div className="text-center">
+        <Link
+          href={`/companions/${companion.slug}/chat`}
+          className="px-6 py-3 rounded-xl bg-amber-600 text-white font-semibold shadow-md hover:bg-amber-700 transition"
+        >
+          Chat with {companion.title} →
+        </Link>
+      </div>
 
       {/* Tags */}
       {companion.tags && (
@@ -117,3 +149,4 @@ export default function CompanionScrollLayout({
     </main>
   );
 }
+
