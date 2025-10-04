@@ -29,7 +29,7 @@ export default function CompanionPage() {
           <CompanionRitual companion={companion} />
         )}
         {/* Removed empty conditional block that caused error */}
-        {companion.mode === 'hybrid' && (
+        {companion.mode === 'chat' && (
           <section>
             <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Whisper with {companion.title}</h2>
             <iframe
@@ -38,7 +38,7 @@ export default function CompanionPage() {
             />
           </section>
         )}
-        {companion.mode === 'hybrid' && (
+        {companion.mode === 'chat' && (
           <section className="space-y-8">
             <div>
               <h2 className="text-lg font-semibold text-amber-600 mb-2 text-center">Prompt Summon</h2>
