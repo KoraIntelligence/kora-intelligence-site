@@ -26,7 +26,7 @@ export default function SummonPage() {
             </h1>
             <div className="grid gap-6 md:grid-cols-2 max-w-3xl">
               {Object.values(companions)
-                .filter((c) => c.mode === 'hybrid')
+                .filter((c) => c.mode === 'chat')
                 .map((c) => (
                   <button
                     key={c.slug}
