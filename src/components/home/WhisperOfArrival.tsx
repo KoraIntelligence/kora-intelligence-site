@@ -42,7 +42,6 @@ export default function WhisperOfArrival() {
       <div className="mt-10">
         <Link
           href="#companions"
-          scroll={false}
           className="px-6 py-3 rounded-2xl bg-amber-600 text-white hover:bg-amber-700 transition-colors duration-300 shadow-lg"
         >
           Try a Companion →
