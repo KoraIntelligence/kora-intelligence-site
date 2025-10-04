@@ -17,7 +17,7 @@ export default function Footer() {
 
       <nav className="flex justify-center gap-6 mt-4">
         <Link href="/companions" className="hover:opacity-70 transition">Companions</Link>
-        <Link href="/dispatches" className="hover:opacity-70 transition">Dispatches</Link>
+        <Link href="/dispatch" className="hover:opacity-70 transition">Dispatches</Link>
         <Link href="/privacy" className="hover:opacity-70 transition">Privacy</Link>
       </nav>
     </footer>
