@@ -1,9 +1,9 @@
 import Head from 'next/head';
 import {
   WhisperOfArrival,
-  CompassFlame,
-  CompanionGrove,
   ComparisonTable,
+  CompanionGrove,
+  CompassFlame,
   RitualEchoes,
   ZebraCovenant,
   CallToPresence,
@@ -29,9 +29,9 @@ export default function Home() {
 
       <div className="space-y-24 font-serif text-gray-800 dark:text-gray-100 bg-white dark:bg-neutral-900 transition-colors duration-300 ease-in-out">
         <WhisperOfArrival />
-        <CompassFlame />
-        <CompanionGrove />
         <ComparisonTable />
+        <CompanionGrove />
+        <CompassFlame />
         <RitualEchoes />
         <ZebraCovenant />
         <CallToPresence />

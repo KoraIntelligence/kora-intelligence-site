@@ -1,9 +1,9 @@
 import Head from 'next/head';
 import {
   WhisperOfArrival,
-  CompassFlame,
-  CompanionGrove,
   ComparisonTable,
+  CompanionGrove,
+  CompassFlame,
   RitualEchoes,
   ZebraCovenant,
   CallToPresence,
