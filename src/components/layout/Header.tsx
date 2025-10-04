@@ -49,7 +49,7 @@ export default function Header() {
             <Link href="/our-story" className="hover:opacity-70 transition">Our Story</Link>
             <Link href="/companions" className="hover:opacity-70 transition">Companions</Link>
             <Link href="/labs" className="hover:opacity-70 transition">Labs</Link>
-            <Link href="/dispatches" className="hover:opacity-70 transition">Dispatches</Link>
+            <Link href="/dispatch" className="hover:opacity-70 transition">Dispatches</Link>
             <Link href="/contact" className="inline-block">
               <span className="bg-amber-600 text-white px-3 py-1 rounded-md hover:bg-amber-700 transition">
                 Begin Your Journey

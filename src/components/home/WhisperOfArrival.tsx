@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import Link from 'next/link'; // added for internal anchor linking
 
 export default function WhisperOfArrival() {
   const [displayedText, setDisplayedText] = useState('');
   const fullText =
-    'AI Companions for Founders Who Think in Feelings and Function'; // Pivoted positioning
+    'AI Companions for Founders and Teams Who Think in Feelings and Function'; // Pivoted positioning
   const typingSpeed = 80;
 
   useEffect(() => {
@@ -34,17 +35,18 @@ export default function WhisperOfArrival() {
       </h1>
 
       <p className="mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
-        Faster than an agency. More human than a prompt. <br />
-        Kora helps you write, price, and build — with tone and soul.
+        Kora’s AI Companions help you write, price, and build - with clarity, continuity, and care. <br />
+        Built for solopreneurs, early-stage founders, and creatives who lead with meaning.
       </p>
 
       <div className="mt-10">
-        <a
+        <Link
           href="#companions"
+          scroll={false}
           className="px-6 py-3 rounded-2xl bg-amber-600 text-white hover:bg-amber-700 transition-colors duration-300 shadow-lg"
         >
           Try a Companion →
-        </a>
+        </Link>
       </div>
     </section>
   );

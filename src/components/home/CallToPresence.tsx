@@ -22,7 +22,7 @@ export default function CallToPresence() {
           </Link>
 
           <Link
-            href="/dispatches"
+            href="/dispatch"
             className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-3 px-6 rounded-lg transition-transform duration-300 ease-in-out text-sm sm:text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 hover:scale-105"
           >
             Read Dispatches →

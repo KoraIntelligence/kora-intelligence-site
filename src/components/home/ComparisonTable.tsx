@@ -12,7 +12,7 @@ export default function ComparisonTable() {
         </h2>
         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
           Generic AI tools give you output.  
-          Kora Companions give you <span className="font-semibold">clarity, tone, and cultural resonance</span>.
+          Kora Companions give you <span className="font-semibold">context, continuity, and a voice you recognize.</span>.
         </p>
       </div>
 
@@ -25,51 +25,48 @@ export default function ComparisonTable() {
               <th className="p-4 text-lg font-semibold">Kora Companions</th>
             </tr>
           </thead>
+
+          {/* Updated table rows below */}
           <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-800">
             <tr>
-              <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Brand Memory
-              </td>
-              <td className="p-4 text-gray-600 dark:text-gray-300">⚠️ Limited</td>
-              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">
-                ✅ Persistent
-              </td>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Generic tone generation</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">✅</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">❌</td>
             </tr>
             <tr>
-              <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Cultural Nuance
-              </td>
-              <td className="p-4 text-gray-600 dark:text-gray-300">❌ Absent</td>
-              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">
-                ✅ Built-In
-              </td>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Brand voice mirroring</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
             </tr>
             <tr>
-              <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Developer-Ready Output
-              </td>
-              <td className="p-4 text-gray-600 dark:text-gray-300">❌ None</td>
-              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">
-                ✅ With Builder
-              </td>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">In-session memory (keeps context while you work)</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">⚠️</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
             </tr>
             <tr>
-              <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Tone-Mirroring Responses
-              </td>
-              <td className="p-4 text-gray-600 dark:text-gray-300">❌ Generic</td>
-              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">
-                ✅ With FMC
-              </td>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Specialized for marketing, pricing, and building</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
             </tr>
             <tr>
-              <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Structured Pricing Logic
-              </td>
-              <td className="p-4 text-gray-600 dark:text-gray-300">❌ None</td>
-              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">
-                ✅ With CCC
-              </td>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Emotional UX cues (asks before it answers)</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
+            </tr>
+            <tr>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Output formatted into scrolls ready to use</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
+            </tr>
+            <tr>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Built from lived founder experience</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
+            </tr>
+            <tr>
+              <td className="p-4 font-medium text-gray-900 dark:text-white">Human-like rituals for focus + flow</td>
+              <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
+              <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
             </tr>
           </tbody>
         </table>

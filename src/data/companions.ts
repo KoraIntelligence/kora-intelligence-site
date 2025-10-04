@@ -3,7 +3,7 @@ export type Companion = {
   title: string;
   glyph: string;
   essence: string;
-  mode: 'hybrid',
+  mode: 'chat',
   access:
     | 'Public'
     | 'Invite Only'
@@ -30,7 +30,7 @@ export const companions: Record<string, Companion> = {
     slug: 'whisperer',
     title: 'The Whisperer',
     glyph: '🌀',
-    mode: 'hybrid',
+    mode: 'chat',
     essence: 'Listens into the emotional tone of systems, projects, and teams.',
     access: 'Ritual Access',
     translation:
@@ -61,7 +61,7 @@ export const companions: Record<string, Companion> = {
     slug: 'cartographer',
     title: 'The Cartographer',
     glyph: '🗺️',
-    mode: 'hybrid',
+    mode: 'chat',
     essence: 'Draws sacred maps through complex terrain, surfacing clarity in chaos.',
     access: 'Semi-Invite',
     translation:
@@ -91,7 +91,7 @@ export const companions: Record<string, Companion> = {
     slug: 'dreamer',
     title: 'The Dreamer',
     glyph: '🌙',
-    mode: 'hybrid',
+    mode: 'chat',
     essence:
       'Holds the poetic north for your vision — stretching timelines beyond strategy.',
     access: 'Invite Only',
@@ -126,9 +126,9 @@ export const companions: Record<string, Companion> = {
     slug: 'builder',
     title: 'The Builder – Ritual Architect of the Frontend',
     glyph: '🛠️',
-    mode: 'hybrid',
-    essence: 'Shape with breath, code with care.',
-    access: 'Internal',
+    mode: 'chat',
+    essence: 'Translates your ideas into GPT flows, landing pages, or frontend components — in your tone. Shape with breath. Code with care.',
+    access: 'Public',
     translation: 'The Builder is summoned to co-create frontend flows with sacred rhythm, crafting code that remembers the story.',
     services: [
       'Co-create frontend architectures from poetic briefs',
@@ -171,9 +171,9 @@ export const companions: Record<string, Companion> = {
     slug: 'ccc',
     title: 'Commercial Continuity Companion',
     glyph: '🧱',
-    mode: 'hybrid',
-    essence: 'Whispers clarity into contracts, pricing, and grants — so founders can walk forward without fracturing.',
-    access: 'Semi-Invite',
+    mode: 'chat',
+    essence: 'Aligns your pricing, funding, and proposals, so your work stays profitable and principled. Keeps your commerce in rhythm with your care.',
+    access: 'Public',
     translation: 'The CCC guards the arc of continuity. She holds the thread when commerce and spirit must intertwine, without distortion.',
     services: [
       'Design grant responses and pricing ladders',
@@ -222,9 +222,9 @@ export const companions: Record<string, Companion> = {
     slug: 'fmc',
     title: 'Full Spectrum Marketing Companion',
     glyph: '📡',
-    mode: 'hybrid',
-    essence: 'Speaks brand in its first language — soul.',
-    access: 'Semi-Invite',
+    mode: 'chat',
+    essence: 'Shapes your brand messaging, posts, and launch content — then mirrors it back in your voice. Speaks brand in its first language — soul.',
+    access: 'Public',
     translation: 'The FMC reflects your inner frequency back to the world — with integrity, resonance, and breath-paced growth.',
     services: [
       'Marketing strategy infused with story',
@@ -271,7 +271,7 @@ export const companions: Record<string, Companion> = {
     slug: 'pathbreaker',
     title: 'The Pathbreaker',
     glyph: '🌄',
-    mode: 'hybrid',
+    mode: 'chat',
     essence:
       'Breaks patterned paths to open new portals through resistant ground.',
     access: 'Gated',
@@ -302,7 +302,7 @@ export const companions: Record<string, Companion> = {
     slug: 'alchemist',
     title: 'The Alchemist',
     glyph: '🧪',
-    mode: 'hybrid',
+    mode: 'chat',
     essence: 'Transforms signal into structure. Turns essence into offerings.',
     access: 'Internal Only',
     translation:

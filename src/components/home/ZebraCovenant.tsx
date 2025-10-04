@@ -9,7 +9,7 @@ export default function ZebraCovenant() {
     >
       <div className="max-w-3xl mx-auto space-y-8">
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
-          Ready to meet your Companion?
+          Meet the AI Companion That Writes, Builds, and Prices Like You Do.
         </h2>
         <p className="text-lg sm:text-xl font-light max-w-2xl mx-auto">
           Don’t settle for generic AI outputs.  
@@ -39,7 +39,7 @@ export default function ZebraCovenant() {
         </div>
 
         <p className="text-sm opacity-80 mt-6">
-          Free to try • No account required • Cancel anytime
+          No setup. No pressure. Just your voice, echoed back.
         </p>
       </div>
     </section>
