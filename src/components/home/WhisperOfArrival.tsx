@@ -40,12 +40,12 @@ export default function WhisperOfArrival() {
       </p>
 
       <div className="mt-10">
-        <Link
-          href="#companions"
-          className="px-6 py-3 rounded-2xl bg-amber-600 text-white hover:bg-amber-700 transition-colors duration-300 shadow-lg"
-        >
-          Try a Companion →
-        </Link>
+        <a
+  href="#companions"
+  className="px-6 py-3 rounded-2xl bg-amber-600 text-white hover:bg-amber-700 transition-colors duration-300 shadow-lg"
+>
+  Try a Companion →
+</a>
       </div>
     </section>
   );
