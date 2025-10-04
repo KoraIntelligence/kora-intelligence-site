@@ -13,7 +13,7 @@ export default function CompanionEngineCTA() {
         href="/companions"
         className="inline-block mt-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-2 rounded-md shadow transition"
       >
-        Begin Your Ritual →
+        Try a Companion →
       </Link>
     </div>
   );

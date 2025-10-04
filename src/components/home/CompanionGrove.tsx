@@ -7,15 +7,17 @@ import { companions, Companion } from '@/data/companions';
 export default function CompanionGrove() {
   return (
     <section
+      id="companions" // Added: allows the "Try a Companion" anchor to work
       aria-label="Meet the Companions"
-      className="bg-neutral-50 dark:bg-gray-900 pt-24 pb-32 px-6 sm:px-12 transition-colors ease-in-out duration-500"
+      className="scroll-mt-24 bg-neutral-50 dark:bg-gray-900 pt-24 pb-32 px-6 sm:px-12 transition-colors ease-in-out duration-500"
     >
       <div className="max-w-3xl mx-auto text-center mb-12 space-y-4">
         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100">
           Meet Your Companions
         </h2>
         <p className="text-md sm:text-lg text-gray-700 dark:text-gray-300">
-          Start with the three active Companions - each designed to support a core function: brand messaging (FMC), pricing and funding (CCC), or digital product flows (Builder).
+          Start with the three active Companions — each designed to support a core function:
+          brand messaging (FMC), pricing and funding (CCC), or digital product flows (Builder).
         </p>
       </div>
 
