@@ -54,7 +54,7 @@ export default function CompanionChat(props: CompanionChatProps) {
     if (promoValid && emailValid) {
       Cookies.set('sohbat_access', 'true', { expires: 0.125 });
       setIsLoggedIn(true);
-      alert('Access granted. Welcome to the Sohbat.');
+      alert('Access granted. Welcome to the Chat.');
     } else {
       alert('Invalid email or promo code.');
     }
@@ -210,7 +210,7 @@ const loadTally = () =>
     return (
       <div className="max-w-md mx-auto p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow space-y-4">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center">
-          Sohbat Access
+          Chat Access
         </h2>
         <input
           type="email"
@@ -230,7 +230,7 @@ const loadTally = () =>
           onClick={handleLogin}
           className="w-full bg-amber-700 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition"
         >
-          Enter Sohbat →
+          Enter Chat →
         </button>
       </div>
     );
@@ -274,7 +274,7 @@ const loadTally = () =>
           onClick={() => setMemoryCaptured(true)}
           className="w-full bg-amber-700 text-white px-4 py-2 rounded-lg hover:bg-amber-800 transition"
         >
-          Begin Sohbat →
+          Begin Chat →
         </button>
       </div>
     );
@@ -392,7 +392,7 @@ const loadTally = () =>
 
                               <a
                                 href={previewImage}
-                                download="sohbat-image.png"
+                                download="chat-image.png"
                                 className="block mt-4 text-center bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded transition"
                               >
                                 📥 Download Image
@@ -434,7 +434,7 @@ const loadTally = () =>
                 onClick={handleSaveScroll}
                 className="text-center text-sm text-amber-700 hover:underline mt-4 block no-print"
               >
-                📜 Save this Sohbat as a Scroll
+                📜 Save this Chat as a Scroll
               </button>
             )}
 
