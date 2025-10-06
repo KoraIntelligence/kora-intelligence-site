@@ -9,7 +9,7 @@ export default function BuilderPage() {
     <>
       <Head>
         <title>{companion.title} – Kora Companion</title>
-        <meta name="description" content={companion.essence} />
+        <meta name="description" content={companion.tagline} />
       </Head>
 
       <CompanionScrollLayout companion={companion}>
