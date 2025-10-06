@@ -45,7 +45,7 @@ export default function CompanionsPage() {
                 {companion.title}
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {companion.essence}
+                {companion.tagline}
               </p>
             </Link>
           ))}

@@ -23,7 +23,7 @@ export default function CompanionGrove() {
       </div>
 
       {/* Companion Cards */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {Object.values(companions)
           .filter((companion: Companion) =>
             ['fmc', 'ccc', 'builder'].includes(companion.slug)
@@ -32,24 +32,23 @@ export default function CompanionGrove() {
             <Link
               key={companion.slug}
               href={`/companions/${companion.slug}`}
-              className="group p-6 bg-white dark:bg-neutral-800 rounded-2xl text-center shadow hover:shadow-lg transition-all duration-300 flex flex-col items-center border border-transparent hover:border-amber-300 dark:hover:border-amber-500"
+              className="group bg-white dark:bg-neutral-800 rounded-2xl text-center shadow hover:shadow-xl transition-all duration-300 p-6 border border-transparent hover:border-amber-300 dark:hover:border-amber-500 flex flex-col items-center justify-between"
             >
-              <div className="relative">
-                <Image
-                  src={`/assets/glyphs/glyph-${companion.slug}.png`}
-                  alt={`${companion.title} – AI Companion glyph`}
-                  width={128}
-                  height={128}
-                  className="mx-auto mb-4 rounded-full transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-              <h3 className="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
+              <Image
+                src={`/assets/glyphs/glyph-${companion.slug}.png`}
+                alt={`${companion.title} – AI Companion glyph`}
+                width={96}
+                height={96}
+                className="mb-4 rounded-full transition-transform duration-300 group-hover:scale-105"
+              />
+
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 {companion.title}
               </h3>
 
-              {/* Updated: tagline replaces essence */}
+              {/* Use tagline instead of essence */}
               {companion.tagline && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {companion.tagline}
                 </p>
               )}
@@ -58,7 +57,7 @@ export default function CompanionGrove() {
       </div>
 
       {/* CTA */}
-      <div className="mt-16">
+      <div className="mt-20">
         <CompanionEngineCTA />
       </div>
     </section>
