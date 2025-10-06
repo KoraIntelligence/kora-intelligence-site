@@ -58,4 +58,35 @@ select {
   .messages > * {
     page-break-inside: avoid;
   }
+
+  .section-heading {
+  @apply text-2xl font-bold text-amber-600 text-center mb-8;
 }
+
+/* Fade-in animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-fade-up {
+  animation: fadeIn 0.8s ease-out forwards;
+  animation-delay: 0.15s;
+}
+
+.animate-fade-in-delayed {
+  animation: fadeIn 1s ease-out forwards;
+  animation-delay: 0.25s;
+}
+}
+

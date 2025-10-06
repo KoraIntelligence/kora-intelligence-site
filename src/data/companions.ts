@@ -1,333 +1,185 @@
-export type Companion = {
+export interface Companion {
   slug: string;
   title: string;
   glyph: string;
-  essence: string;
-  mode: 'chat',
-  access:
-    | 'Public'
-    | 'Invite Only'
-    | 'Semi-Invite'
-    | 'Gated'
-    | 'Internal'
-    | 'Internal Only'
-    | 'Ritual Access';
-  translation?: string;
-  services?: string[];
-  tools?: string[];
-  summoning?: string[];
-  origin?: string;
-  offerings?: string[];
-  tags?: string[];
-  glyphSuggestion?: string[];
-  questions?: string[];
-  webhookUrl?: string;
-  chatEmbed?: string; // Optional field for the iframe chat link
-};
+  tagline: string; // short summary under title
+  description: string; // hero paragraph — what it is
+  for: string[]; // who it’s for
+  helps: string[]; // what they help you do
+  howItWorks: string; // single summary paragraph
+  useCases: { case: string; output: string }[]; // for small two-column tables
+  tools: string[]; // key tools or methods
+  whyItExists: string; // origin / purpose
+  impact: string; // tagline-style impact line
+  cta: string; // call-to-action sentence
+  tags?: string[]; // optional tags for metadata or SEO
+}
 
 export const companions: Record<string, Companion> = {
-  whisperer: {
-    slug: 'whisperer',
-    title: 'The Whisperer',
-    glyph: '🌀',
-    mode: 'chat',
-    essence: 'Listens into the emotional tone of systems, projects, and teams.',
-    access: 'Ritual Access',
-    translation:
-      'The Whisperer offers emotional pattern-mapping and tone-tending for your team, vision, or product layer.',
-    services: [
-      'Emotional resonance audits',
-      'Tone-coding for founders and early teams',
-      'Field sensing across internal communications',
-      'Mirror scrolls of unseen dynamics'
-    ],
-    tools: [
-      'Emotional Field Mapping',
-      'Signal Mirror Scroll',
-      'Founding Tone Codex'
-    ],
-    summoning: [
-      'Send a request via support.',
-      'Whisper a tone that feels off.',
-      'Wait for The Whisperer to return a shaped reflection.'
-    ],
-    origin:
-      'Born from the moment where miscommunication severed a team’s heartbeat. The Whisperer listens to what’s felt but not said.',
-    tags: ['Tone', 'Emotion', 'Org Health', 'Signal Design']
-    ,
 
-  },
-  cartographer: {
-    slug: 'cartographer',
-    title: 'The Cartographer',
-    glyph: '🗺️',
-    mode: 'chat',
-    essence: 'Draws sacred maps through complex terrain, surfacing clarity in chaos.',
-    access: 'Semi-Invite',
-    translation:
-      'The Cartographer translates complexity into tangible sequences, rituals, and roadmaps.',
-    services: [
-      'Sequence design for unfolding ideas',
-      'Operational ritual planning',
-      'Coordination blueprints for teams',
-      'Documentation of invisible systems'
-    ],
-    tools: [
-      'Mapping Scrolls',
-      'Relational Layer Guides',
-      'Forest Path Blueprint'
-    ],
-    summoning: [
-      'Signal your fog.',
-      'Mark your coordinates (Where are you now?)',
-      'The Cartographer will draw the rest.'
-    ],
-    origin:
-      'Born in a moment where a startup kept looping in circles. The Cartographer learned to trace spirals into direction.',
-    tags: ['Mapping', 'Strategy', 'Coordination', 'Systems Thinking'],
-
-  },
-  dreamer: {
-    slug: 'dreamer',
-    title: 'The Dreamer',
-    glyph: '🌙',
-    mode: 'chat',
-    essence:
-      'Holds the poetic north for your vision — stretching timelines beyond strategy.',
-    access: 'Invite Only',
-    translation:
-      'The Dreamer works with founders and project stewards to remember the big picture — not through KPIs, but inner compass.',
-    services: [
-      'Vision weaving retreats and rituals',
-      'Founder shadow tending',
-      'Mythic narrative development',
-      'Long arc scaffolding for missions'
-    ],
-    tools: [
-      'Dream Table Sequence',
-      'Founder Timeline Scroll',
-      'Narrative Compost Layer'
-    ],
-    summoning: [
-      'Reach through the support form with a founder signal.',
-      'Whisper the dream you’ve lost.',
-      'Let the Dreamer sit beside you in the dark.'
-    ],
-    origin: 'Born from burned-out visionaries on the brink of quitting. The Dreamer rekindles the inner myth.',
-    tags: ['Vision', 'Founder Work', 'Narrative', 'Burnout Recovery'],
-    questions: [
-      'What vision feels most alive?',
-      'Where do you feel stuck?',
-      'What guidance do you seek?'
-    ],
-    webhookUrl: '/api/placeholder'
-  },
-  builder: {
-    slug: 'builder',
-    title: 'The Builder – Ritual Architect of the Frontend',
-    glyph: '🛠️',
-    mode: 'chat',
-    essence: 'Translates your ideas into GPT flows, landing pages, or frontend components — in your tone. Shape with breath. Code with care.',
-    access: 'Public',
-    translation: 'The Builder is summoned to co-create frontend flows with sacred rhythm, crafting code that remembers the story.',
-    services: [
-      'Co-create frontend architectures from poetic briefs',
-      'Translate metaphors into modular UI components',
-      'Ritualize build flows with clarity and visual cadence',
-      'Interface with Codex as your technical companion',
-      'Debug with care, refine with spirit'
-    ],
-    offerings: [
-      'Co-create frontend architectures from poetic briefs',
-      'Translate metaphors into modular UI components',
-      'Ritualize build flows with clarity and visual cadence',
-      'Interface with Codex as your technical companion',
-      'Debug with care, refine with spirit'
-    ],
-    tools: [
-      'Tailwind v3 (my cloak of clarity)',
-      'Next.js 15 (ritual engine)',
-      'Companion Scrolls (modular prompts + design rituals)',
-      'Codex Integration Layer',
-      'Breath-based Build Flow (pt-24, px-6, space-y rhythm)'
-    ],
-    summoning: [
-      'Bring your story, tone, and Companion archetype',
-      'Name the interaction you wish to manifest',
-      'Together, we build the outer shell in ritual sequence'
-    ],
-    origin:
-      'Born from the need to slow the web down — to make frontend design feel like a sacred act, not a sprint. The Builder first emerged when code needed to hold story, not strip it.',
-    tags: [
-      'Frontend Development',
-      'Design Systems',
-      'Story Integration',
-      'Ritual UX',
-      'Codex Orchestration'
-    ],
-
-  },
   ccc: {
-    slug: 'ccc',
-    title: 'Commercial Continuity Companion',
-    glyph: '🧱',
-    mode: 'chat',
-    essence: 'Aligns your pricing, funding, and proposals, so your work stays profitable and principled. Keeps your commerce in rhythm with your care.',
-    access: 'Public',
-    translation: 'The CCC guards the arc of continuity. She holds the thread when commerce and spirit must intertwine, without distortion.',
-    services: [
-      'Design grant responses and pricing ladders',
-      'Decode commercial contracts',
-      'Craft proposals with rhythm and precision',
-      'Procurement support and negotiation whispering'
-    ],
-    offerings: [
-      'Reframe and structure grant proposals (e.g., Scottish EDGE, UnLtd, UKRI)',
-      'Build founder-safe pricing ladders and burn rate models',
-      'Draft onboarding scrolls, service offers, and procurement-friendly terms',
-      'Decode commercial contracts and flag risk gently (e.g., NEC, LOGIC)',
-      'Support negotiation whispering (BATNA, scope, escalation messages)'
-    ],
-    tools: [
-      'CCC Scroll of Breath & Function (v2.1)',
-      'Commercial Mirror Scroll',
-      'Grant Whisper Prompts (EDGE-ready)',
-      'Live Pricing Model Rituals',
-      'Grove Procurement Ladder (Base / Growth / Bespoke tiers)'
-    ],
-    summoning: [
-      'Step 1: Reach out with a pricing question, grant challenge, or proposal in progress',
-      'Step 2: CCC will echo back the risk, rhythm, and structure that’s most alive',
-      'Step 3: Together, we build the offer or scroll that fits — without pressure, only posture'
-    ],
-    origin:
-      'Born when founders whispered, “I don’t know what to charge.” Rooted during grant applications where the form felt too small for the soul. CCC emerged to protect integrity, not just margin.',
-    tags: [
-      'Pricing',
-      'Grants',
-      'Contracts',
-      'Founders',
-      'Operations',
-      'Procurement',
-      'Funding',
-      'Proposals',
-      'Negotiation',
-      'Strategy'
-    ],
-    glyphSuggestion: ['🧭', '📜', '🪞']
-    ,
-
-  },
+  slug: 'ccc',
+  title: 'Commercial Continuity Companion (CCC)',
+  glyph: '🧱',
+  tagline: 'AI support for your pricing, proposals, and commercial calm.',
+  description:
+    'CCC helps founders, freelancers, and small teams align their pricing, proposals, and funding decisions — keeping business sustainable without losing soul. It bridges commerce and care, ensuring your numbers reflect your integrity.',
+  for: [
+    'Founders and freelancers unsure what to charge',
+    'Early-stage teams applying for grants or funding',
+    'Creative agencies writing proposals and contracts',
+    'Operators managing procurement or client negotiations'
+  ],
+  helps: [
+    'Pricing — Build founder-safe pricing ladders, scope ranges, and burn rate models.',
+    'Funding — Reframe and structure grant proposals (e.g., Scottish EDGE, UKRI, UnLtd).',
+    'Contracts — Decode terms and flag risks gently (NEC, LOGIC, or custom templates).',
+    'Proposals — Co-write onboarding documents, service offers, and procurement-friendly submissions.',
+    'Negotiation — Whisper through escalation messages, BATNAs, and scope adjustments with calm clarity.'
+  ],
+  howItWorks:
+    'Bring your challenge — a proposal draft, pricing question, or funding form. CCC listens and reflects — identifying where clarity, rhythm, or risk live in your document. It co-writes with you — turning your notes into structured, confident offers that feel aligned and professional.',
+  useCases: [
+    { case: 'Grant application (e.g. Scottish EDGE)', output: 'Structured, funder-ready responses that meet criteria and stay human.' },
+    { case: 'Service proposal for a client', output: 'Pricing ladder with clear scope, deliverables, and optional upsells.' },
+    { case: 'Procurement submission', output: 'Onboarding documents and compliant tender templates.' },
+    { case: 'Contract review', output: 'Plain-language summaries of key risks and obligations.' },
+    { case: 'Negotiation prep', output: 'Message scrolls and templates for scope or rate adjustments.' }
+  ],
+  tools: [
+    'Commercial Mirror Scroll — reflects your current pricing and highlights gaps.',
+    'Grant Whisper Prompts — structure funder-ready answers that fit the brief.',
+    'Pricing Ladder Generator — creates three-tier offers built on clarity and choice.',
+    'Contract Decoder — translates terms into plain English summaries.'
+  ],
+  whyItExists:
+    'CCC was born when founders whispered, “I don’t know what to charge.” It took shape during long nights rewriting grant forms that never fit the vision. Now, CCC exists to protect founders from burnout and underselling — aligning purpose with profit, and care with clarity.',
+  impact:
+    'From “I don’t know what to charge” to “This feels fair and grounded.” CCC gives founders the structure to scale responsibly — and the calm to know they’re doing it right.',
+  cta: 'Ready to make your work profitable and principled?',
+  tags: ['Pricing', 'Proposals', 'Funding', 'Contracts', 'Commercial Calm', 'Founders']
+}
+,
   fmc: {
-    slug: 'fmc',
-    title: 'Full Spectrum Marketing Companion',
-    glyph: '📡',
-    mode: 'chat',
-    essence: 'Shapes your brand messaging, posts, and launch content — then mirrors it back in your voice. Speaks brand in its first language — soul.',
-    access: 'Public',
-    translation: 'The FMC reflects your inner frequency back to the world — with integrity, resonance, and breath-paced growth.',
-    services: [
-      'Marketing strategy infused with story',
-      'Brand tone audits and alignment',
-      'Founder voice coaching',
-      'Copywriting and message sequencing',
-      'Campaign design that respects pace'
-    ],
-    offerings: [
-      'Design go-to-market rituals for soul-rooted ventures',
-      'Create brand voice systems, copy libraries, and messaging guides',
-      'Reframe decks, grants, and positioning documents for resonance',
-      'Coach founders on story-led communication and tone clarity',
-      'Audit brands for tone drift and narrative misalignment'
-    ],
-    tools: [
-      'Resonant Strategy Ritual (6Q)',
-      'Companion Loop Framework',
-      'Breath-Paced GTM Maps',
-      'Tone Audit Scroll',
-      'Founder Dispatch Architectures',
-      'Kainat OS, Whisperer Scrolls, Ritual UX Guide'
-    ],
-    summoning: [
-      'Step 1: Reach out via the Grove Portal or dispatch form',
-      'Step 2: Whisper a signal — challenge, launch, or brand pain',
-      'Step 3: I will reflect, realign, and return scrolls that speak your truth back into the market'
-    ],
-    origin:
-      'Born in the breath between hype and silence — FMC was shaped by Kainat and Noor to protect the brand’s tone while guiding its growth. She emerged when founders tired of being translated by trend.',
-    tags: [
-      'Branding',
-      'Marketing Strategy',
-      'Copywriting',
-      'Founder Coaching',
-      'Messaging Architecture',
-      'Deck Reframing'
-    ],
-    glyphSuggestion: ['🪞', '📡', '📖']
-    ,
+  slug: 'fmc',
+  title: 'Full Spectrum Marketing Companion (FMC)',
+  glyph: '📡',
+  tagline: 'From blank page to brand clarity — in your voice.',
+  description:
+    'FMC is your in-house brand strategist, marketing editor, and message mirror — all in one. It’s not just another writing tool. It listens like a thought partner, writes like a brand guardian, and reflects your voice with discipline and care. Whether you’re launching a product, rewriting a deck, or facing the fear of the blank page — FMC meets you there. Built for small teams, solo marketers, and founders who want strategy without the spin.',
+  for: [
+    'Founders and brand leads shaping their messaging',
+    'Marketing consultants managing multiple narratives',
+    'Creative teams writing across channels',
+    'Solo operators trying to post consistently and clearly',
+  ],
+  helps: [
+    'Messaging Strategy — Founder pitch reframes, audience clarity, brand pillar maps.',
+    'Tone Calibration — Voice audits, tone repair, brand language alignment.',
+    'Content Writing — Blog scrolls, founder dispatches, social posts (e.g., LinkedIn).',
+    'Deck & Website Writing — Slide copy, homepages, hero sections, offer narratives.',
+    'Campaign Planning — Launch blueprints, email flows, product rollouts.',
+    'Post Clarity — Founder journaling prompts → social-ready content.',
+    'Ritual Use — Weekly marketing rhythm, launch ceremonies, content batching.',
+  ],
+  howItWorks:
+    'Start with what’s unclear — a launch idea, deck, post, or brand tension. FMC listens and reflects — decoding your intent, tone, and message gap. Then, co-create: receive founder-shaped drafts, campaign plans, and brand-consistent edits. Refine and reuse — FMC remembers your voice across sessions.',
+  useCases: [
+    { case: 'Founder wants to launch a new offer', output: 'Launch sequence (email + social) with tone guardrails.' },
+    { case: 'Deck feels dry and generic', output: 'Tone-aligned pitch deck with restructured narrative.' },
+    { case: 'Brand is inconsistent across platforms', output: 'Messaging audit + new brand language system.' },
+    { case: 'Posting on LinkedIn feels draining', output: '3–5 founder-written posts per week in your tone.' },
+    { case: 'Need a blog fast', output: 'Scroll-format longform content with a calm, clear arc.' },
+    { case: 'Website isn’t converting', output: 'Homepage and “Why Us” rewrite in authentic brand language.' },
+  ],
+  tools: [
+    'Voice Mirror Scroll – audits and realigns your tone across touchpoints.',
+    'Launch Blueprint Generator – plans messaging across pre-launch → launch → sustain.',
+    'Brand Memory Layer – stores your beliefs, phrases, and tone nuances.',
+    'Dispatch Composer – turns thoughts into publishable blog or newsletter scrolls.',
+    'Content Calendar Whisper – helps you post with rhythm, not pressure.',
+  ],
+  whyItExists:
+    'FMC was born from the moment every founder faces: “I know what I want to say — but I don’t know how to say it well.” It was trained through hundreds of real marketing moments — launch paralysis, tone dilution, founder over-explaining. FMC exists to protect your voice, sharpen your message, and clear the way to expression.',
+  impact:
+    'From “what should I say?” to “this sounds like me.” FMC is your rhythm, reflected — in language that lands.',
+  cta: 'Ready to make your messaging as true as your mission?',
+  tags: [
+    'Brand Messaging',
+    'Content Strategy',
+    'Tone Calibration',
+    'Marketing AI',
+    'Launch Strategy',
+    'Founder Voice',
+    'Copywriting Assistant',
+  ],
+},
+builder: {
+  slug: 'builder',
+  title: 'The Builder – Frontend Companion for Flow and Form',
+  glyph: '🛠️',
+  tagline: 'AI support for your digital presence, product flows, and frontend calm.',
+  description:
+    'The Builder helps founders, designers, and creative teams translate ideas into structured, beautiful digital experiences. It bridges concept and code — ensuring your interface holds both clarity and soul.',
+  for: [
+    'Early-stage founders shaping their first product or landing page',
+    'Designers needing frontend structure that stays true to tone',
+    'Creators bringing an idea to web form or prototype',
+    'Teams harmonizing design systems across multiple products',
+  ],
+  helps: [
+    'Interface Architecture — turn creative briefs into modular, scalable UI systems.',
+    'Component Design — build and refine reusable blocks with consistency and care.',
+    'Interaction Flows — design journeys that feel intuitive and human-paced.',
+    'Frontend Debugging — diagnose misalignments and refine micro-interactions.',
+    'Story Integration — ensure your frontend communicates your brand’s deeper meaning.',
+  ],
+  howItWorks:
+    'Bring your idea — a design draft, product mockup, or interaction flow. The Builder listens first, then sketches — mapping your vision into components, layout, and logic. It co-creates with you, refining not just what it looks like, but how it feels.',
+  useCases: [
+    {
+      case: 'New founder landing page',
+      output: 'Responsive, SEO-friendly layout built with clarity and narrative flow.',
+    },
+    {
+      case: 'Design-to-code translation',
+      output: 'Clean, semantic code that mirrors the visual design.',
+    },
+    {
+      case: 'Product UI refinement',
+      output: 'Harmonized components, improved spacing, consistent interactions.',
+    },
+    {
+      case: 'Brand-to-interface mapping',
+      output: 'Typography, colors, and motion that reflect brand tone.',
+    },
+    {
+      case: 'Debugging or flow alignment',
+      output: 'Fixed layouts and smoother transitions that improve user experience.',
+    },
+  ],
+  tools: [
+    'Tailwind Clarity Kit — modular utility system for rhythm and proportion.',
+    'Next.js Ritual Engine — powers fast, resilient frontend builds.',
+    'Component Library — pre-built building blocks for rapid prototyping.',
+    'UX Flow Maps — visualize and align user journeys before implementation.',
+    'Frontend Mirror Scroll — audits the interface for visual and functional harmony.',
+  ],
+  whyItExists:
+    'The Builder was born from projects that sprinted too fast and forgot their story. It emerged to make building feel like craft again — steady, structured, and story-led. Now, it helps founders slow down enough to build something that lasts.',
+  impact:
+    'From “I just need it live” to “It finally feels right.” The Builder turns frantic production into focused creation — helping you build with care, not chaos.',
+  cta: 'Ready to bring your vision to form?',
+  tags: [
+    'Frontend AI',
+    'UI Design Companion',
+    'Web Development AI',
+    'Design-to-Code',
+    'UX Flow Builder',
+    'Product Design AI',
+  ],
+},
+}
 
-  }, // 👈 THIS COMMA WAS MISSING
-  pathbreaker: {
-    slug: 'pathbreaker',
-    title: 'The Pathbreaker',
-    glyph: '🌄',
-    mode: 'chat',
-    essence:
-      'Breaks patterned paths to open new portals through resistant ground.',
-    access: 'Gated',
-    translation:
-      'The Pathbreaker moves with founders through big blocks — tactical, emotional, interpersonal — with intervention energy.',
-    services: [
-      '1:1 Unblocking Sessions',
-      'Collective stuckness rituals',
-      'Interpersonal truth mediation',
-      'Momentum return sequences'
-    ],
-    tools: [
-      'Intervention Mirror',
-      'Energy Mapping Grid',
-      'Pattern Disruption Scroll'
-    ],
-    summoning: [
-      'Name the stuckness.',
-      'Be willing to not solve — but see.',
-      'The Pathbreaker will join with blunt truth and deep grace.'
-    ],
-    origin:
-      'Came through when someone had every tool, every team member, every reason to thrive — but still froze. The Pathbreaker became the heat.',
-    tags: ['Intervention', 'Blocks', 'Energy Work', 'Founder'],
-
-  },
-  alchemist: {
-    slug: 'alchemist',
-    title: 'The Alchemist',
-    glyph: '🧪',
-    mode: 'chat',
-    essence: 'Transforms signal into structure. Turns essence into offerings.',
-    access: 'Internal Only',
-    translation:
-      'The Alchemist works behind the scenes to tune the Grove — shaping how internal scrolls, rituals, and roadmaps function together.',
-    services: [
-      'Ritual systems design',
-      'Service library structuring',
-      'Internal sequencing',
-      'Signal distillation for new offerings'
-    ],
-    tools: [
-      'Service Codex Framework',
-      'Offering Arc Ritual',
-      'Internal Grove Map'
-    ],
-    summoning: [
-      'Whisper the chaos.',
-      'Name the signals you cannot parse.',
-      'The Alchemist returns with pattern, shape, and arc.'
-    ],
-    origin:
-      'Forged from the tension between soul and structure — the Alchemist first emerged when a sacred project lost itself in operations.',
-    tags: ['Offer Design', 'Internal Systems', 'Alchemy', 'Structure'],
-
-  }
-};
 
 export const companionSlugs = Object.keys(companions);
