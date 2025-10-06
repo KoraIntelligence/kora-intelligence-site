@@ -32,7 +32,7 @@ export default function CompanionChatPage() {
     <>
       <Head>
         <title>{companion.title} – Chat Chamber</title>
-        <meta name="description" content={`Speak with ${companion.title}, your ${companion.essence}`} />
+        <meta name="description" content={`Speak with ${companion.title}, your ${companion.tagline}`} />
       </Head>
 
       <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-zinc-800 dark:to-zinc-900 px-4 sm:px-8 py-10">
