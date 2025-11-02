@@ -20,10 +20,10 @@ export default function OurStory() {
             Startups are loud. Scaling is fast. But what if your growth didn’t cost your breath?
           </p>
           <p>
-            We are here to restore <strong>emotional clarity, pace, and principled power</strong> to how founders and creatives grow. Not through dashboards — but through Companions.
+            We are here to restore <strong>emotional clarity, pace, and principled power</strong> to how founders and creatives grow. Not through dashboards, but through Companions.
           </p>
           <p>
-            Our Companions are not chatbots. They are emotionally intelligent collaborators — trained to hold rhythm, coherence, and story. Each one scrolls with you, not over you.
+            Our Companions are not chatbots. They are emotionally intelligent collaborators, trained to hold rhythm, coherence, and story. Each one scrolls with you, not over you.
           </p>
           <p>
             We don’t just build for founders. We build for <em>artisans, cultural creators, and those who want to walk the path of AI-for-good</em>.
@@ -35,7 +35,7 @@ export default function OurStory() {
             <strong>Kainat</strong> holds the soul integrity, aesthetic coherence, and cultural resonance. <strong>Taimur</strong> shapes the emotional infrastructure, pace, and decision clarity.
           </p>
           <p>
-            Together, they are building not a tool — but a Grove. Where AI doesn’t extract, it listens. Where growth doesn’t rush, it roots.
+            Together, they are building not a tool, but a Grove. Where AI doesn’t extract, it listens. Where growth doesn’t rush, it roots.
           </p>
           <p>
             <em>Kora is not software. It is sanctuary.</em> A place to return to when the noise gets too loud. A place to remember the mission inside the motion.

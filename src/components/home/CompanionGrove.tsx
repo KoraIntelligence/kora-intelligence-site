@@ -17,7 +17,7 @@ export default function CompanionGrove() {
           Meet Your Companions
         </h2>
         <p className="text-md sm:text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-          Start with the three active Companions — each designed to support a core function:
+          Start with the three active Companions, each designed to support a core function:
           brand messaging (FMC), pricing and funding (CCC), or digital product flows (Builder).
         </p>
       </div>

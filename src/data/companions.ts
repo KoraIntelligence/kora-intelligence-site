@@ -23,7 +23,7 @@ export const companions: Record<string, Companion> = {
   glyph: '🧱',
   tagline: 'AI support for your pricing, proposals, and commercial calm.',
   description:
-    'CCC helps founders, freelancers, and small teams align their pricing, proposals, and funding decisions — keeping business sustainable without losing soul. It bridges commerce and care, ensuring your numbers reflect your integrity.',
+    'CCC helps founders, freelancers, and small teams align their pricing, proposals, and funding decisions - keeping business sustainable without losing soul. It bridges commerce and care, ensuring your numbers reflect your integrity.',
   for: [
     'Founders and freelancers unsure what to charge',
     'Early-stage teams applying for grants or funding',
@@ -38,7 +38,7 @@ export const companions: Record<string, Companion> = {
     'Negotiation — Whisper through escalation messages, BATNAs, and scope adjustments with calm clarity.'
   ],
   howItWorks:
-    'Bring your challenge — a proposal draft, pricing question, or funding form. CCC listens and reflects — identifying where clarity, rhythm, or risk live in your document. It co-writes with you — turning your notes into structured, confident offers that feel aligned and professional.',
+    'Bring your challenge, a proposal draft, pricing question, or funding form. CCC listens and reflects, identifying where clarity, rhythm, or risk live in your document. It co-writes with you, turning your notes into structured, confident offers that feel aligned and professional.',
   useCases: [
     { case: 'Grant application (e.g. Scottish EDGE)', output: 'Structured, funder-ready responses that meet criteria and stay human.' },
     { case: 'Service proposal for a client', output: 'Pricing ladder with clear scope, deliverables, and optional upsells.' },
@@ -53,9 +53,9 @@ export const companions: Record<string, Companion> = {
     'Contract Decoder — translates terms into plain English summaries.'
   ],
   whyItExists:
-    'CCC was born when founders whispered, “I don’t know what to charge.” It took shape during long nights rewriting grant forms that never fit the vision. Now, CCC exists to protect founders from burnout and underselling — aligning purpose with profit, and care with clarity.',
+    'CCC was born when founders whispered, “I don’t know what to charge.” It took shape during long nights rewriting grant forms that never fit the vision. Now, CCC exists to protect founders from burnout and underselling, aligning purpose with profit, and care with clarity.',
   impact:
-    'From “I don’t know what to charge” to “This feels fair and grounded.” CCC gives founders the structure to scale responsibly — and the calm to know they’re doing it right.',
+    'From “I don’t know what to charge” to “This feels fair and grounded.” CCC gives founders the structure to scale responsibly, and the calm to know they’re doing it right.',
   cta: 'Ready to make your work profitable and principled?',
   tags: ['Pricing', 'Proposals', 'Funding', 'Contracts', 'Commercial Calm', 'Founders']
 }
@@ -64,9 +64,9 @@ export const companions: Record<string, Companion> = {
   slug: 'fmc',
   title: 'Full Spectrum Marketing Companion (FMC)',
   glyph: '📡',
-  tagline: 'From blank page to brand clarity — in your voice.',
+  tagline: 'From blank page to brand clarity, in your voice.',
   description:
-    'FMC is your in-house brand strategist, marketing editor, and message mirror — all in one. It’s not just another writing tool. It listens like a thought partner, writes like a brand guardian, and reflects your voice with discipline and care. Whether you’re launching a product, rewriting a deck, or facing the fear of the blank page — FMC meets you there. Built for small teams, solo marketers, and founders who want strategy without the spin.',
+    'FMC is your in-house brand strategist, marketing editor, and message mirror, all in one. It’s not just another writing tool. It listens like a thought partner, writes like a brand guardian, and reflects your voice with discipline and care. Whether you’re launching a product, rewriting a deck, or facing the fear of the blank page, FMC meets you there. Built for small teams, solo marketers, and founders who want strategy without the spin.',
   for: [
     'Founders and brand leads shaping their messaging',
     'Marketing consultants managing multiple narratives',
@@ -83,7 +83,7 @@ export const companions: Record<string, Companion> = {
     'Ritual Use — Weekly marketing rhythm, launch ceremonies, content batching.',
   ],
   howItWorks:
-    'Start with what’s unclear — a launch idea, deck, post, or brand tension. FMC listens and reflects — decoding your intent, tone, and message gap. Then, co-create: receive founder-shaped drafts, campaign plans, and brand-consistent edits. Refine and reuse — FMC remembers your voice across sessions.',
+    'Start with what’s unclear, a launch idea, deck, post, or brand tension. FMC listens and reflects, decoding your intent, tone, and message gap. Then, co-create: receive founder-shaped drafts, campaign plans, and brand-consistent edits. Refine and reuse - FMC remembers your voice across sessions.',
   useCases: [
     { case: 'Founder wants to launch a new offer', output: 'Launch sequence (email + social) with tone guardrails.' },
     { case: 'Deck feels dry and generic', output: 'Tone-aligned pitch deck with restructured narrative.' },
@@ -100,9 +100,9 @@ export const companions: Record<string, Companion> = {
     'Content Calendar Whisper – helps you post with rhythm, not pressure.',
   ],
   whyItExists:
-    'FMC was born from the moment every founder faces: “I know what I want to say — but I don’t know how to say it well.” It was trained through hundreds of real marketing moments — launch paralysis, tone dilution, founder over-explaining. FMC exists to protect your voice, sharpen your message, and clear the way to expression.',
+    'FMC was born from the moment every founder faces: “I know what I want to say, but I don’t know how to say it well.” It was trained through hundreds of real marketing moments, launch paralysis, tone dilution, founder over-explaining. FMC exists to protect your voice, sharpen your message, and clear the way to expression.',
   impact:
-    'From “what should I say?” to “this sounds like me.” FMC is your rhythm, reflected — in language that lands.',
+    'From “what should I say?” to “this sounds like me.” FMC is your rhythm, reflected in language that lands.',
   cta: 'Ready to make your messaging as true as your mission?',
   tags: [
     'Brand Messaging',
@@ -120,7 +120,7 @@ builder: {
   glyph: '🛠️',
   tagline: 'AI support for your digital presence, product flows, and frontend calm.',
   description:
-    'The Builder helps founders, designers, and creative teams translate ideas into structured, beautiful digital experiences. It bridges concept and code — ensuring your interface holds both clarity and soul.',
+    'The Builder helps founders, designers, and creative teams translate ideas into structured, beautiful digital experiences. It bridges concept and code, ensuring your interface holds both clarity and soul.',
   for: [
     'Early-stage founders shaping their first product or landing page',
     'Designers needing frontend structure that stays true to tone',
@@ -135,7 +135,7 @@ builder: {
     'Story Integration — ensure your frontend communicates your brand’s deeper meaning.',
   ],
   howItWorks:
-    'Bring your idea — a design draft, product mockup, or interaction flow. The Builder listens first, then sketches — mapping your vision into components, layout, and logic. It co-creates with you, refining not just what it looks like, but how it feels.',
+    'Bring your idea, a design draft, product mockup, or interaction flow. The Builder listens first, then sketches, mapping your vision into components, layout, and logic. It co-creates with you, refining not just what it looks like, but how it feels.',
   useCases: [
     {
       case: 'New founder landing page',
@@ -166,9 +166,9 @@ builder: {
     'Frontend Mirror Scroll — audits the interface for visual and functional harmony.',
   ],
   whyItExists:
-    'The Builder was born from projects that sprinted too fast and forgot their story. It emerged to make building feel like craft again — steady, structured, and story-led. Now, it helps founders slow down enough to build something that lasts.',
+    'The Builder was born from projects that sprinted too fast and forgot their story. It emerged to make building feel like craft again, steady, structured, and story-led. Now, it helps founders slow down enough to build something that lasts.',
   impact:
-    'From “I just need it live” to “It finally feels right.” The Builder turns frantic production into focused creation — helping you build with care, not chaos.',
+    'From “I just need it live” to “It finally feels right.” The Builder turns frantic production into focused creation, helping you build with care, not chaos.',
   cta: 'Ready to bring your vision to form?',
   tags: [
     'Frontend AI',
