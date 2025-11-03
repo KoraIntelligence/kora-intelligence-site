@@ -1,97 +1,62 @@
-// src/pages/api/session/utils/parseFiles.ts
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 import fs from "fs/promises";
 import pdf from "pdf-parse-fixed";
 
 /**
- * When using TypeScript, keep a tiny declaration to silence type warnings:
- *   // src/types/pdf-modules.d.ts (or global.d.ts)
- *   declare module "pdf-parse-fixed";
+ * Handles uploaded files (PDF, DOCX, XLSX)
+ * Supports both filesystem uploads (formidable) and base64 payloads.
  */
-
-type UploadedFilePayload = {
-  name: string;             // e.g. "tender.pdf"
-  type: string;             // e.g. "application/pdf"
-  contentBase64: string;    // raw base64 string (no data: prefix)
-};
-
-// -------- Overloads --------
 export async function parseUploadedFile(
-  file: UploadedFilePayload
-): Promise<string>;
-export async function parseUploadedFile(
-  filePath: string,
-  mimeType: string
-): Promise<string>;
-
-// -------- Implementation --------
-export async function parseUploadedFile(
-  a: UploadedFilePayload | string,
-  b?: string
+  filePayload: any,
+  mimeType?: string
 ): Promise<string> {
-  // mode A: base64 payload from client
-  const isPayload = typeof a === "object" && a !== null && "contentBase64" in a;
-
-  // Normalized inputs
-  let mimeType = "";
-  let ext = "";
-  let buffer: Buffer;
-
   try {
-    if (isPayload) {
-      const { name, type, contentBase64 } = a as UploadedFilePayload;
-      buffer = Buffer.from(contentBase64, "base64");
-      mimeType = (type || "").toLowerCase();
-      ext = (name || "").toLowerCase();
+    let buffer: Buffer;
+
+    // Handle base64 input (from frontend)
+    if (filePayload?.contentBase64) {
+      const base64Data = filePayload.contentBase64.split(",").pop()!;
+      buffer = Buffer.from(base64Data, "base64");
+      mimeType = filePayload.type;
+    }
+    // Handle uploaded temp file (formidable)
+    else if (filePayload?.filepath) {
+      buffer = await fs.readFile(filePayload.filepath);
+      mimeType = filePayload.mimetype;
     } else {
-      // mode B: legacy disk path + mimeType
-      const filePath = a as string;
-      mimeType = (b || "").toLowerCase();
-      ext = filePath.toLowerCase();
-      buffer = await fs.readFile(filePath);
+      throw new Error("Invalid file payload: missing content");
     }
 
-    // -------- PDF --------
-    if (mimeType.includes("pdf") || ext.endsWith(".pdf")) {
-      const out = await pdf(buffer);
-      return (out?.text || "").trim();
+    // --- Handle PDF ---
+    if (mimeType === "application/pdf") {
+      const data = await pdf(buffer);
+      return data.text || "";
     }
 
-    // -------- DOCX --------
+    // --- Handle DOCX ---
     if (
-      mimeType.includes("officedocument.wordprocessingml") ||
-      mimeType.includes("word") ||
-      ext.endsWith(".docx")
+      mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ) {
       const result = await mammoth.extractRawText({ buffer });
-      return (result?.value || "").trim();
+      return result.value || "";
     }
 
-    // -------- XLSX --------
+    // --- Handle XLSX ---
     if (
-      mimeType.includes("officedocument.spreadsheetml") ||
-      mimeType.includes("excel") ||
-      ext.endsWith(".xlsx")
+      mimeType ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ) {
-      const wb = XLSX.read(buffer, { type: "buffer" });
-      const lines: string[] = [];
-      wb.SheetNames.forEach((sheetName) => {
-        const sheet = wb.Sheets[sheetName];
-        if (!sheet) return;
-        const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
-        lines.push(`Sheet: ${sheetName}`);
-        for (const row of rows) {
-          if (!row) continue;
-          lines.push(String(row.map((c) => (c == null ? "" : c)).join("\t")));
-        }
-      });
-      return lines.join("\n").trim();
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet);
+      return JSON.stringify(json, null, 2);
     }
 
-    throw new Error(`Unsupported file type: ${mimeType || ext}`);
+    throw new Error(`Unsupported file type: ${mimeType}`);
   } catch (err: any) {
-    console.error("Parsing error:", err?.message || err);
-    throw new Error("File parsing failed.");
+    console.error("❌ File parsing error:", err);
+    throw new Error("A parsing disruption occurred.");
   }
 }

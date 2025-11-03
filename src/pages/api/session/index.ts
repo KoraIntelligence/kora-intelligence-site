@@ -17,19 +17,19 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "25mb", // allow large JSON base64 uploads
+      sizeLimit: "25mb", // Allow large JSON uploads (for base64 files)
     },
   },
 };
 
 /**
- * Universal handler:
- * - Accepts JSON (preferred: {input, mode, filePayload, tone, intent})
- * - Fallback: multipart (legacy, only if Formidable installed)
+ * Handles both JSON (base64) and multipart (form-data) uploads.
+ * Supports CCC, FMC, and Builder companion routes.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     let input = "";
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let tone = "";
     let extractedText = "";
 
-    // 🔹 CASE 1 — JSON (new chat upload)
+    // 🟢 CASE 1: JSON payload (from unified chat)
     if (req.headers["content-type"]?.includes("application/json")) {
       const body = req.body || {};
       input = body.input || "";
@@ -46,20 +46,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       intent = body.intent || "";
       tone = body.tone || (await getTone()) || "neutral";
 
-      // If file payload is provided (base64)
+      // Handle base64 file upload
       if (body.filePayload) {
         try {
           extractedText = await parseUploadedFile(body.filePayload);
         } catch (err: any) {
-          console.error("File parse error:", err);
-          return res
-            .status(400)
-            .json({ error: "File parsing failed. Try a different file." });
+          console.error("❌ JSON file parse error:", err);
+          return res.status(400).json({
+            ok: false,
+            error: "A parsing disruption occurred. Try a different file.",
+          });
         }
       }
     }
 
-    // 🔹 CASE 2 — Multipart (legacy fallback)
+    // 🟠 CASE 2: Multipart form upload (legacy support)
     else if (req.headers["content-type"]?.includes("multipart/form-data")) {
       const formidable = (await import("formidable")).default;
       const form = formidable({
@@ -80,19 +81,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       intent = fields.intent || "";
       tone = fields.tone || (await getTone()) || "neutral";
 
-      if (files?.file) {
-        const file = Array.isArray(files.file) ? files.file[0] : files.file;
-        const filePath = file.filepath;
-        const mimeType = file.mimetype || "application/pdf";
-        extractedText = await parseUploadedFile(filePath, mimeType);
+      // Parse uploaded file if any
+      if (fields.filePayload) {
+        extractedText = await parseUploadedFile(fields.filePayload);
+      } else if (files?.file) {
+        const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
+        extractedText = await parseUploadedFile(uploadedFile, uploadedFile.mimetype);
       }
-    } else {
+    }
+
+    // 🔴 CASE 3: Invalid request type
+    else {
       return res.status(400).json({
+        ok: false,
         error: "Unsupported content type. Use JSON or multipart/form-data.",
       });
     }
 
-    // 🧭 Route to appropriate Companion
+    // 🧭 Route to the appropriate Companion
     let result;
     switch (mode) {
       case "ccc":
@@ -105,17 +111,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         result = await runBuilder({ input, extractedText, tone, intent });
         break;
       default:
-        return res.status(400).json({ error: "Invalid companion mode." });
+        return res.status(400).json({ ok: false, error: "Invalid companion mode." });
     }
 
-    // 📎 Generate attachments if needed
+    // 📎 Generate downloadable attachments (PDF/DOCX/XLSX)
     const attachments: any[] = [];
-    if (result.outputText) {
+    if (result?.outputText) {
       attachments.push(await createPDF(result.outputText));
       attachments.push(await createDocx(result.outputText));
       if (mode === "ccc") attachments.push(await createXlsx());
     }
 
+    // ✅ Successful response
     res.status(200).json({
       ok: true,
       mode,
