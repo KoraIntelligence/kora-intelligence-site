@@ -17,56 +17,78 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "25mb", // Allow large JSON uploads (for base64 files)
+      sizeLimit: "25mb", // large enough for base64 uploads
     },
   },
 };
 
 /**
- * Handles both JSON (base64) and multipart (form-data) uploads.
- * Supports CCC, FMC, and Builder companion routes.
+ * Unified API Handler with debug instrumentation
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log("\n\n===============================");
+  console.log("🚀 [API] /api/session — New request");
+  console.log("🧾 Headers:", req.headers["content-type"]);
+
   if (req.method !== "POST") {
+    console.log("⛔ Method not allowed");
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  try {
-    let input = "";
-    let mode = "";
-    let intent = "";
-    let tone = "";
-    let extractedText = "";
+  let mode = "";
+  let input = "";
+  let intent = "";
+  let tone = "";
+  let extractedText = "";
 
-    // 🟢 CASE 1: JSON payload (from unified chat)
+  try {
+    // ===============================
+    // 🧩 CASE 1 — JSON (preferred)
+    // ===============================
     if (req.headers["content-type"]?.includes("application/json")) {
+      console.log("📦 Detected JSON payload");
+
       const body = req.body || {};
       input = body.input || "";
       mode = body.mode || "";
       intent = body.intent || "";
       tone = body.tone || (await getTone()) || "neutral";
 
-      // Handle base64 file upload
       if (body.filePayload) {
+        console.log("📄 FilePayload received:", {
+          name: body.filePayload?.name,
+          type: body.filePayload?.type,
+        });
+
+        const base64Data = body.filePayload?.contentBase64?.split(",").pop() || "";
+        console.log("📏 Base64 length:", base64Data.length);
+
         try {
           extractedText = await parseUploadedFile(body.filePayload);
+          console.log("✅ Parsed text length:", extractedText?.length || 0);
         } catch (err: any) {
-          console.error("❌ JSON file parse error:", err);
-          return res.status(400).json({
-            ok: false,
-            error: "A parsing disruption occurred. Try a different file.",
-          });
+          console.error("❌ parseUploadedFile failed:", err.message);
+          return res
+            .status(400)
+            .json({ error: "File parsing failed", debug: err.message });
         }
+      } else {
+        console.log("⚠️ No filePayload present in request.");
       }
     }
 
-    // 🟠 CASE 2: Multipart form upload (legacy support)
+    // ===============================
+    // 🧩 CASE 2 — multipart (legacy fallback)
+    // ===============================
     else if (req.headers["content-type"]?.includes("multipart/form-data")) {
+      console.log("📦 Detected multipart/form-data upload");
+
       const formidable = (await import("formidable")).default;
+      const uploadDir = "/tmp"; // ✅ works on Vercel
       const form = formidable({
-        multiples: false,
-        uploadDir: path.join(process.cwd(), "tmp"),
-        keepExtensions: true,
+      multiples: false,
+      uploadDir,
+      keepExtensions: true,
       });
 
       const { fields, files }: any = await new Promise((resolve, reject) => {
@@ -81,24 +103,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       intent = fields.intent || "";
       tone = fields.tone || (await getTone()) || "neutral";
 
-      // Parse uploaded file if any
-      if (fields.filePayload) {
-        extractedText = await parseUploadedFile(fields.filePayload);
-      } else if (files?.file) {
-        const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
-        extractedText = await parseUploadedFile(uploadedFile, uploadedFile.mimetype);
+      if (files?.file) {
+        const file = Array.isArray(files.file) ? files.file[0] : files.file;
+        console.log("📄 Uploaded file (formidable):", {
+          filepath: file.filepath,
+          mimetype: file.mimetype,
+        });
+        extractedText = await parseUploadedFile(file.filepath, file.mimetype);
+        console.log("✅ Parsed text length:", extractedText?.length || 0);
+      } else {
+        console.log("⚠️ No file found in multipart upload");
       }
-    }
-
-    // 🔴 CASE 3: Invalid request type
-    else {
+    } else {
+      console.log("❌ Unsupported content type:", req.headers["content-type"]);
       return res.status(400).json({
-        ok: false,
         error: "Unsupported content type. Use JSON or multipart/form-data.",
       });
     }
 
-    // 🧭 Route to the appropriate Companion
+    // ===============================
+    // 🧭 Route to appropriate Companion
+    // ===============================
+    console.log("🧭 Routing to companion:", mode);
     let result;
     switch (mode) {
       case "ccc":
@@ -111,18 +137,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         result = await runBuilder({ input, extractedText, tone, intent });
         break;
       default:
-        return res.status(400).json({ ok: false, error: "Invalid companion mode." });
+        console.log("⚠️ Invalid mode received:", mode);
+        return res.status(400).json({ error: "Invalid companion mode." });
     }
 
-    // 📎 Generate downloadable attachments (PDF/DOCX/XLSX)
+    // ===============================
+    // 📎 Attachments (generate output files)
+    // ===============================
     const attachments: any[] = [];
     if (result?.outputText) {
-      attachments.push(await createPDF(result.outputText));
-      attachments.push(await createDocx(result.outputText));
-      if (mode === "ccc") attachments.push(await createXlsx());
+      console.log("🧾 Generating attachments for output text...");
+      try {
+        attachments.push(await createPDF(result.outputText));
+        attachments.push(await createDocx(result.outputText));
+        if (mode === "ccc") attachments.push(await createXlsx());
+      } catch (err: any) {
+        console.error("⚠️ Attachment generation failed:", err.message);
+      }
+    } else {
+      console.log("⚠️ No outputText returned from companion");
     }
 
-    // ✅ Successful response
+    // ===============================
+    // ✅ Send success response
+    // ===============================
+    console.log("🟢 Returning response:", {
+      mode,
+      outputLength: result?.outputText?.length || 0,
+      attachments: attachments.length,
+    });
+
     res.status(200).json({
       ok: true,
       mode,
@@ -131,10 +175,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       meta: result.meta || {},
     });
   } catch (err: any) {
-    console.error("❌ Unified session error:", err);
+    console.error("💥 Unhandled API Error:", err);
     res.status(500).json({
       ok: false,
       error: err?.message || "Internal Server Error",
     });
   }
+
+  console.log("===============================\n\n");
 }

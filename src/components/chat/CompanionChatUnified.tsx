@@ -73,122 +73,154 @@ export default function CompanionChatUnified() {
   }
 
   /* ============================================================================
-     📤 File Upload (CCC)
-  ============================================================================ */
-  async function handleFileUpload(file: File) {
-    if (!file || uploading) return;
-    setUploading(true);
+   📤 File Upload (CCC) — with Debug Logging
+============================================================================ */
+async function handleFileUpload(file: File) {
+  if (!file || uploading) return;
+  setUploading(true);
 
-    const msgId = uid();
+  const msgId = uid();
+  setMessages((m) => [
+    ...m,
+    {
+      id: msgId,
+      role: "system",
+      content: `Uploading "${file.name}"...`,
+      ts: Date.now(),
+    },
+  ]);
+
+  try {
+    console.log("📤 Uploading file:", file.name, file.type, file.size);
+
+    const arrayBuf = await file.arrayBuffer();
+    const contentBase64 = btoa(
+      Array.from(new Uint8Array(arrayBuf))
+        .map((b) => String.fromCharCode(b))
+        .join("")
+    );
+
+    // ✅ Log base64 snippet for debug (won’t print whole file)
+    console.log("📄 FilePayload Base64 sample:", contentBase64.slice(0, 100));
+
+    const payload = {
+      mode: "ccc",
+      tone,
+      filePayload: {
+        name: file.name,
+        type: file.type,
+        contentBase64,
+      },
+      intent: "rfq_rfp_analysis",
+    };
+
+    console.log("🛰️ Sending payload to /api/session:", {
+      mode: payload.mode,
+      tone: payload.tone,
+      intent: payload.intent,
+      hasFile: !!payload.filePayload?.contentBase64,
+    });
+
+    const res = await fetch("/api/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    console.log("📥 Response from /api/session:", res.status, data);
+
+    if (!res.ok) throw new Error(data.error || "API request failed");
+
     setMessages((m) => [
-      ...m,
+      ...m.filter((msg) => msg.id !== msgId),
       {
-        id: msgId,
-        role: "system",
-        content: `Uploading "${file.name}"...`,
+        id: uid(),
+        role: "assistant",
+        content:
+          data.reply ||
+          "I’ve analyzed the document. Would you like a first draft proposal?",
+        attachments: data.attachments || [],
         ts: Date.now(),
       },
     ]);
-
-    try {
-      const arrayBuf = await file.arrayBuffer();
-      const contentBase64 = btoa(
-  Array.from(new Uint8Array(arrayBuf))
-    .map((b) => String.fromCharCode(b))
-    .join("")
-);
-
-      const payload = {
-        mode: "ccc",
-        tone,
-        filePayload: {
-          name: file.name,
-          type: file.type,
-          contentBase64,
-        },
-        intent: "rfq_rfp_analysis",
-      };
-
-      const data = await callSession(payload);
-      setMessages((m) => [
-        ...m.filter((msg) => msg.id !== msgId),
-        {
-          id: uid(),
-          role: "assistant",
-          content:
-            data.reply ||
-            "I’ve analyzed the document. Would you like a first draft proposal?",
-          attachments: data.attachments || [],
-          ts: Date.now(),
-        },
-      ]);
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      setMessages((m) => [
-        ...m.filter((msg) => msg.id !== msgId),
-        {
-          id: uid(),
-          role: "assistant",
-          content:
-            "💥 A parsing disruption occurred. Try again or upload a different file.",
-          ts: Date.now(),
-        },
-      ]);
-    } finally {
-      setUploading(false);
-    }
+  } catch (err: any) {
+    console.error("❌ Upload error:", err);
+    setMessages((m) => [
+      ...m.filter((msg) => msg.id !== msgId),
+      {
+        id: uid(),
+        role: "assistant",
+        content:
+          "💥 A parsing disruption occurred. Try again or upload a different file.",
+        ts: Date.now(),
+      },
+    ]);
+  } finally {
+    setUploading(false);
   }
+}
 
-  /* ============================================================================
-     💬 Send Message
-  ============================================================================ */
-  async function handleSend() {
-    const content = input.trim();
-    if (!content || sending) return;
-    setSending(true);
-    setInput("");
+/* ============================================================================
+   💬 Send Message — with Debug Logging
+============================================================================ */
+async function handleSend() {
+  const content = input.trim();
+  if (!content || sending) return;
+  setSending(true);
+  setInput("");
 
-    const userMsg: Message = {
-      id: uid(),
-      role: "user",
-      content,
-      ts: Date.now(),
-    };
-    setMessages((m) => [...m, userMsg, { id: uid(), role: "system", content: "…", ts: Date.now() }]);
+  console.log("💬 Sending text message:", { input: content, mode, tone });
 
-    try {
-      const data = await callSession({
-        input: content,
-        mode,
-        tone,
-      });
+  const userMsg: Message = {
+    id: uid(),
+    role: "user",
+    content,
+    ts: Date.now(),
+  };
 
-      setMessages((m) => [
-        ...m.filter((msg) => msg.role !== "system"),
-        {
-          id: uid(),
-          role: "assistant",
-          content: data.reply || "The Companion has no reply.",
-          attachments: data.attachments || [],
-          ts: Date.now(),
-        },
-      ]);
-    } catch (err: any) {
-      console.error("Chat send error:", err);
-      setMessages((m) => [
-        ...m.filter((msg) => msg.role !== "system"),
-        {
-          id: uid(),
-          role: "assistant",
-          content:
-            "⚠️ The Companion fell silent. Please try again in a moment.",
-          ts: Date.now(),
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
+  setMessages((m) => [
+    ...m,
+    userMsg,
+    { id: uid(), role: "system", content: "…", ts: Date.now() },
+  ]);
+
+  try {
+    const data = await callSession({
+      input: content,
+      mode,
+      tone,
+    });
+
+    console.log("📥 Text response from /api/session:", data);
+
+    setMessages((m) => [
+      ...m.filter((msg) => msg.role !== "system"),
+      {
+        id: uid(),
+        role: "assistant",
+        content: data.reply || "The Companion has no reply.",
+        attachments: data.attachments || [],
+        ts: Date.now(),
+      },
+    ]);
+  } catch (err: any) {
+    console.error("❌ Chat send error:", err);
+    setMessages((m) => [
+      ...m.filter((msg) => msg.role !== "system"),
+      {
+        id: uid(),
+        role: "assistant",
+        content:
+          "⚠️ The Companion fell silent. Please try again in a moment.",
+        ts: Date.now(),
+      },
+    ]);
+  } finally {
+    setSending(false);
   }
+}
 
   /* ============================================================================
      Render Helpers
