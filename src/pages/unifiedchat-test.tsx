@@ -29,7 +29,7 @@ export default function UnifiedChatTest() {
             This page is for internal pilot testing only.
           </p>
 
-          <CompanionChatUnified companion={mockCompanion} />
+          <CompanionChatUnified />
         </div>
       </main>
     </>
