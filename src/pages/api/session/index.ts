@@ -1,5 +1,7 @@
 // src/pages/api/session/index.ts
 import type { NextApiRequest, NextApiResponse } from "next";
+import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import OpenAI from "openai";
 import path from "path";
 import fs from "fs/promises";
 
@@ -9,178 +11,173 @@ import { runBuilder } from "./companions/builder";
 
 import { parseUploadedFile } from "./utils/parseFiles";
 import { createPDF, createDocx, createXlsx } from "./utils/generateDocs";
-import { getTone } from "./memory/tone";
-import OpenAI from "openai";
 
+import {
+  getOrCreateUserProfile,
+  createSession,
+  saveMessage,
+  getLastTone,
+  saveTone,
+} from "@/lib/memory";
+
+// 🧠 Shared companion personality configs
+import { companionsConfig } from "@/companions/config/shared";
+
+// Initialize OpenAI client
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: "25mb", // large enough for base64 uploads
-    },
+    bodyParser: { sizeLimit: "25mb" },
   },
 };
 
-/**
- * Unified API Handler with debug instrumentation
- */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log("\n\n===============================");
-  console.log("🚀 [API] /api/session — New request");
-  console.log("🧾 Headers:", req.headers["content-type"]);
-
-  if (req.method !== "POST") {
-    console.log("⛔ Method not allowed");
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  let mode = "";
-  let input = "";
-  let intent = "";
-  let tone = "";
-  let extractedText = "";
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    // ===============================
-    // 🧩 CASE 1 — JSON (preferred)
-    // ===============================
-    if (req.headers["content-type"]?.includes("application/json")) {
-      console.log("📦 Detected JSON payload");
+    /* ---------------------------------------------------------------------
+       STEP 1: Verify user authentication (Supabase session)
+    --------------------------------------------------------------------- */
+    const supabase = createServerSupabaseClient({ req, res });
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-      const body = req.body || {};
-      input = body.input || "";
-      mode = body.mode || "";
-      intent = body.intent || "";
-      tone = body.tone || (await getTone()) || "neutral";
-
-      if (body.filePayload) {
-        console.log("📄 FilePayload received:", {
-          name: body.filePayload?.name,
-          type: body.filePayload?.type,
-        });
-
-        const base64Data = body.filePayload?.contentBase64?.split(",").pop() || "";
-        console.log("📏 Base64 length:", base64Data.length);
-
-        try {
-          extractedText = await parseUploadedFile(body.filePayload);
-          console.log("✅ Parsed text length:", extractedText?.length || 0);
-        } catch (err: any) {
-          console.error("❌ parseUploadedFile failed:", err.message);
-          return res
-            .status(400)
-            .json({ error: "File parsing failed", debug: err.message });
-        }
-      } else {
-        console.log("⚠️ No filePayload present in request.");
-      }
+    if (authError || !user) {
+      console.warn("🔒 Unauthorized request (no Supabase user)");
+      return res.status(401).json({ error: "Unauthorized. Please sign in." });
     }
 
-    // ===============================
-    // 🧩 CASE 2 — multipart (legacy fallback)
-    // ===============================
-    else if (req.headers["content-type"]?.includes("multipart/form-data")) {
-      console.log("📦 Detected multipart/form-data upload");
+    const userId = user.id;
+    const userEmail = user.email || "unknown";
 
-      const formidable = (await import("formidable")).default;
-      const uploadDir = "/tmp"; // ✅ works on Vercel
-      const form = formidable({
-      multiples: false,
-      uploadDir,
-      keepExtensions: true,
-      });
+    await getOrCreateUserProfile(userId, userEmail);
 
-      const { fields, files }: any = await new Promise((resolve, reject) => {
-        form.parse(req, (err, fields, files) => {
-          if (err) reject(err);
-          else resolve({ fields, files });
-        });
-      });
+    /* ---------------------------------------------------------------------
+       STEP 2: Extract request payload
+    --------------------------------------------------------------------- */
+    const { input, mode, filePayload, tone: userTone, intent } = req.body || {};
 
-      input = fields.input || "";
-      mode = fields.mode || "";
-      intent = fields.intent || "";
-      tone = fields.tone || (await getTone()) || "neutral";
-
-      if (files?.file) {
-        const file = Array.isArray(files.file) ? files.file[0] : files.file;
-        console.log("📄 Uploaded file (formidable):", {
-          filepath: file.filepath,
-          mimetype: file.mimetype,
-        });
-        extractedText = await parseUploadedFile(file.filepath, file.mimetype);
-        console.log("✅ Parsed text length:", extractedText?.length || 0);
-      } else {
-        console.log("⚠️ No file found in multipart upload");
-      }
-    } else {
-      console.log("❌ Unsupported content type:", req.headers["content-type"]);
-      return res.status(400).json({
-        error: "Unsupported content type. Use JSON or multipart/form-data.",
-      });
+    if (!mode || (!input && !filePayload)) {
+      return res.status(400).json({ error: "Missing required parameters: mode or input/filePayload" });
     }
 
-    // ===============================
-    // 🧭 Route to appropriate Companion
-    // ===============================
-    console.log("🧭 Routing to companion:", mode);
-    let result;
-    switch (mode) {
-      case "ccc":
-        result = await runCCC({ input, extractedText, tone, intent });
-        break;
-      case "fmc":
-        result = await runFMC({ input, extractedText, tone, intent });
-        break;
-      case "builder":
-        result = await runBuilder({ input, extractedText, tone, intent });
-        break;
-      default:
-        console.log("⚠️ Invalid mode received:", mode);
-        return res.status(400).json({ error: "Invalid companion mode." });
-    }
+    // Retrieve last known tone memory
+    const lastTone = await getLastTone(userId, mode);
+    const tone = userTone || lastTone || "neutral";
 
-    // ===============================
-    // 📎 Attachments (generate output files)
-    // ===============================
-    const attachments: any[] = [];
-    if (result?.outputText) {
-      console.log("🧾 Generating attachments for output text...");
+    /* ---------------------------------------------------------------------
+       STEP 3: Parse uploaded file (if any)
+    --------------------------------------------------------------------- */
+    let extractedText = "";
+    if (filePayload?.contentBase64 && filePayload?.type) {
+      const tmpDir = path.join(process.cwd(), "tmp");
+      const tmpPath = path.join(tmpDir, filePayload.name);
+
+      await fs.mkdir(tmpDir, { recursive: true });
+      await fs.writeFile(tmpPath, Buffer.from(filePayload.contentBase64, "base64"));
+
       try {
-        attachments.push(await createPDF(result.outputText));
-        attachments.push(await createDocx(result.outputText));
-        if (mode === "ccc") attachments.push(await createXlsx());
-      } catch (err: any) {
-        console.error("⚠️ Attachment generation failed:", err.message);
+        extractedText = await parseUploadedFile(tmpPath, filePayload.type);
+      } catch (fileErr: any) {
+        console.error("❌ File parsing failed:", fileErr);
+        return res.status(400).json({
+          ok: false,
+          error: "File parsing failed. Try uploading a different file.",
+        });
       }
-    } else {
-      console.log("⚠️ No outputText returned from companion");
     }
 
-    // ===============================
-    // ✅ Send success response
-    // ===============================
-    console.log("🟢 Returning response:", {
-      mode,
-      outputLength: result?.outputText?.length || 0,
-      attachments: attachments.length,
-    });
+    /* ---------------------------------------------------------------------
+       STEP 4: Create session record
+    --------------------------------------------------------------------- */
+    const session = await createSession(userId, mode, intent);
+    await saveMessage(session.id, "user", input || "(File upload)");
 
-    res.status(200).json({
+    /* ---------------------------------------------------------------------
+       STEP 5: Route to the correct Companion
+    --------------------------------------------------------------------- */
+    let result;
+    try {
+      switch (mode) {
+        case "ccc":
+          result = await runCCC({ input, extractedText, tone, intent });
+          break;
+        case "fmc":
+          result = await runFMC({ input, extractedText, tone, intent });
+          break;
+        case "builder":
+          result = await runBuilder({ input, extractedText, tone, intent });
+          break;
+        default:
+          return res.status(400).json({ error: `Invalid mode: ${mode}` });
+      }
+    } catch (aiErr: any) {
+      console.error(`💥 Companion (${mode}) processing error:`, aiErr);
+      return res.status(500).json({ error: `AI processing failed for ${mode}.` });
+    }
+
+    /* ---------------------------------------------------------------------
+       STEP 6: Generate attachments (PDF/DOCX/XLSX)
+    --------------------------------------------------------------------- */
+    const attachments: any[] = [];
+    if (result.outputText) {
+      try {
+        const pdf = await createPDF(result.outputText);
+        const docx = await createDocx(result.outputText);
+        attachments.push(pdf, docx);
+
+        if (mode === "ccc") {
+          const xlsx = await createXlsx();
+          attachments.push(xlsx);
+        }
+      } catch (genErr: any) {
+        console.error("⚠️ Attachment generation failed:", genErr);
+      }
+    }
+
+    /* ---------------------------------------------------------------------
+       STEP 7: Save assistant response + tone memory
+    --------------------------------------------------------------------- */
+    await saveMessage(session.id, "assistant", result.outputText);
+    await saveTone(userId, mode, tone, "Post-response update");
+
+/* ---------------------------------------------------------------------
+   STEP 8: Retrieve personality metadata
+--------------------------------------------------------------------- */
+
+// Define valid modes for TypeScript
+type CompanionMode = keyof typeof companionsConfig;
+
+const personality =
+  companionsConfig[mode as CompanionMode]
+    ? {
+        name: companionsConfig[mode as CompanionMode].title,
+        summary: companionsConfig[mode as CompanionMode].essence,
+      }
+    : { name: "Unknown Companion", summary: "No description available" };
+
+    /* ---------------------------------------------------------------------
+       STEP 9: Return structured API response
+    --------------------------------------------------------------------- */
+    return res.status(200).json({
       ok: true,
+      user: { id: userId, email: userEmail },
       mode,
+      sessionId: session.id,
+      tone,
+      personality,
       reply: result.outputText,
       attachments,
       meta: result.meta || {},
     });
   } catch (err: any) {
-    console.error("💥 Unhandled API Error:", err);
-    res.status(500).json({
+    console.error("❌ Unified session fatal error:", err);
+    return res.status(500).json({
       ok: false,
-      error: err?.message || "Internal Server Error",
+      error: err.message || "Internal Server Error",
     });
   }
-
-  console.log("===============================\n\n");
 }

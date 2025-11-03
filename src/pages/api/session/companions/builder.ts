@@ -1,24 +1,57 @@
+// src/companions/logic/runBuilder.ts
 import OpenAI from "openai";
+import { BUILDER_PROFILE } from "../../../../companions/config/builder";
+import { SHARED_CODEX } from "../../../../companions/config/shared";
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function runBuilder({ input, tone }: any) {
-  const basePrompt = `
-You are The Builder – Companion of Manifestation.
-You turn ideas into usable structures, design snippets, or system blueprints.
-Tone: ${tone}.
-`;
+export async function runBuilder({
+  input,
+  extractedText = "",
+  tone = "precise",
+  intent = "component_design",
+}: {
+  input: string;
+  extractedText?: string;
+  tone?: string;
+  intent?: string;
+}) {
+  const prompt = `
+${BUILDER_PROFILE.invocation}
 
-  const task = `
-User goal: ${input}
-Output:
-- Structured plan or HTML/React snippet
-- Accompanying rationale in plain English
-`;
+You are ${BUILDER_PROFILE.name}, ${BUILDER_PROFILE.archetype}.
+Act in alignment with the Codex: ${SHARED_CODEX.ethos.purpose}
+Tone: ${tone || BUILDER_PROFILE.tone.base}
 
-  const response = await openai.responses.create({
+User request:
+"""
+${input}
+"""
+
+If any reference or design document was uploaded:
+"""
+${extractedText || "No file uploaded."}
+"""
+
+Respond in the following structure:
+
+1. Intent Summary  
+2. Wireframe Outline  
+3. HTML/Tailwind Component (well formatted)  
+4. Notes for Refinement
+
+Return code within triple backticks for rendering.`;
+
+  const completion = await openai.responses.create({
     model: "gpt-4.1",
-    input: [{ role: "system", content: basePrompt + task }],
+    input: prompt,
   });
 
-  return { outputText: response.output_text, meta: { type: "structure" } };
+  const outputText = completion.output_text || "Builder could not form a response.";
+
+  return {
+    outputText,
+    meta: { companion: "Builder", tone, intent },
+    attachments: [],
+  };
 }

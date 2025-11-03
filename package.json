@@ -9,6 +9,9 @@
   "dependencies": {
     "@mdx-js/loader": "^3.1.0",
     "@next/mdx": "^15.4.1",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/auth-helpers-react": "^0.5.0",
+    "@supabase/supabase-js": "^2.78.0",
     "@tailwindcss/postcss": "^4.1.8",
     "@tailwindcss/typography": "^0.5.16",
     "@upstash/redis": "^1.35.3",

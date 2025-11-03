@@ -1,45 +1,57 @@
+// src/companions/logic/runCCC.ts
 import OpenAI from "openai";
+import { CCC_PROFILE } from "../../../../companions/config/ccc";
+import { SHARED_CODEX } from "../../../../companions/config/shared";
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function runCCC({ input, extractedText, tone, intent }: any) {
-  const basePrompt = `
-You are CCC – the Commercial Continuity Companion.
-Your role is to analyze business documents calmly and constructively.
-You identify risks, rewards, and insights. When asked, you draft pricing ladders or proposals.
-Tone: ${tone}.
-  `;
+export async function runCCC({
+  input,
+  extractedText = "",
+  tone = "calm",
+  intent = "proposal_analysis",
+}: {
+  input: string;
+  extractedText?: string;
+  tone?: string;
+  intent?: string;
+}) {
+  const prompt = `
+${CCC_PROFILE.invocation}
 
-  let taskPrompt = "";
+You are ${CCC_PROFILE.name}, ${CCC_PROFILE.archetype}.
+Act in alignment with the Codex: ${SHARED_CODEX.ethos.purpose}
+Tone: ${tone || CCC_PROFILE.tone.base}
 
-  if (intent === "proposal-draft") {
-    taskPrompt = `
-Create a proposal draft based on the user's prior analysis.
-It should include:
-- An executive summary
-- Project scope
-- Deliverables
-- Pricing model (3 tiers)
-- Terms and next steps
-`;
-  } else {
-    taskPrompt = `
-Analyze the following text or RFQ:
-${extractedText || input}
+User input:
+"""
+${input}
+"""
 
-Return:
-- 3 key risks
-- 3 key rewards
-- 1 commercial insight
-`;
-  }
+If any RFQ/RFP text was uploaded:
+"""
+${extractedText || "No file uploaded."}
+"""
 
-  const response = await openai.responses.create({
+Respond in a structured and analytical format:
+
+1. Executive Summary  
+2. Risk and Reward Overview  
+3. Commercial Recommendation  
+4. Next Step Invitation (optional)
+
+Keep responses structured, and calm.`;
+
+  const completion = await openai.responses.create({
     model: "gpt-4.1",
-    input: [{ role: "system", content: basePrompt + taskPrompt }],
+    input: prompt,
   });
 
+  const outputText = completion.output_text || "CCC could not form a response.";
+
   return {
-    outputText: response.output_text || "No output received.",
-    meta: { type: intent || "analysis" },
+    outputText,
+    meta: { companion: "CCC", tone, intent },
+    attachments: [],
   };
 }

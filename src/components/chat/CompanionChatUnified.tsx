@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -24,7 +24,7 @@ type Message = {
 };
 
 const uid = () => Math.random().toString(36).slice(2);
-const LOCAL_KEY = "kora-unified-chat-v3";
+const LOCAL_KEY = "kora-unified-chat-v4";
 
 /* ============================================================================
    Main Component
@@ -36,6 +36,7 @@ export default function CompanionChatUnified() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +46,7 @@ export default function CompanionChatUnified() {
       listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages.length]);
 
-  // Persist tone + mode
+  // Restore tone & mode from localStorage
   useEffect(() => {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (raw) {
@@ -54,13 +55,21 @@ export default function CompanionChatUnified() {
       if (m) setMode(m);
     }
   }, []);
+
   useEffect(() => {
     localStorage.setItem(LOCAL_KEY, JSON.stringify({ tone, mode }));
   }, [tone, mode]);
 
   /* ============================================================================
-     API Call Wrapper
+     Helpers
   ============================================================================ */
+  const downloadDataUrl = (dataUrl: string, filename: string) => {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    a.click();
+  };
+
   async function callSession(payload: Record<string, unknown>) {
     const res = await fetch("/api/session", {
       method: "POST",
@@ -73,157 +82,115 @@ export default function CompanionChatUnified() {
   }
 
   /* ============================================================================
-   📤 File Upload (CCC) — with Debug Logging
-============================================================================ */
-async function handleFileUpload(file: File) {
-  if (!file || uploading) return;
-  setUploading(true);
+     📤 File Upload (CCC)
+  ============================================================================ */
+  async function handleFileUpload(file: File) {
+    if (!file || uploading) return;
+    setUploading(true);
 
-  const msgId = uid();
-  setMessages((m) => [
-    ...m,
-    {
-      id: msgId,
-      role: "system",
-      content: `Uploading "${file.name}"...`,
-      ts: Date.now(),
-    },
-  ]);
-
-  try {
-    console.log("📤 Uploading file:", file.name, file.type, file.size);
-
-    const arrayBuf = await file.arrayBuffer();
-    const contentBase64 = btoa(
-      Array.from(new Uint8Array(arrayBuf))
-        .map((b) => String.fromCharCode(b))
-        .join("")
-    );
-
-    // ✅ Log base64 snippet for debug (won’t print whole file)
-    console.log("📄 FilePayload Base64 sample:", contentBase64.slice(0, 100));
-
-    const payload = {
-      mode: "ccc",
-      tone,
-      filePayload: {
-        name: file.name,
-        type: file.type,
-        contentBase64,
-      },
-      intent: "rfq_rfp_analysis",
-    };
-
-    console.log("🛰️ Sending payload to /api/session:", {
-      mode: payload.mode,
-      tone: payload.tone,
-      intent: payload.intent,
-      hasFile: !!payload.filePayload?.contentBase64,
-    });
-
-    const res = await fetch("/api/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    console.log("📥 Response from /api/session:", res.status, data);
-
-    if (!res.ok) throw new Error(data.error || "API request failed");
-
+    const msgId = uid();
     setMessages((m) => [
-      ...m.filter((msg) => msg.id !== msgId),
-      {
-        id: uid(),
-        role: "assistant",
-        content:
-          data.reply ||
-          "I’ve analyzed the document. Would you like a first draft proposal?",
-        attachments: data.attachments || [],
-        ts: Date.now(),
-      },
+      ...m,
+      { id: msgId, role: "system", content: `Uploading "${file.name}"…`, ts: Date.now() },
     ]);
-  } catch (err: any) {
-    console.error("❌ Upload error:", err);
-    setMessages((m) => [
-      ...m.filter((msg) => msg.id !== msgId),
-      {
-        id: uid(),
-        role: "assistant",
-        content:
-          "💥 A parsing disruption occurred. Try again or upload a different file.",
-        ts: Date.now(),
-      },
-    ]);
-  } finally {
-    setUploading(false);
+
+    try {
+      const arrayBuf = await file.arrayBuffer();
+      const contentBase64 = btoa(
+        Array.from(new Uint8Array(arrayBuf))
+          .map((b) => String.fromCharCode(b))
+          .join("")
+      );
+
+      const payload = {
+        mode: "ccc",
+        tone,
+        filePayload: {
+          name: file.name,
+          type: file.type,
+          contentBase64,
+        },
+        intent: "rfq_rfp_analysis",
+      };
+
+      const data = await callSession(payload);
+      console.log("📥 File upload response:", data);
+
+      if (data.sessionId) setSessionId(data.sessionId);
+
+      setMessages((m) => [
+        ...m.filter((msg) => msg.id !== msgId),
+        {
+          id: uid(),
+          role: "assistant",
+          content:
+            data.reply ||
+            "I’ve analyzed the document. Would you like a first draft proposal?",
+          attachments: data.attachments || [],
+          ts: Date.now(),
+        },
+      ]);
+    } catch (err: any) {
+      console.error("❌ Upload error:", err);
+      setMessages((m) => [
+        ...m.filter((msg) => msg.id !== msgId),
+        {
+          id: uid(),
+          role: "assistant",
+          content:
+            "💥 A parsing disruption occurred. Try again or upload a different file.",
+          ts: Date.now(),
+        },
+      ]);
+    } finally {
+      setUploading(false);
+    }
   }
-}
-
-/* ============================================================================
-   💬 Send Message — with Debug Logging
-============================================================================ */
-async function handleSend() {
-  const content = input.trim();
-  if (!content || sending) return;
-  setSending(true);
-  setInput("");
-
-  console.log("💬 Sending text message:", { input: content, mode, tone });
-
-  const userMsg: Message = {
-    id: uid(),
-    role: "user",
-    content,
-    ts: Date.now(),
-  };
-
-  setMessages((m) => [
-    ...m,
-    userMsg,
-    { id: uid(), role: "system", content: "…", ts: Date.now() },
-  ]);
-
-  try {
-    const data = await callSession({
-      input: content,
-      mode,
-      tone,
-    });
-
-    console.log("📥 Text response from /api/session:", data);
-
-    setMessages((m) => [
-      ...m.filter((msg) => msg.role !== "system"),
-      {
-        id: uid(),
-        role: "assistant",
-        content: data.reply || "The Companion has no reply.",
-        attachments: data.attachments || [],
-        ts: Date.now(),
-      },
-    ]);
-  } catch (err: any) {
-    console.error("❌ Chat send error:", err);
-    setMessages((m) => [
-      ...m.filter((msg) => msg.role !== "system"),
-      {
-        id: uid(),
-        role: "assistant",
-        content:
-          "⚠️ The Companion fell silent. Please try again in a moment.",
-        ts: Date.now(),
-      },
-    ]);
-  } finally {
-    setSending(false);
-  }
-}
 
   /* ============================================================================
-     Render Helpers
+     💬 Send Message
+  ============================================================================ */
+  async function handleSend() {
+    const content = input.trim();
+    if (!content || sending) return;
+    setSending(true);
+    setInput("");
+
+    const userMsg: Message = { id: uid(), role: "user", content, ts: Date.now() };
+    setMessages((m) => [...m, userMsg, { id: uid(), role: "system", content: "…", ts: Date.now() }]);
+
+    try {
+      const data = await callSession({ input: content, mode, tone });
+      if (data.sessionId) setSessionId(data.sessionId);
+
+      setMessages((m) => [
+        ...m.filter((msg) => msg.role !== "system"),
+        {
+          id: uid(),
+          role: "assistant",
+          content: data.reply || "The Companion has no reply.",
+          attachments: data.attachments || [],
+          ts: Date.now(),
+        },
+      ]);
+    } catch (err: any) {
+      console.error("❌ Chat send error:", err);
+      setMessages((m) => [
+        ...m.filter((msg) => msg.role !== "system"),
+        {
+          id: uid(),
+          role: "assistant",
+          content: "⚠️ The Companion fell silent. Please try again.",
+          ts: Date.now(),
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  /* ============================================================================
+     RENDER HELPERS
   ============================================================================ */
   const ModeTabs = () => (
     <div className="flex items-center justify-between bg-white/80 border border-gray-200 rounded-2xl p-2 mb-4">
@@ -235,7 +202,18 @@ async function handleSend() {
         ].map(([value, label]) => (
           <button
             key={value}
-            onClick={() => setMode(value as Mode)}
+            onClick={() => {
+              setMode(value as Mode);
+              setMessages((m) => [
+                ...m,
+                {
+                  id: uid(),
+                  role: "system",
+                  content: `Switched to ${label}. Personality context loaded.`,
+                  ts: Date.now(),
+                },
+              ]);
+            }}
             className={`px-4 py-2 rounded-xl text-sm ${
               mode === value
                 ? "bg-amber-600 text-white"
@@ -263,6 +241,32 @@ async function handleSend() {
     </div>
   );
 
+  const Attachments = ({ items }: { items?: Attachment[] }) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((att, idx) => {
+          switch (att.kind) {
+            case "pdf":
+            case "docx":
+            case "xlsx":
+              return (
+                <button
+                  key={idx}
+                  className="px-3 py-2 text-sm rounded-lg bg-amber-600 text-white hover:bg-amber-700"
+                  onClick={() => downloadDataUrl(att.dataUrl, att.filename)}
+                >
+                  Download {att.kind.toUpperCase()}
+                </button>
+              );
+            default:
+              return null;
+          }
+        })}
+      </div>
+    );
+  };
+
   const MessageBubble = ({ m }: { m: Message }) => {
     const isUser = m.role === "user";
     const isSystem = m.role === "system";
@@ -279,10 +283,9 @@ async function handleSend() {
         {isSystem ? (
           m.content
         ) : (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {m.content}
-          </ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
         )}
+        {m.attachments && <Attachments items={m.attachments} />}
         <div className="text-[10px] text-gray-400 mt-1">
           {new Date(m.ts).toLocaleTimeString()}
         </div>
@@ -298,9 +301,14 @@ async function handleSend() {
       <h1 className="text-2xl font-semibold text-amber-700 mb-2">
         Unified Chat Playground
       </h1>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-gray-500 mb-2">
         Upload a document or chat directly with your selected Companion.
       </p>
+      {sessionId && (
+        <p className="text-xs text-gray-400 italic">
+          Session: {sessionId} | Tone: {tone}
+        </p>
+      )}
 
       <ModeTabs />
 
@@ -314,7 +322,9 @@ async function handleSend() {
             type="file"
             accept=".pdf,.docx,.xlsx"
             disabled={uploading}
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+            onChange={(e) =>
+              e.target.files && handleFileUpload(e.target.files[0])
+            }
             className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-amber-600 file:text-white hover:file:bg-amber-700 file:px-3 file:py-2"
           />
         </div>
