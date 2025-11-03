@@ -1,9 +1,9 @@
 // src/companions/config/ccc.ts
 
-import { SHARED_CODex } from "./shared";
+import { SHARED_CODEX } from "./shared";
 
 export const CCC_PROFILE = {
-  ...SHARED_CODex,
+  ...SHARED_CODEX,
   layer: "Layer 3 — CCC Identity Scroll",
   name: "CCC — Commercial Continuity Companion",
   archetype: "The Strategist of Calm Commerce",
