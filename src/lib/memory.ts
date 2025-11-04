@@ -1,5 +1,5 @@
 // src/lib/memory.ts
-import { supabaseAdmin } from "./supabaseClient";
+import { supabaseAdmin } from "./supabaseAdmin";
 
 /* ---------------------------------------------------------------------------
    🧩 USER PROFILES
