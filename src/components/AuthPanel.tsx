@@ -13,7 +13,7 @@ export default function AuthPanel() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // 🔹 Magic link (email) login
+  // ✉️ Magic Link Login
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -37,7 +37,7 @@ export default function AuthPanel() {
     }
   };
 
-  // 🔹 Google OAuth login
+  // 🔹 Google Sign-In
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setMessage(null);
@@ -53,12 +53,12 @@ export default function AuthPanel() {
       if (error) throw error;
     } catch (err: any) {
       console.error("Google login error:", err.message);
-      setMessage("⚠️ Google sign-in failed. Please check your connection or try again.");
+      setMessage("⚠️ Google sign-in failed. Please try again.");
       setLoading(false);
     }
   };
 
-  // 🔹 Guest login (bypass auth)
+  // 👤 Guest Login
   const handleGuestLogin = () => {
     router.push("/unifiedchat-test");
   };
@@ -73,7 +73,7 @@ export default function AuthPanel() {
           Sign in below to start your session with your Companion.
         </p>
 
-        {/* Google sign-in */}
+        {/* Google Sign-In */}
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
@@ -88,7 +88,7 @@ export default function AuthPanel() {
           <span className="mx-2">or</span>
         </div>
 
-        {/* Email magic link form */}
+        {/* Magic Link */}
         <form onSubmit={handleMagicLink} className="space-y-4">
           <input
             type="email"
@@ -107,7 +107,7 @@ export default function AuthPanel() {
           </button>
         </form>
 
-        {/* Guest login */}
+        {/* Guest Access */}
         <div className="text-center">
           <button
             onClick={handleGuestLogin}
@@ -118,7 +118,6 @@ export default function AuthPanel() {
           </button>
         </div>
 
-        {/* Status / error messages */}
         {message && (
           <div className="text-center text-sm text-gray-600 mt-4">{message}</div>
         )}
