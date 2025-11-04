@@ -78,15 +78,24 @@ let extractedText = "";
 if (filePayload) {
   try {
     // Save to /tmp so pdf-parse-fixed can handle it safely
-    const tmpDir = path.join(process.cwd(), "tmp");
-    await fs.mkdir(tmpDir, { recursive: true });
+// ✅ Always write temp files to /tmp (Vercel-compatible)
+const tmpDir = "/tmp"; // Vercel’s writable directory
+const tmpPath = path.join(tmpDir, filePayload.name || "upload.tmp");
 
-    const tmpPath = path.join(tmpDir, filePayload.name || "upload.tmp");
-    const buffer = Buffer.from(
-      filePayload.contentBase64.split(",").pop()!,
-      "base64"
-    );
-    await fs.writeFile(tmpPath, buffer);
+const base64Data = filePayload.contentBase64?.split(",").pop();
+if (!base64Data) throw new Error("Invalid file upload: missing base64 content.");
+
+const buffer = Buffer.from(base64Data, "base64");
+
+try {
+  await fs.writeFile(tmpPath, buffer);
+} catch (err: any) {
+  console.error("❌ Temp file write failed:", err.message);
+  throw new Error("Could not write temporary file to /tmp.");
+}
+
+// ✅ Pass to parser safely
+extractedText = await parseUploadedFile(tmpPath, filePayload.type);
 
     // Use parser
     extractedText = await parseUploadedFile(tmpPath, filePayload.type);
