@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
-import { useSession } from "@supabase/auth-helpers-react";
+import { useRouter } from "next/router";
+import { useSession, useSupabaseClient } from "@supabase/auth-helpers-react";
 import AuthPanel from "@/components/AuthPanel";
 
-// Dynamically import to avoid SSR issues
+// Dynamically import the unified chat (avoids SSR issues)
 const CompanionChatUnified = dynamic(
   () => import("@/components/chat/CompanionChatUnified"),
   { ssr: false }
@@ -11,44 +13,97 @@ const CompanionChatUnified = dynamic(
 
 export default function UnifiedChatPage() {
   const session = useSession();
+  const supabase = useSupabaseClient();
+  const router = useRouter();
 
-  const mockCompanion = {
-    slug: "fmc",
-    title: "Full Spectrum Marketing Companion",
-    tagline: "From blank page to brand clarity — in your voice.",
+  const [isGuest, setIsGuest] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // 🧭 Detect guest mode and handle redirect logic
+  useEffect(() => {
+    const guestFlag = localStorage.getItem("guest_mode") === "true";
+    setIsGuest(guestFlag);
+
+    // Redirect only if neither guest nor session
+    if (!guestFlag && !session) {
+      router.push("/auth");
+    }
+
+    setCheckingAuth(false);
+  }, [session, router]);
+
+  // 🚪 Logout function (works for both guest + signed-in users)
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem("guest_mode");
+      localStorage.clear();
+      router.push("/auth");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
+
+  // ⏳ Prevent flicker during session check
+  if (checkingAuth) return null;
+
+  // 🧠 If no session and not guest, redirect happens above
+  if (!session && !isGuest) return null;
 
   return (
     <>
       <Head>
-        <title>Unified Chat | Kora Intelligence</title>
+        <title>Unified Chat Environment | Kora Intelligence</title>
         <meta
           name="description"
           content="Pilot testing of the unified Kora Companion chat environment."
         />
       </Head>
 
-      {/* If not signed in, show AuthPanel */}
-      {!session ? (
-        <AuthPanel />
-      ) : (
-        <main className="min-h-screen bg-white dark:bg-zinc-900 text-gray-800 dark:text-gray-100 px-6 py-12">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-semibold mb-6 text-amber-600">
+      <main className="min-h-screen bg-amber-50 text-gray-800 p-6">
+        {/* Header */}
+        <header className="flex items-center justify-between mb-6 bg-white/70 backdrop-blur-md rounded-xl px-4 py-3 shadow-sm border border-gray-200">
+          <div>
+            <h1 className="text-lg font-semibold text-amber-700">
               Unified Chat Environment
             </h1>
-            <p className="text-gray-500 mb-8">
-              You’re signed in as{" "}
-              <span className="text-amber-700 font-medium">
-                {session.user?.email}
-              </span>
-              . Your interactions are now being tracked for this pilot.
+            <p className="text-sm text-gray-600">
+              {isGuest ? (
+                <>
+                  You’re exploring as a{" "}
+                  <span className="font-medium text-amber-800">Guest</span>.{" "}
+                  <span className="ml-1 text-gray-500">
+                    Your chat will reset when you leave this session.
+                  </span>
+                </>
+              ) : (
+                <>
+                  You’re signed in as{" "}
+                  <span className="font-medium text-amber-800">
+                    {session?.user?.email}
+                  </span>
+                  .{" "}
+                  <span className="ml-1 text-gray-500">
+                    Your interactions are now being tracked for this pilot.
+                  </span>
+                </>
+              )}
             </p>
-
-            <CompanionChatUnified />
           </div>
-        </main>
-      )}
+
+          <button
+            onClick={handleLogout}
+            className="bg-amber-600 hover:bg-amber-700 text-white text-sm px-4 py-2 rounded-md transition"
+          >
+            Logout
+          </button>
+        </header>
+
+        {/* Unified Chat */}
+        <section className="max-w-4xl mx-auto">
+          <CompanionChatUnified />
+        </section>
+      </main>
     </>
   );
 }

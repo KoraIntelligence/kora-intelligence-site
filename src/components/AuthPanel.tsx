@@ -68,6 +68,7 @@ export default function AuthPanel() {
 
   // 👤 Guest Login
   const handleGuestLogin = () => {
+    localStorage.setItem("guest_mode", "true");
     router.push("/unifiedchat-test");
   };
 
