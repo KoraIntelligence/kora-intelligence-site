@@ -1,22 +1,23 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
-import Layout from "../components/layout/Layout";
 import { ThemeProvider } from "next-themes";
+import Layout from "../components/layout/Layout";
 
 import { useState } from "react";
 import { createBrowserSupabaseClient } from "@supabase/auth-helpers-nextjs";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
 
+// ✅ Updated _app.tsx for Supabase Auth (v2)
 export default function App({ Component, pageProps }: AppProps) {
-  // Initialize Supabase client once per app load
-  const [supabase] = useState(() => createBrowserSupabaseClient());
+  // Create a single browser Supabase client for the entire app
+  const [supabaseClient] = useState(() => createBrowserSupabaseClient());
 
   return (
     <SessionContextProvider
-      supabaseClient={supabase}
+      supabaseClient={supabaseClient}
       initialSession={pageProps.initialSession}
     >
-      <ThemeProvider attribute="class">
+      <ThemeProvider attribute="class" defaultTheme="light">
         <Layout>
           <Component {...pageProps} />
         </Layout>

@@ -1,4 +1,3 @@
-// src/pages/api/session/index.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 import OpenAI from "openai";
@@ -8,7 +7,6 @@ import fs from "fs/promises";
 import { runCCC } from "./companions/ccc";
 import { runFMC } from "./companions/fmc";
 import { runBuilder } from "./companions/builder";
-
 import { parseUploadedFile } from "./utils/parseFiles";
 import { createPDF, createDocx, createXlsx } from "./utils/generateDocs";
 
@@ -20,10 +18,8 @@ import {
   saveTone,
 } from "@/lib/memory";
 
-// 🧠 Shared companion personality configs
 import { companionsConfig } from "@/companions/config/shared";
 
-// Initialize OpenAI client
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export const config = {
@@ -33,11 +29,13 @@ export const config = {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     /* ---------------------------------------------------------------------
-       STEP 1: Verify user authentication (Supabase session)
+       STEP 1: Authenticate via Supabase
     --------------------------------------------------------------------- */
     const supabase = createServerSupabaseClient({ req, res });
     const {
@@ -46,30 +44,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.warn("🔒 Unauthorized request (no Supabase user)");
-      return res.status(401).json({ error: "Unauthorized. Please sign in." });
+      console.warn("🚫 Unauthorized request — no Supabase session.");
+      return res.status(401).json({ error: "Unauthorized. Please sign in first." });
     }
 
     const userId = user.id;
-    const userEmail = user.email || "unknown";
-
+    const userEmail = user.email || "unknown@user";
     await getOrCreateUserProfile(userId, userEmail);
 
     /* ---------------------------------------------------------------------
-       STEP 2: Extract request payload
+       STEP 2: Extract and validate request payload
     --------------------------------------------------------------------- */
     const { input, mode, filePayload, tone: userTone, intent } = req.body || {};
 
-    if (!mode || (!input && !filePayload)) {
-      return res.status(400).json({ error: "Missing required parameters: mode or input/filePayload" });
+    if (!mode) {
+      return res.status(400).json({ error: "Missing 'mode' (ccc, fmc, builder)" });
     }
 
-    // Retrieve last known tone memory
+    if (!input && !filePayload) {
+      return res
+        .status(400)
+        .json({ error: "Missing 'input' or 'filePayload'. One is required." });
+    }
+
     const lastTone = await getLastTone(userId, mode);
     const tone = userTone || lastTone || "neutral";
 
     /* ---------------------------------------------------------------------
-       STEP 3: Parse uploaded file (if any)
+       STEP 3: Parse uploaded file (optional)
     --------------------------------------------------------------------- */
     let extractedText = "";
     if (filePayload?.contentBase64 && filePayload?.type) {
@@ -81,23 +83,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       try {
         extractedText = await parseUploadedFile(tmpPath, filePayload.type);
-      } catch (fileErr: any) {
-        console.error("❌ File parsing failed:", fileErr);
+      } catch (err: any) {
+        console.error("❌ File parsing failed:", err);
         return res.status(400).json({
           ok: false,
-          error: "File parsing failed. Try uploading a different file.",
+          error: "File parsing failed — please try a different file format.",
         });
       }
     }
 
     /* ---------------------------------------------------------------------
-       STEP 4: Create session record
+       STEP 4: Create or continue a session
     --------------------------------------------------------------------- */
     const session = await createSession(userId, mode, intent);
-    await saveMessage(session.id, "user", input || "(File upload)");
+    await saveMessage(session.id, "user", input || "(File Upload)");
 
     /* ---------------------------------------------------------------------
-       STEP 5: Route to the correct Companion
+       STEP 5: Route to correct Companion logic
     --------------------------------------------------------------------- */
     let result;
     try {
@@ -112,26 +114,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           result = await runBuilder({ input, extractedText, tone, intent });
           break;
         default:
-          return res.status(400).json({ error: `Invalid mode: ${mode}` });
+          return res.status(400).json({ error: `Invalid mode '${mode}'` });
       }
-    } catch (aiErr: any) {
-      console.error(`💥 Companion (${mode}) processing error:`, aiErr);
-      return res.status(500).json({ error: `AI processing failed for ${mode}.` });
+    } catch (err: any) {
+      console.error(`💥 Companion processing error [${mode}]:`, err);
+      return res.status(500).json({ error: `AI processing failed for ${mode}` });
     }
 
     /* ---------------------------------------------------------------------
-       STEP 6: Generate attachments (PDF/DOCX/XLSX)
+       STEP 6: Generate Attachments (PDF / DOCX / XLSX)
     --------------------------------------------------------------------- */
     const attachments: any[] = [];
     if (result.outputText) {
       try {
-        const pdf = await createPDF(result.outputText);
-        const docx = await createDocx(result.outputText);
-        attachments.push(pdf, docx);
+        attachments.push(await createPDF(result.outputText));
+        attachments.push(await createDocx(result.outputText));
 
         if (mode === "ccc") {
-          const xlsx = await createXlsx();
-          attachments.push(xlsx);
+          attachments.push(await createXlsx());
         }
       } catch (genErr: any) {
         console.error("⚠️ Attachment generation failed:", genErr);
@@ -139,42 +139,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     /* ---------------------------------------------------------------------
-       STEP 7: Save assistant response + tone memory
+       STEP 7: Store assistant message & tone memory
     --------------------------------------------------------------------- */
     await saveMessage(session.id, "assistant", result.outputText);
     await saveTone(userId, mode, tone, "Post-response update");
 
-/* ---------------------------------------------------------------------
-   STEP 8: Retrieve personality metadata
---------------------------------------------------------------------- */
-
-// Define valid modes for TypeScript
-type CompanionMode = keyof typeof companionsConfig;
-
-const personality =
-  companionsConfig[mode as CompanionMode]
-    ? {
-        name: companionsConfig[mode as CompanionMode].title,
-        summary: companionsConfig[mode as CompanionMode].essence,
-      }
-    : { name: "Unknown Companion", summary: "No description available" };
+    /* ---------------------------------------------------------------------
+       STEP 8: Enrich with Companion personality
+    --------------------------------------------------------------------- */
+    type CompanionMode = keyof typeof companionsConfig;
+    const companionProfile =
+      companionsConfig[mode as CompanionMode] || {
+        title: "Unknown Companion",
+        essence: "This companion has yet to reveal its identity.",
+      };
 
     /* ---------------------------------------------------------------------
-       STEP 9: Return structured API response
+       STEP 9: Send structured response
     --------------------------------------------------------------------- */
     return res.status(200).json({
       ok: true,
       user: { id: userId, email: userEmail },
       mode,
-      sessionId: session.id,
       tone,
-      personality,
+      sessionId: session.id,
+      personality: {
+        name: companionProfile.title,
+        summary: companionProfile.essence,
+      },
       reply: result.outputText,
       attachments,
       meta: result.meta || {},
     });
   } catch (err: any) {
-    console.error("❌ Unified session fatal error:", err);
+    console.error("🔥 Unified session fatal error:", err);
     return res.status(500).json({
       ok: false,
       error: err.message || "Internal Server Error",
