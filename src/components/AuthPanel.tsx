@@ -1,90 +1,68 @@
+// src/components/AuthPanel.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/router";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 
 export default function AuthPanel() {
-  const [emailSent, setEmailSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const supabase = useSupabaseClient();
+  const user = useUser();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
+  // 🔁 Redirect logged-in users straight to the chat
   useEffect(() => {
-    setError(null);
-  }, []);
+    if (user) router.push("/unifiedchat-test");
+  }, [user, router]);
 
-  const handleEmailLogin = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-        },
-      });
-      if (error) throw error;
-      setEmailSent(true);
-    } catch (err: any) {
-      console.error("Auth error:", err.message);
-      setError("Something went wrong. Please try again.");
-    }
-  };
+  async function signInWithGoogle() {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/unifiedchat-test` },
+    });
+    if (error) console.error("Google Sign-In Error:", error.message);
+    setLoading(false);
+  }
 
   return (
-    <main className="flex items-center justify-center h-screen bg-gradient-to-b from-amber-50 to-white">
-      <div className="bg-white shadow-md border border-amber-200 rounded-3xl p-8 max-w-md w-full space-y-6">
-        <h1 className="text-2xl font-semibold text-center text-amber-700">
+    <main className="flex flex-col items-center justify-center min-h-screen bg-amber-50">
+      <div className="bg-white rounded-3xl shadow-lg p-8 max-w-md w-full text-center">
+        <h1 className="text-2xl font-semibold text-amber-700 mb-6">
           Welcome to Kora Intelligence
         </h1>
-        <p className="text-sm text-gray-500 text-center">
-          Sign in below to start your session with your Companion.
-        </p>
 
-        {!emailSent ? (
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: "#b45309",
-                    brandAccent: "#92400e",
-                    inputBackground: "#fff",
-                    inputBorder: "#fcd34d",
-                  },
-                },
-              },
-            }}
-            providers={["google"]}
-            view="magic_link"
-            showLinks={false}
-            localization={{
-              variables: {
-                sign_in: {
-                  email_label: "Email address",
-                  email_input_placeholder: "you@example.com",
-                  button_label: "Send Magic Link",
-                },
-              },
-            }}
-            theme="light"
-          />
+        {!user ? (
+          <>
+            <button
+              onClick={signInWithGoogle}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white rounded-lg py-2.5 hover:bg-amber-700 transition"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 488 512"
+                width="20"
+                height="20"
+                fill="currentColor"
+              >
+                <path d="M488 261.8c0-17.8-1.5-35-4.3-51.8H249v98.1h135.7c-5.9 31.8-23.6 58.7-50.3 76.7l81.2 63c47.4-43.8 72.4-108.3 72.4-186z" />
+                <path d="M249 492c67.5 0 124-22.4 165.3-60.8l-81.2-63c-22.5 15.1-51.1 24.2-84.1 24.2-64.7 0-119.6-43.7-139.3-102.4l-85.3 66.2C63.7 436.3 148.5 492 249 492z" />
+                <path d="M109.7 289.9c-4.8-14.3-7.5-29.5-7.5-45.1s2.7-30.8 7.5-45.1L24.3 133.5C8.9 166.1 0 206 0 244.8s8.9 78.7 24.3 111.3l85.4-66.2z" />
+                <path d="M249 97.9c36.8 0 69.8 12.7 95.8 37.6l71.6-71.6C373 23.2 316.5 0 249 0 148.5 0 63.7 55.7 24.3 133.5l85.4 66.2C129.4 141.6 184.3 97.9 249 97.9z" />
+              </svg>
+              {loading ? "Connecting..." : "Sign in with Google"}
+            </button>
+            <button
+  onClick={() => router.push("/unifiedchat-test")}
+  className="mt-4 text-amber-600 hover:underline"
+>
+  Continue as Guest
+</button>
+          </>
         ) : (
-          <div className="text-center space-y-3">
-            <p className="text-amber-700 font-medium">
-              ✉️ Magic link sent to your email!
-            </p>
-            <p className="text-sm text-gray-500">
-              Please check your inbox and click the link to continue.
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="text-center text-red-600 text-sm font-medium">
-            {error}
-          </div>
+          <p className="text-gray-600">Redirecting to your Companion...</p>
         )}
       </div>
     </main>
