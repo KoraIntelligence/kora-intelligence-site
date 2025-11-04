@@ -70,27 +70,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const lastTone = await getLastTone(userId, mode);
     const tone = userTone || lastTone || "neutral";
 
-    /* ---------------------------------------------------------------------
-       STEP 3: Parse uploaded file (optional)
-    --------------------------------------------------------------------- */
-    let extractedText = "";
-    if (filePayload?.contentBase64 && filePayload?.type) {
-      const tmpDir = path.join(process.cwd(), "tmp");
-      const tmpPath = path.join(tmpDir, filePayload.name);
+/* ---------------------------------------------------------------------
+   STEP 3: Parse uploaded file (if any)
+--------------------------------------------------------------------- */
+let extractedText = "";
 
-      await fs.mkdir(tmpDir, { recursive: true });
-      await fs.writeFile(tmpPath, Buffer.from(filePayload.contentBase64, "base64"));
+if (filePayload) {
+  try {
+    // Save to /tmp so pdf-parse-fixed can handle it safely
+    const tmpDir = path.join(process.cwd(), "tmp");
+    await fs.mkdir(tmpDir, { recursive: true });
 
-      try {
-        extractedText = await parseUploadedFile(tmpPath, filePayload.type);
-      } catch (err: any) {
-        console.error("❌ File parsing failed:", err);
-        return res.status(400).json({
-          ok: false,
-          error: "File parsing failed — please try a different file format.",
-        });
-      }
-    }
+    const tmpPath = path.join(tmpDir, filePayload.name || "upload.tmp");
+    const buffer = Buffer.from(
+      filePayload.contentBase64.split(",").pop()!,
+      "base64"
+    );
+    await fs.writeFile(tmpPath, buffer);
+
+    // Use parser
+    extractedText = await parseUploadedFile(tmpPath, filePayload.type);
+  } catch (fileErr: any) {
+    console.error("❌ File handling failed:", fileErr.message);
+    throw new Error("File parsing failed or temporary file could not be saved.");
+  }
+}
 
     /* ---------------------------------------------------------------------
        STEP 4: Create or continue a session
