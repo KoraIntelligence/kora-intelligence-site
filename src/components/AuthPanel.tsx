@@ -1,17 +1,25 @@
-// src/components/AuthPanel.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import {
+  useSupabaseClient,
+  useUser,
+} from "@supabase/auth-helpers-react";
 
 export default function AuthPanel() {
   const supabase = useSupabaseClient();
+  const user = useUser();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  // 🧭 Redirect if already logged in
+  useEffect(() => {
+    if (user) router.push("/unifiedchat-test");
+  }, [user, router]);
 
   // ✉️ Magic Link Login
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -63,60 +71,101 @@ export default function AuthPanel() {
     router.push("/unifiedchat-test");
   };
 
+  // 🚪 Logout
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      setMessage("👋 Logged out successfully.");
+      router.push("/auth");
+    } catch (err: any) {
+      console.error("Logout error:", err.message);
+      setMessage("⚠️ Logout failed. Please refresh the page.");
+    }
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-amber-50 px-4">
       <div className="bg-white rounded-2xl shadow-md p-8 max-w-md w-full space-y-6">
-        <h1 className="text-2xl font-semibold text-amber-700 text-center">
-          Welcome to Kora Intelligence
-        </h1>
-        <p className="text-sm text-gray-600 text-center">
-          Sign in below to start your session with your Companion.
-        </p>
+        {!user ? (
+          <>
+            <h1 className="text-2xl font-semibold text-amber-700 text-center">
+              Welcome to Kora Intelligence
+            </h1>
+            <p className="text-sm text-gray-600 text-center">
+              Sign in below to start your session with your Companion.
+            </p>
 
-        {/* Google Sign-In */}
-        <button
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-50 transition"
-        >
-          <img src="/icons/google.svg" alt="Google" className="w-5 h-5" />
-          <span>Sign in with Google</span>
-        </button>
+            {/* Google Sign-In */}
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-50 transition"
+            >
+              <img src="/icons/google.svg" alt="Google" className="w-5 h-5" />
+              <span>Sign in with Google</span>
+            </button>
 
-        {/* Divider */}
-        <div className="flex items-center justify-center text-gray-400 text-sm">
-          <span className="mx-2">or</span>
-        </div>
+            {/* Divider */}
+            <div className="flex items-center justify-center text-gray-400 text-sm">
+              <span className="mx-2">or</span>
+            </div>
 
-        {/* Magic Link */}
-        <form onSubmit={handleMagicLink} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Your email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full border border-gray-300 rounded-md p-2 text-sm"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-amber-600 text-white py-2 rounded-md hover:bg-amber-700 disabled:opacity-60"
-          >
-            {loading ? "Sending..." : "Send Magic Link"}
-          </button>
-        </form>
+            {/* Magic Link */}
+            <form onSubmit={handleMagicLink} className="space-y-4">
+              <input
+                type="email"
+                placeholder="Your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-md p-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-amber-600 text-white py-2 rounded-md hover:bg-amber-700 disabled:opacity-60"
+              >
+                {loading ? "Sending..." : "Send Magic Link"}
+              </button>
+            </form>
 
-        {/* Guest Access */}
-        <div className="text-center">
-          <button
-            onClick={handleGuestLogin}
-            disabled={loading}
-            className="text-sm text-amber-700 underline hover:text-amber-800"
-          >
-            Continue as Guest
-          </button>
-        </div>
+            {/* Guest Access */}
+            <div className="text-center">
+              <button
+                onClick={handleGuestLogin}
+                disabled={loading}
+                className="text-sm text-amber-700 underline hover:text-amber-800"
+              >
+                Continue as Guest
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Logged-in State */}
+            <div className="text-center space-y-3">
+              <h2 className="text-lg font-semibold text-amber-700">
+                You’re signed in
+              </h2>
+              <p className="text-sm text-gray-600">
+                {user.email ? (
+                  <>
+                    as <span className="font-medium">{user.email}</span>
+                  </>
+                ) : (
+                  "as a guest user."
+                )}
+              </p>
+              <button
+                onClick={handleLogout}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-md transition"
+              >
+                Logout
+              </button>
+            </div>
+          </>
+        )}
 
         {message && (
           <div className="text-center text-sm text-gray-600 mt-4">{message}</div>
