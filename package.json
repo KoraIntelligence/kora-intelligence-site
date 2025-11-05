@@ -7,6 +7,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
     "@mdx-js/loader": "^3.1.0",
     "@next/mdx": "^15.4.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
