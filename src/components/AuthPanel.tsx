@@ -52,10 +52,10 @@ useEffect(() => {
     setMessage(null);
 
     try {
-const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
   provider: "google",
   options: {
-    redirectTo: "https://koraintelligence.com/auth/v1/callback",
+    redirectTo: `${window.location.origin}/unifiedchat-test`,
   },
 });
 
