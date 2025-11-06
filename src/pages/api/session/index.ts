@@ -18,7 +18,7 @@ import {
   saveTone,
 } from "@/lib/memory";
 import { companionsConfig } from "@/companions/config/shared";
-import { supabaseAdmin } from "@/lib/supabaseAdmin"; // required for guest creation
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -32,59 +32,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    /* ---------------------------------------------------------------------
-       STEP 1: Verify user authentication or create guest session
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 1: Identify User (Auth or Guest)
+    ───────────────────────────────────────────────────────────── */
     const supabase = createServerSupabaseClient({ req, res });
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
     const guestHeader = req.headers["x-guest"];
 
     let userId: string;
     let userEmail: string;
     let isGuest = false;
 
-if (user) {
-  userId = user.id;
-  userEmail = user.email || "unknown";
-} else if (guestHeader === "true") {
-  // Guest mode path
-  isGuest = true;
-  const existingGuest = await supabaseAdmin
-    .from("user_profiles")
-    .select("id")
-    .eq("email", "guest@kora.local")
-    .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (existingGuest.data) {
-    userId = existingGuest.data.id;
-  } else {
-    const { data: newGuest, error: guestErr } = await supabaseAdmin
-      .from("user_profiles")
-      .insert([
-        {
-          email: "guest@kora.local",
-          name: "Guest User",
-          current_tone: "calm",
-        },
-      ])
-      .select("id")
-      .single();
+    if (user) {
+      userId = user.id;
+      userEmail = user.email || "unknown";
+    } else if (guestHeader === "true") {
+      isGuest = true;
+      const { data: guest, error } = await supabaseAdmin
+        .from("user_profiles")
+        .select("id")
+        .eq("email", "guest@kora.local")
+        .single();
 
-    if (guestErr) throw guestErr;
-    userId = newGuest.id;
-  }
+      if (guest) {
+        userId = guest.id;
+      } else {
+        const { data: newGuest, error: guestErr } = await supabaseAdmin
+          .from("user_profiles")
+          .insert([
+            {
+              email: "guest@kora.local",
+              name: "Guest User",
+              current_tone: "calm",
+            },
+          ])
+          .select("id")
+          .single();
 
-  userEmail = "guest@kora.local";
-} else {
-  // No user or guest flag — reject
-  return res.status(401).json({ error: "Unauthorized. Please sign in or use guest mode." });
-}
+        if (guestErr) throw guestErr;
+        userId = newGuest.id;
+      }
 
-    /* ---------------------------------------------------------------------
-       STEP 2: Extract payload
-    --------------------------------------------------------------------- */
+      userEmail = "guest@kora.local";
+    } else {
+      return res.status(401).json({ error: "Unauthorized. Please sign in or use guest mode." });
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       STEP 2: Validate Payload
+    ───────────────────────────────────────────────────────────── */
     const { input, mode, filePayload, tone: userTone, intent } = req.body || {};
     if (!mode || (!input && !filePayload)) {
       return res.status(400).json({ error: "Missing required parameters: mode or input/filePayload" });
@@ -93,9 +92,9 @@ if (user) {
     const lastTone = await getLastTone(userId, mode);
     const tone = userTone || lastTone || "neutral";
 
-    /* ---------------------------------------------------------------------
-       STEP 3: Parse uploaded file (if any)
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 3: Parse File (if uploaded)
+    ───────────────────────────────────────────────────────────── */
     let extractedText = "";
     if (filePayload?.contentBase64 && filePayload?.type) {
       const tmpDir = path.join(process.cwd(), "tmp");
@@ -115,15 +114,15 @@ if (user) {
       }
     }
 
-    /* ---------------------------------------------------------------------
-       STEP 4: Create or reuse chat session
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 4: Create Session + Save User Message
+    ───────────────────────────────────────────────────────────── */
     const session = await createSession(userId, mode, intent);
     await saveMessage(session.id, "user", input || "(File upload)");
 
-    /* ---------------------------------------------------------------------
-       STEP 5: Route request to Companion
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 5: Run Companion Model
+    ───────────────────────────────────────────────────────────── */
     let result;
     try {
       switch (mode) {
@@ -140,13 +139,13 @@ if (user) {
           return res.status(400).json({ error: `Invalid mode: ${mode}` });
       }
     } catch (aiErr: any) {
-      console.error(`💥 Companion (${mode}) processing error:`, aiErr);
+      console.error(`💥 AI routing failed for ${mode}:`, aiErr);
       return res.status(500).json({ error: `AI processing failed for ${mode}.` });
     }
 
-    /* ---------------------------------------------------------------------
-       STEP 6: Generate downloadable attachments
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 6: Generate Attachments (PDF, DOCX, XLSX)
+    ───────────────────────────────────────────────────────────── */
     const attachments: any[] = [];
     if (result.outputText) {
       try {
@@ -162,34 +161,33 @@ if (user) {
       }
     }
 
-    /* ---------------------------------------------------------------------
-       STEP 7: Save AI response + tone
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 7: Save AI Response + Tone Update
+    ───────────────────────────────────────────────────────────── */
     await saveMessage(session.id, "assistant", result.outputText);
     await saveTone(userId, mode, tone, "Post-response update");
 
-    /* ---------------------------------------------------------------------
-       STEP 8: Retrieve personality metadata
-    --------------------------------------------------------------------- */
-    type CompanionMode = keyof typeof companionsConfig;
-    const personality =
-      companionsConfig[mode as CompanionMode]
-        ? {
-            name: companionsConfig[mode as CompanionMode].title,
-            summary: companionsConfig[mode as CompanionMode].essence,
-          }
-        : { name: "Unknown Companion", summary: "No description available" };
+    /* ─────────────────────────────────────────────────────────────
+       STEP 8: Build Personality Metadata
+    ───────────────────────────────────────────────────────────── */
+    const personality = companionsConfig[mode as keyof typeof companionsConfig] || {
+      title: "Unknown",
+      essence: "No description available",
+    };
 
-    /* ---------------------------------------------------------------------
-       STEP 9: Respond
-    --------------------------------------------------------------------- */
+    /* ─────────────────────────────────────────────────────────────
+       STEP 9: Return Response
+    ───────────────────────────────────────────────────────────── */
     return res.status(200).json({
       ok: true,
       user: { id: userId, email: userEmail, guest: isGuest },
       mode,
       sessionId: session.id,
       tone,
-      personality,
+      personality: {
+        name: personality.title,
+        summary: personality.essence,
+      },
       reply: result.outputText,
       attachments,
       meta: result.meta || {},

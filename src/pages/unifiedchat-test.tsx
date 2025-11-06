@@ -3,7 +3,6 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useSession, useSupabaseClient } from "@supabase/auth-helpers-react";
-import AuthPanel from "@/components/AuthPanel";
 
 // Dynamically import the unified chat (avoids SSR issues)
 const CompanionChatUnified = dynamic(
@@ -24,7 +23,6 @@ export default function UnifiedChatPage() {
     const guestFlag = localStorage.getItem("guest_mode") === "true";
     setIsGuest(guestFlag);
 
-    // Redirect only if neither guest nor session
     if (!guestFlag && !session) {
       router.push("/auth");
     }
@@ -35,9 +33,15 @@ export default function UnifiedChatPage() {
   // 🚪 Logout function (works for both guest + signed-in users)
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      localStorage.removeItem("guest_mode");
-      localStorage.clear();
+      const isGuest = localStorage.getItem("guest_mode") === "true";
+
+      if (isGuest) {
+        localStorage.removeItem("guest_mode");
+        localStorage.clear();
+      } else {
+        await supabase.auth.signOut();
+      }
+
       router.push("/auth");
     } catch (err) {
       console.error("Logout failed:", err);
@@ -46,9 +50,6 @@ export default function UnifiedChatPage() {
 
   // ⏳ Prevent flicker during session check
   if (checkingAuth) return null;
-
-  // 🧠 If no session and not guest, redirect happens above
-  if (!session && !isGuest) return null;
 
   return (
     <>

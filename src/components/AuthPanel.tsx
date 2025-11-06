@@ -16,10 +16,11 @@ export default function AuthPanel() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // 🧭 Redirect if already logged in
-  useEffect(() => {
-    if (user) router.push("/unifiedchat-test");
-  }, [user, router]);
+// 🧭 Redirect if already logged in or guest
+useEffect(() => {
+  const isGuest = localStorage.getItem("guest_mode") === "true";
+  if (user || isGuest) router.push("/unifiedchat-test");
+}, [user, router]);
 
   // ✉️ Magic Link Login
   const handleMagicLink = async (e: React.FormEvent) => {

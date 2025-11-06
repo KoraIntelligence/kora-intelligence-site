@@ -2,9 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-/* ============================================================================
-   Types
-============================================================================ */
 type Mode = "ccc" | "fmc" | "builder";
 type Role = "user" | "assistant" | "system";
 
@@ -26,9 +23,6 @@ type Message = {
 const uid = () => Math.random().toString(36).slice(2);
 const LOCAL_KEY = "kora-unified-chat-v4";
 
-/* ============================================================================
-   Main Component
-============================================================================ */
 export default function CompanionChatUnified() {
   const [mode, setMode] = useState<Mode>("ccc");
   const [tone, setTone] = useState("calm");
@@ -37,17 +31,19 @@ export default function CompanionChatUnified() {
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
-// Detect guest mode
-const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mode") === "true";
+
+  const isGuest =
+    typeof window !== "undefined" &&
+    localStorage.getItem("guest_mode") === "true";
+
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll
   useEffect(() => {
-    if (listRef.current)
+    if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
   }, [messages.length]);
 
-  // Restore tone & mode from localStorage
   useEffect(() => {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (raw) {
@@ -61,9 +57,6 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
     localStorage.setItem(LOCAL_KEY, JSON.stringify({ tone, mode }));
   }, [tone, mode]);
 
-  /* ============================================================================
-     Helpers
-  ============================================================================ */
   const downloadDataUrl = (dataUrl: string, filename: string) => {
     const a = document.createElement("a");
     a.href = dataUrl;
@@ -72,20 +65,22 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
   };
 
   async function callSession(payload: Record<string, unknown>) {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(isGuest ? { "x-guest": "true" } : {}),
+    };
+
     const res = await fetch("/api/session", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      ...(isGuest ? { "x-guest": "true" } : {}), // 👈 Add guest flag for backend
+      headers,
       body: JSON.stringify(payload),
     });
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "API request failed");
     return data;
   }
 
-  /* ============================================================================
-     📤 File Upload (CCC)
-  ============================================================================ */
   async function handleFileUpload(file: File) {
     if (!file || uploading) return;
     setUploading(true);
@@ -93,7 +88,12 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
     const msgId = uid();
     setMessages((m) => [
       ...m,
-      { id: msgId, role: "system", content: `Uploading "${file.name}"…`, ts: Date.now() },
+      {
+        id: msgId,
+        role: "system",
+        content: `Uploading "${file.name}"…`,
+        ts: Date.now(),
+      },
     ]);
 
     try {
@@ -149,17 +149,24 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
     }
   }
 
-  /* ============================================================================
-     💬 Send Message
-  ============================================================================ */
   async function handleSend() {
     const content = input.trim();
     if (!content || sending) return;
     setSending(true);
     setInput("");
 
-    const userMsg: Message = { id: uid(), role: "user", content, ts: Date.now() };
-    setMessages((m) => [...m, userMsg, { id: uid(), role: "system", content: "…", ts: Date.now() }]);
+    const userMsg: Message = {
+      id: uid(),
+      role: "user",
+      content,
+      ts: Date.now(),
+    };
+
+    setMessages((m) => [
+      ...m,
+      userMsg,
+      { id: uid(), role: "system", content: "…", ts: Date.now() },
+    ]);
 
     try {
       const data = await callSession({ input: content, mode, tone });
@@ -191,9 +198,6 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
     }
   }
 
-  /* ============================================================================
-     RENDER HELPERS
-  ============================================================================ */
   const ModeTabs = () => (
     <div className="flex items-center justify-between bg-white/80 border border-gray-200 rounded-2xl p-2 mb-4">
       <div className="flex gap-2">
@@ -285,7 +289,9 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
         {isSystem ? (
           m.content
         ) : (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {m.content}
+          </ReactMarkdown>
         )}
         {m.attachments && <Attachments items={m.attachments} />}
         <div className="text-[10px] text-gray-400 mt-1">
@@ -295,9 +301,6 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
     );
   };
 
-  /* ============================================================================
-     UI
-  ============================================================================ */
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-4 bg-gradient-to-b from-amber-50 to-white rounded-3xl shadow-sm">
       <h1 className="text-2xl font-semibold text-amber-700 mb-2">
@@ -314,7 +317,6 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
 
       <ModeTabs />
 
-      {/* CCC File Upload */}
       {mode === "ccc" && (
         <div className="flex items-center justify-between">
           <label className="text-sm text-gray-600">
@@ -332,7 +334,6 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
         </div>
       )}
 
-      {/* Chat Area */}
       <div
         ref={listRef}
         className="h-[420px] overflow-y-auto space-y-3 p-4 bg-white border rounded-xl"
@@ -342,7 +343,6 @@ const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mod
         ))}
       </div>
 
-      {/* Input */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
