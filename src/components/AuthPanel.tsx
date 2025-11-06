@@ -79,17 +79,28 @@ const handleLogout = async () => {
     const isGuest = localStorage.getItem("guest_mode") === "true";
 
     if (isGuest) {
-      // Just clear guest mode locally
       localStorage.removeItem("guest_mode");
       setMessage("👋 Guest session ended.");
     } else {
       // Full Supabase logout for authenticated users
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
       setMessage("👋 Logged out successfully.");
     }
 
-    // Clear everything else (session data, chat cache, etc.)
+    // 🔹 Manually clear Supabase cookie to prevent auto-login
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    // 🔹 Clear all client-side state
     localStorage.clear();
+    sessionStorage.clear();
+
+    // 🔹 Redirect to login
     router.push("/auth");
   } catch (err: any) {
     console.error("Logout error:", err.message);
