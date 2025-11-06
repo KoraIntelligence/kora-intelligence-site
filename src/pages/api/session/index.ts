@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ───────────────────────────────────────────────────────────── */
     let extractedText = "";
     if (filePayload?.contentBase64 && filePayload?.type) {
-      const tmpDir = path.join(process.cwd(), "tmp");
+      const tmpDir = "/tmp";
       const tmpPath = path.join(tmpDir, filePayload.name);
 
       await fs.mkdir(tmpDir, { recursive: true });
