@@ -30,8 +30,7 @@ export default function UnifiedChatPage() {
     setCheckingAuth(false);
   }, [session, router]);
 
-  // 🚪 Logout function (works for both guest + signed-in users)
-// 🚪 Robust Logout (works for both guest + authed users)
+// 🚪 Clean, complete logout
 const handleLogout = async () => {
   try {
     const isGuest = localStorage.getItem("guest_mode") === "true";
@@ -39,30 +38,26 @@ const handleLogout = async () => {
     if (isGuest) {
       localStorage.removeItem("guest_mode");
     } else {
-      const { error } = await supabase.auth.signOut();
+      // Clears every active Supabase session (all tabs, all scopes)
+      const { error } = await supabase.auth.signOut({ scope: "global" });
       if (error) throw error;
     }
 
-    // Clear client-side state
+    // Purge any residual app data
     localStorage.clear();
     sessionStorage.clear();
 
-    // Extra cookie sweep (helps if you swapped domains)
-    const cookieDomainVariants = ["", window.location.hostname.startsWith("www.") ? window.location.hostname.slice(4) : window.location.hostname];
-    const cookies = document.cookie.split(";") || [];
-    cookieDomainVariants.forEach((domain) => {
-      cookies.forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = `${name}=; Max-Age=0; path=/; ${domain ? `domain=.${domain};` : ""}`;
-      });
+    // Remove any lingering auth cookies (cross-domain safe)
+    document.cookie.split(";").forEach((c) => {
+      const name = c.split("=")[0].trim();
+      document.cookie = `${name}=; Max-Age=0; path=/; domain=${window.location.hostname};`;
+      document.cookie = `${name}=; Max-Age=0; path=/;`;
     });
 
-    // Hard redirect to avoid any stale in-memory state
-    window.location.assign("/auth");
+    // Force a full reload so Supabase re-hydrates cleanly
+    window.location.replace("/auth");
   } catch (err: any) {
-    console.error("Logout error:", err?.message || err);
-    // (optional) setMessage("⚠️ Logout failed. Please refresh the page.");
+    console.error("Logout error:", err.message);
   }
 };
 

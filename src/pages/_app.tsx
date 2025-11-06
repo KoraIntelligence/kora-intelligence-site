@@ -10,22 +10,22 @@ function ProfileSync() {
   const session = useSession();
 
   useEffect(() => {
-    const ensureProfile = async () => {
+    if (session === null) return; // Supabase still hydrating
+    const sync = async () => {
       const isGuest = localStorage.getItem("guest_mode") === "true";
       try {
         await fetch("/api/user/ensureProfile", {
           method: "POST",
-          headers: {
-            ...(isGuest ? { "x-guest": "true" } : {}),
-          },
+          headers: isGuest ? { "x-guest": "true" } : {},
         });
       } catch (err: any) {
         console.error("⚠️ ensureProfile failed:", err?.message || err);
       }
     };
-    // Run once on load and whenever session changes
-    ensureProfile();
-  }, [session?.user]);
+    // small timeout helps Supabase finish setting cookies
+    const t = setTimeout(sync, 500);
+    return () => clearTimeout(t);
+  }, [session]);
 
   return null;
 }

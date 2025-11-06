@@ -73,35 +73,35 @@ useEffect(() => {
     router.push("/unifiedchat-test");
   };
 
-// 🚪 Logout
+// 🚪 Clean, complete logout — works for guests + logged-in users
 const handleLogout = async () => {
   try {
     const isGuest = localStorage.getItem("guest_mode") === "true";
 
     if (isGuest) {
+      // Just clear guest mode locally
       localStorage.removeItem("guest_mode");
       setMessage("👋 Guest session ended.");
     } else {
-      // Full Supabase logout for authenticated users
-      const { error } = await supabase.auth.signOut();
+      // Clears all Supabase sessions across tabs
+      const { error } = await supabase.auth.signOut({ scope: "global" });
       if (error) throw error;
-
       setMessage("👋 Logged out successfully.");
     }
 
-    // 🔹 Manually clear Supabase cookie to prevent auto-login
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-
-    // 🔹 Clear all client-side state
+    // Purge all local and session data
     localStorage.clear();
     sessionStorage.clear();
 
-    // 🔹 Redirect to login
-    router.push("/auth");
+    // Remove any lingering Supabase cookies
+    document.cookie.split(";").forEach((c) => {
+      const name = c.split("=")[0].trim();
+      document.cookie = `${name}=; Max-Age=0; path=/; domain=${window.location.hostname};`;
+      document.cookie = `${name}=; Max-Age=0; path=/;`;
+    });
+
+    // Force a hard redirect to ensure clean state
+    window.location.replace("/auth");
   } catch (err: any) {
     console.error("Logout error:", err.message);
     setMessage("⚠️ Logout failed. Please refresh the page.");
