@@ -37,7 +37,8 @@ export default function CompanionChatUnified() {
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
-
+// Detect guest mode
+const isGuest = typeof window !== "undefined" && localStorage.getItem("guest_mode") === "true";
   const listRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll
@@ -74,6 +75,7 @@ export default function CompanionChatUnified() {
     const res = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      ...(isGuest ? { "x-guest": "true" } : {}), // 👈 Add guest flag for backend
       body: JSON.stringify(payload),
     });
     const data = await res.json();

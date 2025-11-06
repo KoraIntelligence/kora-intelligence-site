@@ -72,18 +72,29 @@ export default function AuthPanel() {
     router.push("/unifiedchat-test");
   };
 
-  // 🚪 Logout
-  const handleLogout = async () => {
-    try {
+// 🚪 Logout
+const handleLogout = async () => {
+  try {
+    const isGuest = localStorage.getItem("guest_mode") === "true";
+
+    if (isGuest) {
+      // Just clear guest mode locally
+      localStorage.removeItem("guest_mode");
+      setMessage("👋 Guest session ended.");
+    } else {
+      // Full Supabase logout for authenticated users
       await supabase.auth.signOut();
-      localStorage.clear();
       setMessage("👋 Logged out successfully.");
-      router.push("/auth");
-    } catch (err: any) {
-      console.error("Logout error:", err.message);
-      setMessage("⚠️ Logout failed. Please refresh the page.");
     }
-  };
+
+    // Clear everything else (session data, chat cache, etc.)
+    localStorage.clear();
+    router.push("/auth");
+  } catch (err: any) {
+    console.error("Logout error:", err.message);
+    setMessage("⚠️ Logout failed. Please refresh the page.");
+  }
+};
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-amber-50 px-4">

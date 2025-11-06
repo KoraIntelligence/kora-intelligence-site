@@ -17,8 +17,8 @@ import {
   getLastTone,
   saveTone,
 } from "@/lib/memory";
-
 import { companionsConfig } from "@/companions/config/shared";
+import { supabaseAdmin } from "@/lib/supabaseAdmin"; // required for guest creation
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -29,90 +29,100 @@ export const config = {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     /* ---------------------------------------------------------------------
-       STEP 1: Authenticate via Supabase
+       STEP 1: Verify user authentication or create guest session
     --------------------------------------------------------------------- */
     const supabase = createServerSupabaseClient({ req, res });
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
+    const guestHeader = req.headers["x-guest"];
 
-    if (authError || !user) {
-      console.warn("🚫 Unauthorized request — no Supabase session.");
-      return res.status(401).json({ error: "Unauthorized. Please sign in first." });
-    }
+    let userId: string;
+    let userEmail: string;
+    let isGuest = false;
 
-    const userId = user.id;
-    const userEmail = user.email || "unknown@user";
-    await getOrCreateUserProfile(userId, userEmail);
+if (user) {
+  userId = user.id;
+  userEmail = user.email || "unknown";
+} else if (guestHeader === "true") {
+  // Guest mode path
+  isGuest = true;
+  const existingGuest = await supabaseAdmin
+    .from("user_profiles")
+    .select("id")
+    .eq("email", "guest@kora.local")
+    .single();
+
+  if (existingGuest.data) {
+    userId = existingGuest.data.id;
+  } else {
+    const { data: newGuest, error: guestErr } = await supabaseAdmin
+      .from("user_profiles")
+      .insert([
+        {
+          email: "guest@kora.local",
+          name: "Guest User",
+          current_tone: "calm",
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (guestErr) throw guestErr;
+    userId = newGuest.id;
+  }
+
+  userEmail = "guest@kora.local";
+} else {
+  // No user or guest flag — reject
+  return res.status(401).json({ error: "Unauthorized. Please sign in or use guest mode." });
+}
 
     /* ---------------------------------------------------------------------
-       STEP 2: Extract and validate request payload
+       STEP 2: Extract payload
     --------------------------------------------------------------------- */
     const { input, mode, filePayload, tone: userTone, intent } = req.body || {};
-
-    if (!mode) {
-      return res.status(400).json({ error: "Missing 'mode' (ccc, fmc, builder)" });
-    }
-
-    if (!input && !filePayload) {
-      return res
-        .status(400)
-        .json({ error: "Missing 'input' or 'filePayload'. One is required." });
+    if (!mode || (!input && !filePayload)) {
+      return res.status(400).json({ error: "Missing required parameters: mode or input/filePayload" });
     }
 
     const lastTone = await getLastTone(userId, mode);
     const tone = userTone || lastTone || "neutral";
 
-/* ---------------------------------------------------------------------
-   STEP 3: Parse uploaded file (if any)
---------------------------------------------------------------------- */
-let extractedText = "";
+    /* ---------------------------------------------------------------------
+       STEP 3: Parse uploaded file (if any)
+    --------------------------------------------------------------------- */
+    let extractedText = "";
+    if (filePayload?.contentBase64 && filePayload?.type) {
+      const tmpDir = path.join(process.cwd(), "tmp");
+      const tmpPath = path.join(tmpDir, filePayload.name);
 
-if (filePayload) {
-  try {
-    // Save to /tmp so pdf-parse-fixed can handle it safely
-// ✅ Always write temp files to /tmp (Vercel-compatible)
-const tmpDir = "/tmp"; // Vercel’s writable directory
-const tmpPath = path.join(tmpDir, filePayload.name || "upload.tmp");
+      await fs.mkdir(tmpDir, { recursive: true });
+      await fs.writeFile(tmpPath, Buffer.from(filePayload.contentBase64, "base64"));
 
-const base64Data = filePayload.contentBase64?.split(",").pop();
-if (!base64Data) throw new Error("Invalid file upload: missing base64 content.");
-
-const buffer = Buffer.from(base64Data, "base64");
-
-try {
-  await fs.writeFile(tmpPath, buffer);
-} catch (err: any) {
-  console.error("❌ Temp file write failed:", err.message);
-  throw new Error("Could not write temporary file to /tmp.");
-}
-
-// ✅ Pass to parser safely
-extractedText = await parseUploadedFile(tmpPath, filePayload.type);
-
-    // Use parser
-    extractedText = await parseUploadedFile(tmpPath, filePayload.type);
-  } catch (fileErr: any) {
-    console.error("❌ File handling failed:", fileErr.message);
-    throw new Error("File parsing failed or temporary file could not be saved.");
-  }
-}
+      try {
+        extractedText = await parseUploadedFile(tmpPath, filePayload.type);
+      } catch (fileErr: any) {
+        console.error("❌ File parsing failed:", fileErr);
+        return res.status(400).json({
+          ok: false,
+          error: "File parsing failed. Try uploading a different file.",
+        });
+      }
+    }
 
     /* ---------------------------------------------------------------------
-       STEP 4: Create or continue a session
+       STEP 4: Create or reuse chat session
     --------------------------------------------------------------------- */
     const session = await createSession(userId, mode, intent);
-    await saveMessage(session.id, "user", input || "(File Upload)");
+    await saveMessage(session.id, "user", input || "(File upload)");
 
     /* ---------------------------------------------------------------------
-       STEP 5: Route to correct Companion logic
+       STEP 5: Route request to Companion
     --------------------------------------------------------------------- */
     let result;
     try {
@@ -127,24 +137,25 @@ extractedText = await parseUploadedFile(tmpPath, filePayload.type);
           result = await runBuilder({ input, extractedText, tone, intent });
           break;
         default:
-          return res.status(400).json({ error: `Invalid mode '${mode}'` });
+          return res.status(400).json({ error: `Invalid mode: ${mode}` });
       }
-    } catch (err: any) {
-      console.error(`💥 Companion processing error [${mode}]:`, err);
-      return res.status(500).json({ error: `AI processing failed for ${mode}` });
+    } catch (aiErr: any) {
+      console.error(`💥 Companion (${mode}) processing error:`, aiErr);
+      return res.status(500).json({ error: `AI processing failed for ${mode}.` });
     }
 
     /* ---------------------------------------------------------------------
-       STEP 6: Generate Attachments (PDF / DOCX / XLSX)
+       STEP 6: Generate downloadable attachments
     --------------------------------------------------------------------- */
     const attachments: any[] = [];
     if (result.outputText) {
       try {
-        attachments.push(await createPDF(result.outputText));
-        attachments.push(await createDocx(result.outputText));
-
+        const pdf = await createPDF(result.outputText);
+        const docx = await createDocx(result.outputText);
+        attachments.push(pdf, docx);
         if (mode === "ccc") {
-          attachments.push(await createXlsx());
+          const xlsx = await createXlsx();
+          attachments.push(xlsx);
         }
       } catch (genErr: any) {
         console.error("⚠️ Attachment generation failed:", genErr);
@@ -152,40 +163,39 @@ extractedText = await parseUploadedFile(tmpPath, filePayload.type);
     }
 
     /* ---------------------------------------------------------------------
-       STEP 7: Store assistant message & tone memory
+       STEP 7: Save AI response + tone
     --------------------------------------------------------------------- */
     await saveMessage(session.id, "assistant", result.outputText);
     await saveTone(userId, mode, tone, "Post-response update");
 
     /* ---------------------------------------------------------------------
-       STEP 8: Enrich with Companion personality
+       STEP 8: Retrieve personality metadata
     --------------------------------------------------------------------- */
     type CompanionMode = keyof typeof companionsConfig;
-    const companionProfile =
-      companionsConfig[mode as CompanionMode] || {
-        title: "Unknown Companion",
-        essence: "This companion has yet to reveal its identity.",
-      };
+    const personality =
+      companionsConfig[mode as CompanionMode]
+        ? {
+            name: companionsConfig[mode as CompanionMode].title,
+            summary: companionsConfig[mode as CompanionMode].essence,
+          }
+        : { name: "Unknown Companion", summary: "No description available" };
 
     /* ---------------------------------------------------------------------
-       STEP 9: Send structured response
+       STEP 9: Respond
     --------------------------------------------------------------------- */
     return res.status(200).json({
       ok: true,
-      user: { id: userId, email: userEmail },
+      user: { id: userId, email: userEmail, guest: isGuest },
       mode,
-      tone,
       sessionId: session.id,
-      personality: {
-        name: companionProfile.title,
-        summary: companionProfile.essence,
-      },
+      tone,
+      personality,
       reply: result.outputText,
       attachments,
       meta: result.meta || {},
     });
   } catch (err: any) {
-    console.error("🔥 Unified session fatal error:", err);
+    console.error("❌ Unified session fatal error:", err);
     return res.status(500).json({
       ok: false,
       error: err.message || "Internal Server Error",
