@@ -53,11 +53,11 @@ useEffect(() => {
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/unifiedchat-test`,
-        },
-      });
+  provider: "google",
+  options: {
+    redirectTo: `${window.location.origin}/auth/v1/callback`,
+  },
+});
 
       if (error) throw error;
     } catch (err: any) {
