@@ -3,22 +3,37 @@ import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import Layout from "../components/layout/Layout";
 import { ThemeProvider } from "next-themes";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
-import { SessionContextProvider } from "@supabase/auth-helpers-react";
+import { SessionContextProvider, useSession } from "@supabase/auth-helpers-react";
+
+function ProfileSync() {
+  const session = useSession();
+
+  useEffect(() => {
+    const ensureProfile = async () => {
+      if (session?.user) {
+        try {
+          await fetch("/api/user/ensureProfile", { method: "POST" });
+        } catch (err: any) {
+          console.error("⚠️ Failed to ensure user profile:", err.message);
+        }
+      }
+    };
+    ensureProfile();
+  }, [session?.user]);
+
+  return null;
+}
 
 export default function App({ Component, pageProps }: AppProps) {
-  // ✅ Initialize Supabase only once per app
   const [supabaseClient] = useState(() => createPagesBrowserClient());
 
   return (
-    <SessionContextProvider
-      supabaseClient={supabaseClient}
-      initialSession={pageProps.initialSession}
-    >
+    <SessionContextProvider supabaseClient={supabaseClient} initialSession={pageProps.initialSession}>
       <ThemeProvider attribute="class">
         <Layout>
+          <ProfileSync />
           <Component {...pageProps} />
         </Layout>
       </ThemeProvider>
