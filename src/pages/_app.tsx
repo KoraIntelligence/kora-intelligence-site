@@ -1,4 +1,3 @@
-// src/pages/_app.tsx
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import Layout from "../components/layout/Layout";
@@ -12,14 +11,19 @@ function ProfileSync() {
 
   useEffect(() => {
     const ensureProfile = async () => {
-      if (session?.user) {
-        try {
-          await fetch("/api/user/ensureProfile", { method: "POST" });
-        } catch (err: any) {
-          console.error("⚠️ Failed to ensure user profile:", err.message);
-        }
+      const isGuest = localStorage.getItem("guest_mode") === "true";
+      try {
+        await fetch("/api/user/ensureProfile", {
+          method: "POST",
+          headers: {
+            ...(isGuest ? { "x-guest": "true" } : {}),
+          },
+        });
+      } catch (err: any) {
+        console.error("⚠️ ensureProfile failed:", err?.message || err);
       }
     };
+    // Run once on load and whenever session changes
     ensureProfile();
   }, [session?.user]);
 
@@ -30,7 +34,10 @@ export default function App({ Component, pageProps }: AppProps) {
   const [supabaseClient] = useState(() => createPagesBrowserClient());
 
   return (
-    <SessionContextProvider supabaseClient={supabaseClient} initialSession={pageProps.initialSession}>
+    <SessionContextProvider
+      supabaseClient={supabaseClient}
+      initialSession={pageProps.initialSession}
+    >
       <ThemeProvider attribute="class">
         <Layout>
           <ProfileSync />

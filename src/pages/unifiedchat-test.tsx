@@ -31,22 +31,40 @@ export default function UnifiedChatPage() {
   }, [session, router]);
 
   // 🚪 Logout function (works for both guest + signed-in users)
-  const handleLogout = async () => {
-    try {
-      const isGuest = localStorage.getItem("guest_mode") === "true";
+// 🚪 Robust Logout (works for both guest + authed users)
+const handleLogout = async () => {
+  try {
+    const isGuest = localStorage.getItem("guest_mode") === "true";
 
-      if (isGuest) {
-        localStorage.removeItem("guest_mode");
-        localStorage.clear();
-      } else {
-        await supabase.auth.signOut();
-      }
-
-      router.push("/auth");
-    } catch (err) {
-      console.error("Logout failed:", err);
+    if (isGuest) {
+      localStorage.removeItem("guest_mode");
+    } else {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     }
-  };
+
+    // Clear client-side state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Extra cookie sweep (helps if you swapped domains)
+    const cookieDomainVariants = ["", window.location.hostname.startsWith("www.") ? window.location.hostname.slice(4) : window.location.hostname];
+    const cookies = document.cookie.split(";") || [];
+    cookieDomainVariants.forEach((domain) => {
+      cookies.forEach((c) => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+        document.cookie = `${name}=; Max-Age=0; path=/; ${domain ? `domain=.${domain};` : ""}`;
+      });
+    });
+
+    // Hard redirect to avoid any stale in-memory state
+    window.location.assign("/auth");
+  } catch (err: any) {
+    console.error("Logout error:", err?.message || err);
+    // (optional) setMessage("⚠️ Logout failed. Please refresh the page.");
+  }
+};
 
   // ⏳ Prevent flicker during session check
   if (checkingAuth) return null;
