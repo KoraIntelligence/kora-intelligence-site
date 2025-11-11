@@ -1,3 +1,4 @@
+// src/pages/api/session/index.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 import OpenAI from "openai";
@@ -8,7 +9,6 @@ import { runCCC } from "./companions/ccc";
 import { runFMC } from "./companions/fmc";
 import { runBuilder } from "./companions/builder";
 import { parseUploadedFile } from "./utils/parseFiles";
-import { createPDF, createDocx, createXlsx } from "./utils/generateDocs";
 
 import {
   getOrCreateUserProfile,
@@ -32,9 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    /* ─────────────────────────────────────────────────────────────
+    /* ────────────────────────────────────────────────
        STEP 1: Identify User (Auth or Guest)
-    ───────────────────────────────────────────────────────────── */
+    ──────────────────────────────────────────────── */
     const supabase = createServerSupabaseClient({ req, res });
     const guestHeader = req.headers["x-guest"];
 
@@ -49,8 +49,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (user) {
       userId = user.id;
       userEmail = user.email || "unknown";
+      await getOrCreateUserProfile(user.id, user.email || "unknown");
     } else if (guestHeader === "true") {
       isGuest = true;
+
       const { data: guest, error } = await supabaseAdmin
         .from("user_profiles")
         .select("id")
@@ -81,9 +83,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: "Unauthorized. Please sign in or use guest mode." });
     }
 
-    /* ─────────────────────────────────────────────────────────────
+    /* ────────────────────────────────────────────────
        STEP 2: Validate Payload
-    ───────────────────────────────────────────────────────────── */
+    ──────────────────────────────────────────────── */
     const { input, mode, filePayload, tone: userTone, intent } = req.body || {};
     if (!mode || (!input && !filePayload)) {
       return res.status(400).json({ error: "Missing required parameters: mode or input/filePayload" });
@@ -92,9 +94,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const lastTone = await getLastTone(userId, mode);
     const tone = userTone || lastTone || "neutral";
 
-    /* ─────────────────────────────────────────────────────────────
-       STEP 3: Parse File (if uploaded)
-    ───────────────────────────────────────────────────────────── */
+    /* ────────────────────────────────────────────────
+       STEP 3: Parse Uploaded File (if present)
+    ──────────────────────────────────────────────── */
     let extractedText = "";
     if (filePayload?.contentBase64 && filePayload?.type) {
       const tmpDir = "/tmp";
@@ -114,15 +116,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    /* ─────────────────────────────────────────────────────────────
-       STEP 4: Create Session + Save User Message
-    ───────────────────────────────────────────────────────────── */
-    const session = await createSession(userId, mode, intent);
+    /* ────────────────────────────────────────────────
+       STEP 4: Create/Link Session + Save User Message
+    ──────────────────────────────────────────────── */
+    const session = await createSession(userId, mode, intent || "general");
     await saveMessage(session.id, "user", input || "(File upload)");
 
-    /* ─────────────────────────────────────────────────────────────
-       STEP 5: Run Companion Model
-    ───────────────────────────────────────────────────────────── */
+    /* ────────────────────────────────────────────────
+       STEP 5: Run Appropriate Companion
+    ──────────────────────────────────────────────── */
     let result;
     try {
       switch (mode) {
@@ -139,45 +141,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(400).json({ error: `Invalid mode: ${mode}` });
       }
     } catch (aiErr: any) {
-      console.error(`💥 AI routing failed for ${mode}:`, aiErr);
+      console.error(`💥 AI processing failed for ${mode}:`, aiErr);
       return res.status(500).json({ error: `AI processing failed for ${mode}.` });
     }
 
-    /* ─────────────────────────────────────────────────────────────
-       STEP 6: Generate Attachments (PDF, DOCX, XLSX)
-    ───────────────────────────────────────────────────────────── */
-    const attachments: any[] = [];
-    if (result.outputText) {
-      try {
-        const pdf = await createPDF(result.outputText);
-        const docx = await createDocx(result.outputText);
-        attachments.push(pdf, docx);
-        if (mode === "ccc") {
-          const xlsx = await createXlsx();
-          attachments.push(xlsx);
-        }
-      } catch (genErr: any) {
-        console.error("⚠️ Attachment generation failed:", genErr);
-      }
+    /* ────────────────────────────────────────────────
+       STEP 6: Save AI Response & Tone Update
+    ──────────────────────────────────────────────── */
+    if (result?.outputText) {
+      await saveMessage(session.id, "assistant", result.outputText);
+      await saveTone(userId, mode, tone, "Post-response update");
     }
 
-    /* ─────────────────────────────────────────────────────────────
-       STEP 7: Save AI Response + Tone Update
-    ───────────────────────────────────────────────────────────── */
-    await saveMessage(session.id, "assistant", result.outputText);
-    await saveTone(userId, mode, tone, "Post-response update");
-
-    /* ─────────────────────────────────────────────────────────────
-       STEP 8: Build Personality Metadata
-    ───────────────────────────────────────────────────────────── */
+    /* ────────────────────────────────────────────────
+       STEP 7: Build Companion Metadata
+    ──────────────────────────────────────────────── */
     const personality = companionsConfig[mode as keyof typeof companionsConfig] || {
       title: "Unknown",
       essence: "No description available",
     };
 
-    /* ─────────────────────────────────────────────────────────────
-       STEP 9: Return Response
-    ───────────────────────────────────────────────────────────── */
+    /* ────────────────────────────────────────────────
+       STEP 8: Return Unified Response
+    ──────────────────────────────────────────────── */
     return res.status(200).json({
       ok: true,
       user: { id: userId, email: userEmail, guest: isGuest },
@@ -189,7 +175,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         summary: personality.essence,
       },
       reply: result.outputText,
-      attachments,
+      attachments: result.attachments || [],
       meta: result.meta || {},
     });
   } catch (err: any) {

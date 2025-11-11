@@ -21,6 +21,7 @@
     "contentlayer": "^0.3.4",
     "cookie": "^1.0.2",
     "docx": "^9.5.1",
+    "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
     "framer-motion": "^12.16.0",
     "gfm": "^0.0.1",
@@ -55,6 +56,7 @@
   },
   "devDependencies": {
     "@types/cookie": "^0.6.0",
+    "@types/exceljs": "^0.5.3",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.6",

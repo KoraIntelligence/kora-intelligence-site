@@ -1,61 +1,102 @@
-import { Document, Packer, Paragraph, TextRun } from "docx";
+// src/pages/api/session/utils/generateDocs.ts
 import PDFDocument from "pdfkit";
-import * as XLSX from "xlsx";
-import fs from "fs";
-import path from "path";
+import { Workbook } from "exceljs";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
-export function createPDF(content: string) {
-  const pdfPath = path.join(process.cwd(), "tmp", `kora_${Date.now()}.pdf`);
-  fs.mkdirSync(path.dirname(pdfPath), { recursive: true });
-  const doc = new PDFDocument();
-  doc.pipe(fs.createWriteStream(pdfPath));
-  doc.fontSize(20).text("Kora Report", { align: "center" }).moveDown();
-  doc.fontSize(12).text(content, { align: "left" });
-  doc.end();
-  const data = fs.readFileSync(pdfPath);
-  fs.unlinkSync(pdfPath);
+/* -------------------------------------------------------
+   🧩 Helper — buffer → base64 data URL
+------------------------------------------------------- */
+function bufferToDataUrl(buffer: Buffer, mime: string, filename: string) {
+  const base64 = buffer.toString("base64");
   return {
-    kind: "pdf",
-    filename: "Kora_Report.pdf",
-    dataUrl: `data:application/pdf;base64,${data.toString("base64")}`,
+    kind: mime.includes("sheet")
+      ? "xlsx"
+      : mime.includes("word")
+      ? "docx"
+      : mime.includes("pdf")
+      ? "pdf"
+      : "bin",
+    filename,
+    dataUrl: `data:${mime};base64,${base64}`,
   };
 }
 
-export async function createDocx(content: string) {
+/* -------------------------------------------------------
+   🧩 Create PDF
+------------------------------------------------------- */
+export async function createPDF(text: string) {
+  const doc = new PDFDocument();
+  const chunks: Buffer[] = [];
+
+  return new Promise((resolve) => {
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => {
+      const buffer = Buffer.concat(chunks);
+      const data = bufferToDataUrl(
+        buffer,
+        "application/pdf",
+        `kora_proposal_${Date.now()}.pdf`
+      );
+      resolve(data);
+    });
+
+    doc.fontSize(20).text("Kora Proposal", { align: "center" }).moveDown();
+    doc.fontSize(12).text(text || "Empty PDF document", { align: "left" });
+    doc.end();
+  });
+}
+
+/* -------------------------------------------------------
+   🧩 Create DOCX
+------------------------------------------------------- */
+export async function createDocx(text: string) {
   const doc = new Document({
     sections: [
       {
+        properties: {},
         children: [
-          new Paragraph({ children: [new TextRun("Kora Report")] }),
-          new Paragraph({ children: [new TextRun(content)] }),
+          new Paragraph({
+            children: [new TextRun("Kora Proposal")],
+          }),
+          new Paragraph({
+            children: [new TextRun(text || "Empty DOCX document")],
+          }),
         ],
       },
     ],
   });
+
   const buffer = await Packer.toBuffer(doc);
-  return {
-    kind: "docx",
-    filename: "Kora_Report.docx",
-    dataUrl: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${buffer.toString("base64")}`,
-  };
+  return bufferToDataUrl(
+    buffer,
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    `kora_proposal_${Date.now()}.docx`
+  );
 }
 
-export function createXlsx() {
-  const workbook = XLSX.utils.book_new();
-  const data = [
-    ["Item", "Description", "Price (£)"],
-    ["Discovery", "Initial consultation", 500],
-    ["Build", "System architecture", 1500],
-    ["Deploy", "Testing & delivery", 700],
-  ];
-  const sheet = XLSX.utils.aoa_to_sheet(data);
-  XLSX.utils.book_append_sheet(workbook, sheet, "Pricing");
-  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-  return {
-    kind: "xlsx",
-    filename: "Kora_Pricing.xlsx",
-    dataUrl: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${Buffer.from(
-      buffer
-    ).toString("base64")}`,
-  };
+/* -------------------------------------------------------
+   🧩 Create XLSX
+   Accepts optional 2D array data or text fallback
+------------------------------------------------------- */
+export async function createXlsx(
+  data?: (string | number)[][] | string
+): Promise<{ kind: string; filename: string; dataUrl: string }> {
+  const workbook = new Workbook();
+  const sheet = workbook.addWorksheet("Pricing");
+
+  if (Array.isArray(data)) {
+    data.forEach((row) => sheet.addRow(row));
+  } else if (typeof data === "string") {
+    sheet.addRow(["Generated Text"]);
+    sheet.addRow([data]);
+  } else {
+    sheet.addRow(["No data provided"]);
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return bufferToDataUrl(
+    Buffer.from(buffer),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    `kora_pricing_${Date.now()}.xlsx`
+  );
 }
