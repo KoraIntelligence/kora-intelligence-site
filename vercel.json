@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/unified.ts": {
+      "memory": 1024,
+      "maxDuration": 30,
+      "maxRequestBodySize": "20mb"
+    }
+  }
+}
