@@ -1,8 +1,11 @@
-// src/pages/unifiedchat.tsx
+// src/pages/mvp.tsx
+
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import html2canvas from "html2canvas";
+import { useUser } from "@supabase/auth-helpers-react";
+import { useRouter } from "next/router";
 
 type Companion = "salar" | "lyra";
 
@@ -34,7 +37,6 @@ type MessageMeta = {
   mode?: string;
   tone?: string;
   intent?: string;
-  // For new orchestrators: object of arrays e.g. { clarify: ["clarify_requirements"] }
   nextActions?: Record<string, string[]>;
   identity?: {
     mode?: string;
@@ -53,7 +55,7 @@ type Message = {
 };
 
 const uid = () => Math.random().toString(36).slice(2);
-const LOCAL_KEY = "kora-unified-chat-v6";
+const LOCAL_KEY = "kora-mvp-chat-v1";
 
 // Per-companion mode labels (slug → display)
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
@@ -82,7 +84,41 @@ const TONE_OPTIONS = [
   "precise",
 ];
 
-export default function UnifiedChat() {
+export default function MVP() {
+  const user = useUser();
+  const router = useRouter();
+
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // ---------------------------
+  // Auth gating: require login or guest
+  // ---------------------------
+  useEffect(() => {
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("guest_mode") === "true";
+
+    if (!user && !isGuest) {
+      router.push("/auth");
+      return;
+    }
+
+    setAuthChecked(true);
+  }, [user, router]);
+
+  if (!authChecked) {
+    // Optionally a loading state
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 via-white to-teal-50">
+        <div className="text-sm text-gray-500">Preparing your workspace…</div>
+      </main>
+    );
+  }
+
+  // ---------------------------
+  // Chat state
+  // ---------------------------
+
   const [companion, setCompanion] = useState<Companion>("salar");
   const [salarMode, setSalarMode] = useState<SalarMode>("commercial_chat");
   const [lyraMode, setLyraMode] = useState<LyraMode>("creative_chat");
@@ -329,9 +365,7 @@ export default function UnifiedChat() {
   const NextActionButtons = ({ meta }: { meta?: MessageMeta }) => {
     if (!meta?.nextActions) return null;
 
-    // Flatten object-of-arrays to a simple list of triggers
     const triggers: string[] = Object.values(meta.nextActions).flat();
-
     if (triggers.length === 0) return null;
 
     const labelMap: Record<string, string> = {
@@ -478,7 +512,7 @@ export default function UnifiedChat() {
                 key={idx}
                 type="button"
                 className="px-3 py-2 text-xs rounded-lg bg-amber-600 text-white hover:bg-amber-700"
-                onClick={() => downloadDataUrl(att.dataUrl, att.filename)}
+                onClick={() => downloadDataUrl(att.dataUrl!, att.filename!)}
               >
                 Download {att.kind.toUpperCase()}
               </button>
@@ -547,16 +581,16 @@ export default function UnifiedChat() {
   // UI
   // ---------------------------
   return (
-    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-teal-50 py-8">
-      <div className="max-w-6xl mx-auto rounded-3xl bg-white/80 shadow-xl border border-amber-100 overflow-hidden">
+    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-teal-50 py-10 px-4">
+      <div className="max-w-6xl mx-auto rounded-3xl bg-white/90 shadow-2xl border border-amber-100 overflow-hidden">
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-teal-50">
           <div>
-            <h1 className="text-2xl font-semibold text-amber-800">
-              Kora Unified Chat
+            <h1 className="text-2xl font-semibold text-amber-900">
+              Kora Companion Studio (MVP)
             </h1>
             <p className="text-xs text-gray-600 mt-1">
-              Talk to{" "}
+              A shared chamber for{" "}
               <span className="font-medium">
                 {companion === "salar" ? "Salar" : "Lyra"}
               </span>{" "}
@@ -577,7 +611,7 @@ export default function UnifiedChat() {
 
           <div className="flex items-center gap-4">
             {/* Companion Toggle */}
-            <div className="inline-flex bg-white rounded-full border border-amber-200 p-1">
+            <div className="inline-flex bg-white rounded-full border border-amber-200 p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => setCompanion("salar")}
@@ -608,7 +642,7 @@ export default function UnifiedChat() {
               <select
                 value={tone}
                 onChange={(e) => setTone(e.target.value)}
-                className="border border-amber-200 rounded-full px-3 py-1 text-xs bg-white"
+                className="border border-amber-200 rounded-full px-3 py-1 text-xs bg-white shadow-sm"
               >
                 {TONE_OPTIONS.map((t) => (
                   <option key={t} value={t}>
@@ -676,7 +710,7 @@ export default function UnifiedChat() {
               </div>
             </div>
 
-            {/* File Upload (only show for modes that naturally use docs) */}
+            {/* File Upload */}
             {(companion === "salar" &&
               ["proposal_builder", "contract_advisor", "pricing_estimation"].includes(
                 activeMode
@@ -706,11 +740,11 @@ export default function UnifiedChat() {
           </aside>
 
           {/* Chat Panel */}
-          <section className="flex flex-col">
+          <section className="flex flex-col bg-white">
             {/* Messages */}
             <div
               ref={listRef}
-              className="flex-1 h-[480px] overflow-y-auto space-y-3 p-4 bg-white"
+              className="flex-1 h-[480px] overflow-y-auto space-y-3 p-4"
             >
               {messages.length === 0 && (
                 <div className="h-full flex items-center justify-center text-xs text-gray-400">
@@ -753,7 +787,7 @@ export default function UnifiedChat() {
         </div>
       </div>
 
-      {/* Identity Overlay (simple, text-based) */}
+      {/* Identity Overlay */}
       {showIdentity && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="max-w-lg w-full bg-white rounded-3xl shadow-xl p-6 relative">
@@ -768,9 +802,8 @@ export default function UnifiedChat() {
               {companion === "salar" ? "Salar" : "Lyra"} Identity Snapshot
             </h2>
             <p className="text-xs text-gray-600 mb-4">
-              This uses your shared Codex and Identity layers. For now, this
-              overlay shows the most recent persona + tone returned from the
-              orchestrator.
+              Powered by your shared Codex and Identity layers. This snapshot
+              uses the most recent persona + tone surfaced in this session.
             </p>
             <div className="space-y-2 text-sm">
               <div>
@@ -783,7 +816,9 @@ export default function UnifiedChat() {
               </div>
               <div>
                 <span className="font-semibold text-gray-700">Companion:</span>{" "}
-                {companion === "salar" ? "Salar — Commercial Intelligence" : "Lyra — Brand & Marketing Intelligence"}
+                {companion === "salar"
+                  ? "Salar — Commercial Intelligence"
+                  : "Lyra — Brand & Marketing Intelligence"}
               </div>
               <div>
                 <span className="font-semibold text-gray-700">Mode:</span>{" "}

@@ -1,71 +1,69 @@
-// src/components/unified-chat/ToneSelector.tsx
+// src/components/unifiedchat/ToneSelector.tsx
 import React from "react";
-import {
-  COMPANION_TONES,
-  CompanionKey,
-  ToneOption,
-} from "@/companions/config/tones";
+import { COMPANION_TONES, CompanionKey, ToneOption } from "@/companions/config/tones";
+import { ChevronDown } from "lucide-react";
 
-type ToneSelectorProps = {
+interface ToneSelectorProps {
   companion: CompanionKey;
   value: string;
   onChange: (tone: string) => void;
-};
+}
 
-export function ToneSelector({ companion, value, onChange }: ToneSelectorProps) {
+export default function ToneSelector({
+  companion,
+  value,
+  onChange,
+}: ToneSelectorProps) {
   const config = COMPANION_TONES[companion];
-  const options = config.options;
+  const toneOptions = config.options;
 
-  const companionOptions = options.filter((o) => o.scope === "companion");
-  const globalOptions = options.filter((o) => o.scope === "global");
+  const isSalar = companion === "salar";
 
-  const renderGroup = (label: string, items: ToneOption[]) => {
-    if (!items.length) return null;
-
-    return (
-      <div className="flex flex-wrap gap-2 mb-2">
-        <span className="text-[10px] uppercase tracking-wide text-gray-400 mr-1">
-          {label}
-        </span>
-        {items.map((opt) => {
-          const isActive = opt.value === value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={[
-                "px-3 py-1 rounded-full text-xs transition-all border",
-                "flex items-center gap-1",
-                isActive
-                  ? "bg-amber-600 text-white border-amber-600 shadow-sm"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-amber-50",
-              ].join(" ")}
-            >
-              <span>{opt.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    );
+  const theme = {
+    ring: isSalar ? "focus:ring-amber-400" : "focus:ring-teal-400",
+    text: isSalar ? "text-amber-700" : "text-teal-700",
+    hover: isSalar ? "hover:bg-amber-50" : "hover:bg-teal-50",
+    bg: isSalar ? "bg-amber-50" : "bg-teal-50",
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-600">
-          Tone &amp; Energy
-        </span>
-        <span className="text-[10px] text-gray-400">
-          {companion === "salar"
-            ? "Commercial rhythm"
-            : "Brand & creative voice"}
-        </span>
+    <div className="relative inline-block w-48">
+      {/* Current selection */}
+      <div className="text-xs font-semibold text-gray-600 mb-1">
+        Tone
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white/80 px-3 py-2">
-        {renderGroup("Companion presets", companionOptions)}
-        {renderGroup("Global", globalOptions)}
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`
+            w-full appearance-none px-3 py-2 rounded-lg border text-sm
+            border-gray-300 bg-white cursor-pointer
+            ${theme.ring} ${theme.text}
+          `}
+        >
+          {toneOptions.map((t: ToneOption) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+              {t.scope === "companion" ? " ★" : ""}
+            </option>
+          ))}
+        </select>
+
+        {/* Dropdown icon */}
+        <ChevronDown
+          size={18}
+          className="absolute right-3 top-2.5 text-gray-500 pointer-events-none"
+        />
+      </div>
+
+      {/* Legend */}
+      <div className="mt-2 text-[10px] text-gray-500 leading-relaxed">
+        <span className="font-medium">★ Companion Tone</span> — specialised for{" "}
+        <span className={theme.text}>
+          {companion === "salar" ? "Salar" : "Lyra"}
+        </span>
       </div>
     </div>
   );

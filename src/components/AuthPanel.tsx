@@ -19,7 +19,7 @@ export default function AuthPanel() {
 // 🧭 Redirect if already logged in or guest
 useEffect(() => {
   const isGuest = localStorage.getItem("guest_mode") === "true";
-  if (user || isGuest) router.push("/unifiedchat-test");
+  if (user || isGuest) router.push("/unifiedchat");
 }, [user, router]);
 
   // ✉️ Magic Link Login
@@ -32,7 +32,7 @@ useEffect(() => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/unifiedchat-test`,
+          emailRedirectTo: `${window.location.origin}/unifiedchat`,
         },
       });
 
@@ -55,7 +55,7 @@ useEffect(() => {
     const { error } = await supabase.auth.signInWithOAuth({
   provider: "google",
   options: {
-    redirectTo: `${window.location.origin}/unifiedchat-test`,
+    redirectTo: `${window.location.origin}/unifiedchat`,
   },
 });
 
@@ -70,7 +70,7 @@ useEffect(() => {
   // 👤 Guest Login
   const handleGuestLogin = () => {
     localStorage.setItem("guest_mode", "true");
-    router.push("/unifiedchat-test");
+    router.push("/unifiedchat");
   };
 
 // 🚪 Clean, complete logout — works for guests + logged-in users
