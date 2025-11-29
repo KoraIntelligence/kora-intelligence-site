@@ -5,6 +5,8 @@ import AttachmentPreviewModal from "./AttachmentPreviewModal";
 
 import type { Message, Attachment } from "@/types/chat";
 
+const [input, setInput] = useState("");
+
 type ChatWindowProps = {
   messages: Message[];
   onSend: (text: string, nextAction?: string) => void;
@@ -84,11 +86,13 @@ export default function ChatWindow({
       {/* Chat Input */}
       <div className="border-t bg-white">
         <ChatInput
-          onSend={(text) => onSend(text)}
-          onUpload={onUpload}
-          sending={sending}
-          disabled={false}
-        />
+  value={input}
+  onChange={setInput}
+  onSend={(text) => onSend(text)}
+  onUpload={onUpload}
+  sending={sending}
+  disabled={sending}
+/>
       </div>
     </div>
   );
