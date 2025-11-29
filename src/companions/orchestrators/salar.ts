@@ -30,10 +30,10 @@ import {
 
 export type SalarMode =
   | "commercial_chat"
-  | "proposal"
-  | "contract_advice"
-  | "pricing"
-  | "strategy";
+  | "proposal_builder"
+  | "contract_advisor"
+  | "pricing_estimation"
+  | "commercial_strategist";
 
 export interface SalarOrchestratorInput {
   mode: SalarMode;
@@ -88,10 +88,10 @@ export interface SalarPromptPack {
 
 const PACKS: Record<SalarMode, SalarPromptPack> = {
   commercial_chat: SALAR_COMMERCIAL_CHAT_PROMPTS,
-  proposal: SALAR_PROPOSAL_PROMPTS,
-  contract_advice: SALAR_CONTRACT_PROMPTS,
-  pricing: SALAR_PRICING_PROMPTS,
-  strategy: SALAR_STRATEGY_PROMPTS,
+  proposal_builder: SALAR_PROPOSAL_PROMPTS,
+  contract_advisor: SALAR_CONTRACT_PROMPTS,
+  pricing_estimation: SALAR_PRICING_PROMPTS,
+  commercial_strategist: SALAR_STRATEGY_PROMPTS,
 };
 
 // ======================================================

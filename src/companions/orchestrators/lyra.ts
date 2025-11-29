@@ -28,10 +28,10 @@ import {
 
 export type LyraMode =
   | "creative_chat"
-  | "messaging"
-  | "campaign"
-  | "outreach"
-  | "nurture";
+  | "messaging_advisor"
+  | "campaign_builder"
+  | "lead_outreach"
+  | "customer_nurture";
 
 export interface LyraOrchestratorInput {
   mode: LyraMode;
@@ -89,10 +89,10 @@ export interface LyraPromptPack {
 
 const PACKS: Record<LyraMode, LyraPromptPack> = {
   creative_chat: LYRA_CREATIVE_CHAT_PROMPTS,
-  messaging: LYRA_MESSAGING_PROMPTS,
-  campaign: LYRA_CAMPAIGN_PROMPTS,
-  outreach: LYRA_OUTREACH_PROMPTS,
-  nurture: LYRA_NURTURE_PROMPTS,
+  messaging_advisor: LYRA_MESSAGING_PROMPTS,
+  campaign_builder: LYRA_CAMPAIGN_PROMPTS,
+  lead_outreach: LYRA_OUTREACH_PROMPTS,
+  customer_nurture: LYRA_NURTURE_PROMPTS,
 };
 
 // =====================================================================
