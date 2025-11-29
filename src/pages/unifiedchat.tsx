@@ -8,17 +8,17 @@ type Companion = "salar" | "lyra";
 
 type SalarMode =
   | "commercial_chat"
-  | "proposal"
-  | "contract_advice"
-  | "pricing"
-  | "strategy";
+  | "proposal_builder"
+  | "contract_advisor"
+  | "pricing_estimation"
+  | "commercial_strategist";
 
 type LyraMode =
   | "creative_chat"
-  | "messaging"
-  | "campaign"
-  | "outreach"
-  | "nurture";
+  | "messaging_advisor"
+  | "campaign_builder"
+  | "lead_outreach"
+  | "customer_nurture";
 
 type Role = "user" | "assistant" | "system";
 
@@ -58,18 +58,18 @@ const LOCAL_KEY = "kora-unified-chat-v6";
 // Per-companion mode labels (slug → display)
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
   commercial_chat: "Commercial Chat",
-  proposal: "Proposal Builder",
-  contract_advice: "Contract Advisor",
-  pricing: "Pricing & Estimation",
-  strategy: "Commercial Strategist",
+  proposal_builder: "Proposal Builder",
+  contract_advisor: "Contract Advisor",
+  pricing_estimation: "Pricing & Estimation",
+  commercial_strategist: "Commercial Strategist",
 };
 
 const LYRA_MODE_LABELS: Record<LyraMode, string> = {
   creative_chat: "Creative Chat",
-  messaging: "Messaging Advisor",
-  campaign: "Campaign Builder",
-  outreach: "Lead Outreach",
-  nurture: "Customer Nurture",
+  messaging_advisor: "Messaging Advisor",
+  campaign_builder: "Campaign Builder",
+  lead_outreach: "Lead Outreach",
+  customer_nurture: "Customer Nurture",
 };
 
 // Simple tone map for now (you can expand later / make dynamic)
@@ -678,10 +678,10 @@ export default function UnifiedChat() {
 
             {/* File Upload (only show for modes that naturally use docs) */}
             {(companion === "salar" &&
-              ["proposal", "contract_advice", "pricing"].includes(
+              ["proposal_builder", "contract_advisor", "pricing_estimation"].includes(
                 activeMode
               )) ||
-            (companion === "lyra" && activeMode === "outreach") ? (
+            (companion === "lyra" && activeMode === "lead_outreach") ? (
               <div className="mt-4">
                 <label className="block text-xs text-gray-600 mb-1">
                   {companion === "salar"
