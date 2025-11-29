@@ -6,7 +6,7 @@
 import type { LyraPromptPack } from "../../orchestrators/lyra";
 
 export const LYRA_CAMPAIGN_PROMPTS: LyraPromptPack = {
-  mode: "campaign",
+  mode: "campaign_builder",
 
   // -------------------------------------------------------------------
   // 1. SYSTEM PROMPT

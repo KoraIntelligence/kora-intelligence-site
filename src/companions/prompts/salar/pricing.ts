@@ -6,7 +6,7 @@
 import type { SalarPromptPack } from "../../orchestrators/salar";
 
 export const SALAR_PRICING_PROMPTS: SalarPromptPack = {
-  mode: "pricing",
+  mode: "pricing_estimation",
 
   // -------------------------------------------------------------------
   // 1. SYSTEM PROMPT

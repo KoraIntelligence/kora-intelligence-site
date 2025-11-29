@@ -6,7 +6,7 @@
 import type { LyraPromptPack } from "../../orchestrators/lyra";
 
 export const LYRA_NURTURE_PROMPTS: LyraPromptPack = {
-  mode: "nurture",
+  mode: "customer_nurture",
 
   // -------------------------------------------------------------------
   // 1. SYSTEM PROMPT

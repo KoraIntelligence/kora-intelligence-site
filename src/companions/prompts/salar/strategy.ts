@@ -6,7 +6,7 @@
 import type { SalarPromptPack } from "../../orchestrators/salar";
 
 export const SALAR_STRATEGY_PROMPTS: SalarPromptPack = {
-  mode: "strategy",
+  mode: "commercial_strategist",
 
   // -------------------------------------------------------------------
   // 1. SYSTEM PROMPT

@@ -6,7 +6,7 @@
 import type { SalarPromptPack } from "../../orchestrators/salar";
 
 export const SALAR_PROPOSAL_PROMPTS: SalarPromptPack = {
-  mode: "proposal",
+  mode: "proposal_builder",
 
   // -------------------------------------------------------------
   // 1. SYSTEM PROMPT

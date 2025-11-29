@@ -6,7 +6,7 @@
 import type { LyraPromptPack } from "../../orchestrators/lyra";
 
 export const LYRA_MESSAGING_PROMPTS: LyraPromptPack = {
-  mode: "messaging",
+  mode: "messaging_advisor",
 
   // -------------------------------------------------------------------
   // 1. SYSTEM PROMPT

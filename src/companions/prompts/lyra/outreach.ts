@@ -6,7 +6,7 @@
 import type { LyraPromptPack } from "../../orchestrators/lyra";
 
 export const LYRA_OUTREACH_PROMPTS: LyraPromptPack = {
-  mode: "outreach",
+  mode: "lead_outreach",
 
   // -------------------------------------------------------------------
   // 1. SYSTEM PROMPT
