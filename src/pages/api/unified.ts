@@ -1,11 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb", // or 20mb
-    },
-  },
-};
-
 // src/pages/api/unified.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
