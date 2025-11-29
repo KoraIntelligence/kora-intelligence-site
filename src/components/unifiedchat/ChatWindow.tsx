@@ -9,7 +9,7 @@ const [input, setInput] = useState("");
 
 type ChatWindowProps = {
   messages: Message[];
-  onSend: (text: string, nextAction?: string) => void;
+  onSend: (payload: { text?: string; action?: string }) => void;
   onUpload: (file: File) => void;
   sending: boolean;
   companion: "salar" | "lyra";
@@ -35,8 +35,8 @@ export default function ChatWindow({
 
   // Workflow next-action logic
   const handleNextAction = (action: string) => {
-    onSend("", action);
-  };
+  onSend({ action });
+};
 
   return (
     <div className="flex flex-col h-full w-full bg-white">
@@ -88,7 +88,7 @@ export default function ChatWindow({
         <ChatInput
   value={input}
   onChange={setInput}
-  onSend={(text) => onSend(text)}
+  onSend={({ text, action }) => onSend({ text, action })}
   onUpload={onUpload}
   sending={sending}
   disabled={sending}

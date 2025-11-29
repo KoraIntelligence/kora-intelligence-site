@@ -17,7 +17,6 @@ import type { LyraMode } from "@/companions/orchestrators/lyra";
 type Companion = "salar" | "lyra";
 
 type Message = BaseMessage & {
-  // allow flexible meta shape without fighting TS
   meta?: any;
 };
 
@@ -42,10 +41,8 @@ const LYRA_MODE_LABELS: Record<LyraMode, string> = {
 
 export default function MVP() {
   const [companion, setCompanion] = useState<Companion>("salar");
-  const [salarMode, setSalarMode] =
-    useState<SalarMode>("commercial_chat");
-  const [lyraMode, setLyraMode] =
-    useState<LyraMode>("creative_chat");
+  const [salarMode, setSalarMode] = useState<SalarMode>("commercial_chat");
+  const [lyraMode, setLyraMode] = useState<LyraMode>("creative_chat");
   const [tone, setTone] = useState<string>("calm");
 
   const [input, setInput] = useState("");
@@ -55,8 +52,7 @@ export default function MVP() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const [showIdentity, setShowIdentity] = useState(false);
-  const [previewAttachment, setPreviewAttachment] =
-    useState<any | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -68,7 +64,7 @@ export default function MVP() {
     companion === "salar" ? salarMode : lyraMode;
 
   /* ------------------------------------------------------------------ */
-  /*  Restore + persist basic UI state                                  */
+  /* Restore + persist basic UI state                                   */
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
@@ -81,9 +77,7 @@ export default function MVP() {
       if (parsed.companion) setCompanion(parsed.companion);
       if (parsed.salarMode) setSalarMode(parsed.salarMode);
       if (parsed.lyraMode) setLyraMode(parsed.lyraMode);
-    } catch {
-      // ignore bad JSON
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -95,7 +89,7 @@ export default function MVP() {
   }, [tone, companion, salarMode, lyraMode]);
 
   /* ------------------------------------------------------------------ */
-  /*  Auto-scroll on new messages                                       */
+  /* Auto-scroll on new messages                                       */
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
@@ -105,7 +99,7 @@ export default function MVP() {
   }, [messages.length]);
 
   /* ------------------------------------------------------------------ */
-  /*  API helper                                                         */
+  /* Unified API helper                                                 */
   /* ------------------------------------------------------------------ */
 
   async function callUnified(payload: Record<string, unknown>) {
@@ -128,7 +122,7 @@ export default function MVP() {
   }
 
   /* ------------------------------------------------------------------ */
-  /*  File upload                                                        */
+  /* File upload                                                        */
   /* ------------------------------------------------------------------ */
 
   async function handleFileUpload(file: File) {
@@ -181,6 +175,7 @@ export default function MVP() {
       ]);
     } catch (err) {
       console.error("❌ Upload error:", err);
+
       setMessages((m) => [
         ...m.filter((msg) => msg.id !== tempId),
         {
@@ -196,12 +191,14 @@ export default function MVP() {
   }
 
   /* ------------------------------------------------------------------ */
-  /*  Send message / trigger next action                                */
+  /* Send message / trigger next action                                 */
   /* ------------------------------------------------------------------ */
 
-  async function handleSend(nextActionTrigger?: string) {
-    const trimmed = input.trim();
-    if (!trimmed && !nextActionTrigger) {
+  async function handleSend(payload: { text?: string; action?: string }) {
+    const { text, action } = payload;
+    const trimmed = text?.trim();
+
+    if (!trimmed && !action) {
       console.warn("🟠 Nothing to send.");
       return;
     }
@@ -212,9 +209,7 @@ export default function MVP() {
     const userMsg: Message = {
       id: uid(),
       role: "user",
-      content: nextActionTrigger
-        ? `[Triggered Action: ${nextActionTrigger}]`
-        : trimmed,
+      content: action ? `[Triggered Action: ${action}]` : trimmed!,
       ts: Date.now(),
     };
 
@@ -230,18 +225,15 @@ export default function MVP() {
     ]);
 
     try {
-      const payload: Record<string, unknown> = {
+      const apiPayload: Record<string, unknown> = {
         companion,
         mode: activeMode,
         tone,
-        input: trimmed,
+        input: trimmed || null,
+        nextAction: action || null,
       };
 
-      if (nextActionTrigger) {
-        payload.nextAction = nextActionTrigger;
-      }
-
-      const data = await callUnified(payload);
+      const data = await callUnified(apiPayload);
       if (data.sessionId) setSessionId(data.sessionId);
 
       setMessages((m) => [
@@ -257,6 +249,7 @@ export default function MVP() {
       ]);
     } catch (err) {
       console.error("❌ Chat error:", err);
+
       setMessages((m) => [
         ...m.filter((msg) => msg.role !== "system"),
         {
@@ -272,11 +265,11 @@ export default function MVP() {
   }
 
   const handleNextAction = (action: string) => {
-    void handleSend(action);
+    handleSend({ action });
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Identity snapshot                                                  */
+  /* Identity snapshot                                                  */
   /* ------------------------------------------------------------------ */
 
   const currentIdentityMessage = [...messages]
@@ -287,15 +280,11 @@ export default function MVP() {
     (currentIdentityMessage as any)?.meta?.identity || null;
 
   /* ------------------------------------------------------------------ */
-  /*  Sidebar node                                                       */
+  /* Sidebar node                                                       */
   /* ------------------------------------------------------------------ */
 
   const toneSelectorNode = (
-    <ToneSelector
-      companion={companion}
-      value={tone}
-      onChange={setTone}
-    />
+    <ToneSelector companion={companion} value={tone} onChange={setTone} />
   );
 
   const sidebarNode = (
@@ -312,12 +301,11 @@ export default function MVP() {
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Chat window node                                                   */
+  /* Chat window node                                                   */
   /* ------------------------------------------------------------------ */
 
   const chatWindowNode = (
     <div className="flex flex-col h-full">
-      {/* Inline header inside chat column */}
       <div className="mb-4 flex items-center justify-between text-xs text-gray-600">
         <div>
           <div className="font-semibold text-amber-800 text-sm">
@@ -352,7 +340,6 @@ export default function MVP() {
         </button>
       </div>
 
-      {/* Scrollable messages */}
       <div
         ref={listRef}
         className="flex-1 overflow-y-auto space-y-3"
@@ -368,7 +355,6 @@ export default function MVP() {
         {messages.map((m) => (
           <MessageBubble
             key={m.id}
-            // cast to any so Bubble can use its own meta/attachment types
             message={m as any}
             onOpenAttachment={(att: any) => setPreviewAttachment(att)}
             onNextAction={handleNextAction}
@@ -379,7 +365,7 @@ export default function MVP() {
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Chat input node                                                    */
+  /* Chat input node                                                    */
   /* ------------------------------------------------------------------ */
 
   const chatInputNode = (
@@ -394,21 +380,21 @@ export default function MVP() {
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Identity overlay + attachment preview                             */
+  /* Identity overlay + attachment preview                              */
   /* ------------------------------------------------------------------ */
 
   const identityOverlayNode = showIdentity ? (
     <IdentityOverlay
-  isOpen={showIdentity}
-  companion={companion}
-  mode={
-    companion === "salar"
-      ? SALAR_MODE_LABELS[salarMode]
-      : LYRA_MODE_LABELS[lyraMode]
-  }
-  identity={currentIdentity}
-  onClose={() => setShowIdentity(false)}
-/>
+      isOpen={showIdentity}
+      companion={companion}
+      mode={
+        companion === "salar"
+          ? SALAR_MODE_LABELS[salarMode]
+          : LYRA_MODE_LABELS[lyraMode]
+      }
+      identity={currentIdentity}
+      onClose={() => setShowIdentity(false)}
+    />
   ) : null;
 
   const attachmentDrawerNode = previewAttachment ? (
@@ -419,7 +405,7 @@ export default function MVP() {
   ) : null;
 
   /* ------------------------------------------------------------------ */
-  /*  Render                                                             */
+  /* Render                                                             */
   /* ------------------------------------------------------------------ */
 
   return (

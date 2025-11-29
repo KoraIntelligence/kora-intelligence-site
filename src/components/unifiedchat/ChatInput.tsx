@@ -5,7 +5,7 @@ type ChatInputProps = {
   value: string;
   onChange: (value: string) => void;
 
-  onSend: (text: string, nextAction?: string) => void;
+  onSend: (payload: { text?: string; action?: string }) => void;
   onUpload: (file: File) => void;
   sending: boolean;
   disabled?: boolean;
@@ -23,7 +23,7 @@ export default function ChatInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!value.trim() || disabled || sending) return;
-    onSend(value.trim());
+    onSend({ text: value.trim() });
     setValue("");
   };
 
@@ -35,7 +35,7 @@ export default function ChatInput({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (value.trim()) {
-        onSend(value.trim());
+        onSend({ text: value.trim() });
         setValue("");
       }
     }

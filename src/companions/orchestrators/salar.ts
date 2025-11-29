@@ -106,7 +106,10 @@ const openai = new OpenAI({
 //  PROMPT RESOLUTION
 // ======================================================
 
-function resolvePrompt(pack: SalarPromptPack, nextAction?: string): string {
+function resolvePrompt(
+  pack: SalarPromptPack,
+  nextAction?: string
+): string {
   // ----- MODE 0: FREEFORM COMMERCIAL CHAT -----
   if (pack.mode === "commercial_chat") {
     switch (nextAction) {
@@ -211,7 +214,7 @@ function resolvePrompt(pack: SalarPromptPack, nextAction?: string): string {
 // ======================================================
 
 export async function runSalar(input: SalarOrchestratorInput) {
-  const { mode, extractedText, tone, nextAction } = input;
+  const { mode, input: userInput, extractedText, tone, nextAction } = input;
   const pack = PACKS[mode];
 
   if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
@@ -239,7 +242,11 @@ Tone: ${toneText || "Warm professionalism, calm confidence"}
 ========================
 
 Key Behaviours:
-${behavioursList.length ? behavioursList.map(b => `• ${b}`).join("\n") : ""}
+${
+  behavioursList.length
+    ? behavioursList.map((b) => `• ${b}`).join("\n")
+    : ""
+}
 
 Shared Codex:
 ${identity.codex ?? ""}
@@ -258,7 +265,7 @@ ${prompt}
 
 User Input:
 """
-${input.input}
+${userInput}
 """
 
 Uploaded Text:
@@ -298,25 +305,31 @@ Requested Tone: ${tone}
     }
   }
 
-  // ----- 5) Return with identity surfaced in meta (for UI/debug) -----
-  interface SalarResponse {
-  outputText: string;
-  attachments: any[];
-  meta: {
-    companion: "Salar";
-    mode: SalarMode;
-    nextActions: Record<string, string[]>;
-    identity?: any; // <-- allow router injection
-  };
-}
-return {
-  outputText,
-  attachments,
-  meta: {
-    companion: "Salar",
+  // ----- 5) Flatten nextActions and build identity meta -----
+  const flatNextActions: string[] = Object.values(
+    pack.nextActions || {}
+  ).flat();
+
+  const identityMeta = {
+    persona: identity.persona ?? "Commercial Partner",
+    title: "Commercial Intelligence Companion",
     mode,
-    nextActions: pack.nextActions,
-    identity: undefined, // router will overwrite
-  },
-} as SalarResponse;
+    toneBase: toneText || "Warm professionalism, calm confidence",
+  };
+
+  // ----- 6) Return canonical response -----
+  return {
+    reply: outputText,
+    attachments,
+    meta: {
+      companion: "salar",
+      mode,
+      tone,
+      nextActions: flatNextActions,
+      identity: identityMeta,
+      memory: {
+        shortTerm: [],
+      },
+    },
+  };
 }

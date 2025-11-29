@@ -1,5 +1,3 @@
-// src/components/unifiedchat/MessageBubble.tsx
-
 import React from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -22,8 +20,18 @@ export default function MessageBubble({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
+  const meta = (message as any).meta || {};
+
+  // Normalise meta.companion for UI consistency ("salar" → "Salar")
+  const normalizedMeta = {
+    ...meta,
+    companion: meta.companion
+      ? meta.companion.charAt(0).toUpperCase() + meta.companion.slice(1)
+      : meta.companion,
+  };
+
   const companionLabel =
-    message.meta?.companion ||
+    normalizedMeta.companion ||
     (message.role === "assistant" ? "Companion" : undefined);
 
   return (
@@ -48,9 +56,9 @@ export default function MessageBubble({
             <span className="text-[11px] font-semibold text-amber-700">
               {companionLabel}
             </span>
-            {message.meta?.mode && (
+            {normalizedMeta.mode && (
               <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                {message.meta.mode}
+                {normalizedMeta.mode}
               </span>
             )}
           </div>
@@ -61,26 +69,31 @@ export default function MessageBubble({
           <span>{message.content}</span>
         ) : (
           <div className="prose prose-sm max-w-none">
-  <ReactMarkdown>{message.content}</ReactMarkdown>
-</div>
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
         )}
 
         {/* Attachments */}
-{message.attachments && message.attachments.length > 0 && (
-  <div className="mt-3">
-    <MessageAttachments items={message.attachments} />
-  </div>
-)}
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mt-3">
+            <MessageAttachments
+              items={message.attachments as any}
+              onOpenAttachment={onOpenAttachment as any}
+            />
+          </div>
+        )}
 
-{/* Next Actions */}
-{message.meta?.nextActions && message.meta.nextActions.length > 0 && (
-  <div className="mt-2">
-    <NextActionButtons
-      meta={message.meta}
-      onSend={onNextAction}
-    />
-  </div>
-)}
+        {/* Next Actions */}
+        {normalizedMeta.nextActions &&
+          Array.isArray(normalizedMeta.nextActions) &&
+          normalizedMeta.nextActions.length > 0 && (
+            <div className="mt-2">
+              <NextActionButtons
+                meta={normalizedMeta}
+                onSend={onNextAction}
+              />
+            </div>
+          )}
 
         {/* Timestamp */}
         <div className="mt-1 text-[10px] text-gray-400 text-right">

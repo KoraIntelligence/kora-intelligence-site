@@ -1,4 +1,3 @@
-// src/components/unifiedchat/MessageAttachments.tsx
 import React from "react";
 
 export type Attachment = {
@@ -15,18 +14,34 @@ export type Attachment = {
   canvaUrl?: string;
 };
 
-export default function MessageAttachments({ items }: { items: Attachment[] }) {
+type MessageAttachmentsProps = {
+  items: Attachment[];
+  onOpenAttachment?: (att: Attachment) => void;
+};
+
+export default function MessageAttachments({
+  items,
+  onOpenAttachment,
+}: MessageAttachmentsProps) {
   if (!items || items.length === 0) return null;
 
   return (
     <div className="mt-3 space-y-3">
       {items.map((att, i) => {
+        const handleClick = () => {
+          if (onOpenAttachment) onOpenAttachment(att);
+        };
+
         // -------------------------------------------------------------------
         // 1. CANVA / VISUAL PREVIEW (FMC RENDER)
         // -------------------------------------------------------------------
         if (att.kind === "preview") {
           return (
-            <div key={i} className="border rounded-xl bg-white shadow p-4">
+            <div
+              key={i}
+              className="border rounded-xl bg-white shadow p-4 cursor-pointer"
+              onClick={handleClick}
+            >
               <h3 className="font-semibold text-amber-700 mb-2">
                 {att.title || "Preview"}
               </h3>
@@ -39,6 +54,7 @@ export default function MessageAttachments({ items }: { items: Attachment[] }) {
                     href={att.dataUrl}
                     download={`${att.title || "preview"}.png`}
                     className="px-3 py-1 text-sm rounded-md bg-amber-600 text-white"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Download PNG
                   </a>
@@ -50,6 +66,7 @@ export default function MessageAttachments({ items }: { items: Attachment[] }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-1 text-sm rounded-md bg-purple-600 text-white"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Open in Canva
                   </a>

@@ -9,12 +9,18 @@ export const config = {
   },
 };
 
-
-
 import type { NextApiRequest, NextApiResponse } from "next";
 
-import { runSalar, SalarMode, SalarOrchestratorInput } from "@/companions/orchestrators/salar";
-import { runLyra, LyraMode, LyraOrchestratorInput } from "@/companions/orchestrators/lyra";
+import {
+  runSalar,
+  SalarMode,
+  type SalarOrchestratorInput,
+} from "@/companions/orchestrators/salar";
+import {
+  runLyra,
+  LyraMode,
+  type LyraOrchestratorInput,
+} from "@/companions/orchestrators/lyra";
 
 import { parseUploadedFile } from "@/pages/api/session/utils/parseFiles";
 import { loadIdentity } from "@/companions/identity/loader";
@@ -27,16 +33,16 @@ type CompanionSlug = "salar" | "lyra";
 
 interface UnifiedRequestBody {
   companion?: CompanionSlug;
-  mode: string;            // we'll narrow per companion
+  mode: string; // we'll narrow per companion
   tone?: string;
   input?: string;
   nextAction?: string;
-  filePayload?: any;       // { name, type, contentBase64 } – from frontend
+  filePayload?: any; // { name, type, contentBase64 } – from frontend
 }
 
 // Shape of orchestrator result
 interface OrchestratorResult {
-  outputText: string;
+  reply: string;
   attachments?: any[];
   meta?: Record<string, any>;
 }
@@ -58,7 +64,10 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
 // -----------------------------
 // API Handler
 // -----------------------------
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -87,7 +96,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         extractedText = await parseUploadedFile(filePayload, filePayload.type);
       } catch (err) {
         console.error("❌ File parsing failed in /api/unified:", err);
-        // We let the request continue, but tell the frontend
         return res.status(400).json({
           error: "File parsing failed. Try a different file.",
         });
@@ -95,9 +103,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // -----------------------------
-    // 2) Load identity (shared + companion + mode)
+    // 2) Load identity (for fallback identity meta)
     // -----------------------------
-    const identity = loadIdentity(companion, mode);
+    const rawIdentity: any = loadIdentity(companion, mode);
+
+    const toneBaseFromIdentity: string | undefined =
+      typeof rawIdentity?.tone === "string"
+        ? rawIdentity.tone
+        : rawIdentity?.tone?.base;
 
     // -----------------------------
     // 3) Call the correct orchestrator
@@ -126,24 +139,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       result = await runLyra(lyraInput);
     }
 
-    const outputText = result.outputText || "No response generated.";
+    const reply = result.reply || "No response generated.";
     const attachments = result.attachments || [];
 
     // -----------------------------
-    // 4) Unify meta + inject identity
+    // 4) Unify meta + inject fallback identity
     // -----------------------------
+    const metaFromOrchestrator = result.meta || {};
+
     const meta = {
-      ...(result.meta || {}),
-      companion: companion === "salar" ? "Salar" : "Lyra",
-      mode,
-      identity, // full identity bundle (shared codex + base + mode)
+      ...metaFromOrchestrator,
+      companion: metaFromOrchestrator.companion ?? companion, // "salar" | "lyra"
+      mode: metaFromOrchestrator.mode ?? mode,
+      tone: metaFromOrchestrator.tone ?? tone,
+      identity:
+        metaFromOrchestrator.identity ??
+        {
+          persona: rawIdentity?.persona,
+          toneBase: toneBaseFromIdentity,
+          mode,
+        },
+      // ensure memory at least exists as a placeholder
+      memory: metaFromOrchestrator.memory ?? {
+        shortTerm: [],
+      },
     };
 
     // -----------------------------
     // 5) Return response
     // -----------------------------
     return res.status(200).json({
-      reply: outputText,
+      reply,
       attachments,
       meta,
       sessionId: null, // reserved for future Supabase sessions
@@ -152,7 +178,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error("❌ /api/unified error:", err?.message || err);
 
     return res.status(500).json({
-      error: err?.message || "Unknown error in unified companion endpoint.",
+      error:
+        err?.message || "Unknown error in unified companion endpoint.",
     });
   }
 }

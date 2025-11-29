@@ -79,7 +79,9 @@ export default function NextActionButtons({
   if (!meta?.nextActions || meta.nextActions.length === 0) return null;
 
   // 🔥 FIX #1 — meta.companion may be undefined
-  const companion = meta.companion ?? "Salar";
+  const companion = meta.companion
+  ? meta.companion.charAt(0).toUpperCase() + meta.companion.slice(1)
+  : "Salar";
 
   const palette =
     companion === "Lyra"

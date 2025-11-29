@@ -1,10 +1,10 @@
+// src/companions/orchestrators/lyra.ts
 // =====================================================================
 // LYRA ORCHESTRATOR — Handles all 5 Lyra Modes
 // Modes: creative_chat | messaging | campaign | outreach | nurture
 // =====================================================================
 
 import { loadIdentity } from "../identity/loader";
-
 import OpenAI from "openai";
 
 // Prompt Packs
@@ -15,7 +15,6 @@ import { LYRA_OUTREACH_PROMPTS } from "../prompts/lyra/outreach";
 import { LYRA_NURTURE_PROMPTS } from "../prompts/lyra/nurture";
 
 // Attachments (PDF / DOCX / XLSX)
-// (Lyra currently uses pdf/txt; txt is ignored for now.)
 import {
   createPDF,
   createDocx,
@@ -235,7 +234,7 @@ export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
   }
 
   // ----- Identity + tone extraction -----
-  const identity = loadIdentity("lyra", mode);
+  const identity: any = loadIdentity("lyra", mode);
 
   const toneText =
     (typeof identity.tone === "string"
@@ -294,22 +293,33 @@ Tone: ${tone}
       if (type === "xlsx") {
         attachments.push(await createXlsx(outputText));
       }
-      // TXT is handled on frontend — raw outputText.
     }
   }
 
-  // ----- Return payload -----
+  // ----- Flatten nextActions and build identity meta -----
+  const flatNextActions: string[] = Object.values(
+    pack.nextActions || {}
+  ).flat();
+
+  const identityMeta = {
+    persona: identity.persona || "Creative Partner",
+    title: "Brand & Marketing Intelligence Companion",
+    mode,
+    toneBase: toneText,
+  };
+
+  // ----- Return canonical payload -----
   return {
-    outputText,
+    reply: outputText,
     attachments,
     meta: {
-      companion: "Lyra",
+      companion: "lyra",
       mode,
-      nextActions: pack.nextActions,
-      identity: {
-        mode,
-        persona: identity.persona,
-        tone: toneText,
+      tone,
+      nextActions: flatNextActions,
+      identity: identityMeta,
+      memory: {
+        shortTerm: [],
       },
     },
   };
