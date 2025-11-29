@@ -97,21 +97,56 @@ export async function updateSessionContext(
    🧩 MESSAGES
 --------------------------------------------------------------------------- */
 
+type MessageRole = "user" | "assistant" | "system";
+
+// We allow meta to be stored inside attachments._meta for now
+type SaveMessageOptions =
+  | Record<string, any> // backwards compatibility: attachments only
+  | {
+      attachments?: Record<string, any>;
+      meta?: Record<string, any>;
+    };
+
 export async function saveMessage(
   sessionId: string,
-  role: "user" | "assistant" | "system",
+  role: MessageRole,
   content: string,
-  attachments?: Record<string, any>
+  attachmentsOrOptions?: SaveMessageOptions
 ) {
   try {
     if (!sessionId) throw new Error("Missing session ID in saveMessage");
     if (!role) throw new Error("Missing role in saveMessage");
 
+    let attachments: Record<string, any> | undefined = undefined;
+    let meta: Record<string, any> | undefined = undefined;
+
+    // Backwards-compatible handling:
+    // - If the 4th argument is a plain object with no "meta"/"attachments" keys, treat it as attachments.
+    // - If it looks like { attachments, meta }, use both.
+    if (attachmentsOrOptions) {
+      const maybe = attachmentsOrOptions as any;
+
+      if (
+        typeof maybe === "object" &&
+        (Object.prototype.hasOwnProperty.call(maybe, "attachments") ||
+          Object.prototype.hasOwnProperty.call(maybe, "meta"))
+      ) {
+        attachments = maybe.attachments || {};
+        meta = maybe.meta || undefined;
+      } else {
+        attachments = attachmentsOrOptions as Record<string, any>;
+      }
+    }
+
     const payload = {
       session_id: sessionId,
       role,
       content: content || "",
-      attachments: attachments || {},
+      // Store meta inside attachments._meta to avoid DB migrations for now
+      attachments: {
+        ...(attachments || {}),
+        ...(meta ? { _meta: meta } : {}),
+      },
       created_at: new Date().toISOString(),
     };
 
@@ -142,6 +177,7 @@ export async function getMessages(sessionId: string) {
     return [];
   }
 
+  // Later, when we wire the API → frontend, we can unwrap attachments._meta here if we want.
   return data || [];
 }
 

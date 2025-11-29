@@ -1,4 +1,4 @@
-// src/companions/logic/runCCC.ts
+// src/pages/api/session/companions/ccc.ts
 import OpenAI from "openai";
 import { CCC_PROFILE } from "../../../../companions/config/ccc";
 import { SHARED_CODEX } from "../../../../companions/config/shared";

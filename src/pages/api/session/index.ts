@@ -5,8 +5,8 @@ import OpenAI from "openai";
 import path from "path";
 import fs from "fs/promises";
 
-import { runCCC } from "./companions/ccc";
-import { runFMC } from "./companions/fmc";
+import { runCCC } from "./companions/salar";
+import { runFMC } from "./companions/lyra";
 import { runBuilder } from "./companions/builder";
 import { parseUploadedFile } from "./utils/parseFiles";
 

@@ -1,4 +1,3 @@
-// src/companions/logic/runBuilder.ts
 import OpenAI from "openai";
 import { BUILDER_PROFILE } from "../../../../companions/config/builder";
 import { SHARED_CODEX } from "../../../../companions/config/shared";
