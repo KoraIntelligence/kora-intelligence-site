@@ -116,6 +116,7 @@ export default function IdentityOverlay({
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-auto max-h-64 whitespace-pre-wrap text-xs text-gray-700">
                 {identity.systemPrompt}
               </div>
+              if (!isOpen) return null;
             </section>
           )}
         </div>

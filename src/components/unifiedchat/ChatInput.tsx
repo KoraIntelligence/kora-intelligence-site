@@ -2,10 +2,13 @@ import React, { useState, useRef } from "react";
 import { Paperclip, SendHorizontal, Loader2 } from "lucide-react";
 
 type ChatInputProps = {
-  onSend: (text: string) => void;
+  value: string;
+  onChange: (value: string) => void;
+
+  onSend: (text: string, nextAction?: string) => void;
   onUpload: (file: File) => void;
+  sending: boolean;
   disabled?: boolean;
-  sending?: boolean;
 };
 
 export default function ChatInput({

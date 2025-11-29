@@ -2,41 +2,26 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-// Layout + UI components
 import ChatLayout from "@/components/unifiedchat/ChatLayout";
 import Sidebar from "@/components/unifiedchat/Sidebar";
 import ToneSelector from "@/components/unifiedchat/ToneSelector";
+import MessageBubble from "@/components/unifiedchat/MessageBubble";
+import ChatInput from "@/components/unifiedchat/ChatInput";
 import IdentityOverlay from "@/components/unifiedchat/IdentityOverlay";
 import AttachmentPreviewModal from "@/components/unifiedchat/AttachmentPreviewModal";
-import MessageBubble from "@/components/unifiedchat/MessageBubble";
 
-// Shared chat types
-import type { Message, Attachment } from "@/types/chat";
-
-/* ------------------------------------------------------------------ */
-/*  Local helper types (modes + companion)                            */
-/* ------------------------------------------------------------------ */
+import type { Message as BaseMessage } from "@/types/chat";
+import type { SalarMode } from "@/companions/orchestrators/salar";
+import type { LyraMode } from "@/companions/orchestrators/lyra";
 
 type Companion = "salar" | "lyra";
 
-type SalarMode =
-  | "commercial_chat"
-  | "proposal_builder"
-  | "contract_advisor"
-  | "pricing_estimation"
-  | "commercial_strategist";
+type Message = BaseMessage & {
+  // allow flexible meta shape without fighting TS
+  meta?: any;
+};
 
-type LyraMode =
-  | "creative_chat"
-  | "messaging_advisor"
-  | "campaign_builder"
-  | "lead_outreach"
-  | "customer_nurture";
-
-/* ------------------------------------------------------------------ */
-/*  Constants                                                         */
-/* ------------------------------------------------------------------ */
-
+const uid = () => Math.random().toString(36).slice(2);
 const LOCAL_KEY = "kora-mvp-chat-v1";
 
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
@@ -55,19 +40,15 @@ const LYRA_MODE_LABELS: Record<LyraMode, string> = {
   customer_nurture: "Customer Nurture",
 };
 
-const uid = () => Math.random().toString(36).slice(2);
-
-/* ------------------------------------------------------------------ */
-/*  MVP PAGE                                                          */
-/* ------------------------------------------------------------------ */
-
 export default function MVP() {
   const [companion, setCompanion] = useState<Companion>("salar");
-  const [salarMode, setSalarMode] = useState<SalarMode>("commercial_chat");
-  const [lyraMode, setLyraMode] = useState<LyraMode>("creative_chat");
+  const [salarMode, setSalarMode] =
+    useState<SalarMode>("commercial_chat");
+  const [lyraMode, setLyraMode] =
+    useState<LyraMode>("creative_chat");
   const [tone, setTone] = useState<string>("calm");
 
-  const [input, setInput] = useState<string>("");
+  const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -75,7 +56,7 @@ export default function MVP() {
 
   const [showIdentity, setShowIdentity] = useState(false);
   const [previewAttachment, setPreviewAttachment] =
-    useState<Attachment | null>(null);
+    useState<any | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -87,24 +68,13 @@ export default function MVP() {
     companion === "salar" ? salarMode : lyraMode;
 
   /* ------------------------------------------------------------------ */
-  /*  Scroll to bottom on new messages                                  */
-  /* ------------------------------------------------------------------ */
-
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-  }, [messages.length]);
-
-  /* ------------------------------------------------------------------ */
-  /*  Restore + persist companion / mode / tone                         */
+  /*  Restore + persist basic UI state                                  */
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return;
-
     try {
       const parsed = JSON.parse(raw);
       if (parsed.tone) setTone(parsed.tone);
@@ -112,7 +82,7 @@ export default function MVP() {
       if (parsed.salarMode) setSalarMode(parsed.salarMode);
       if (parsed.lyraMode) setLyraMode(parsed.lyraMode);
     } catch {
-      // ignore bad local state
+      // ignore bad JSON
     }
   }, []);
 
@@ -125,7 +95,17 @@ export default function MVP() {
   }, [tone, companion, salarMode, lyraMode]);
 
   /* ------------------------------------------------------------------ */
-  /*  API helper                                                        */
+  /*  Auto-scroll on new messages                                       */
+  /* ------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [messages.length]);
+
+  /* ------------------------------------------------------------------ */
+  /*  API helper                                                         */
   /* ------------------------------------------------------------------ */
 
   async function callUnified(payload: Record<string, unknown>) {
@@ -148,7 +128,7 @@ export default function MVP() {
   }
 
   /* ------------------------------------------------------------------ */
-  /*  File upload                                                       */
+  /*  File upload                                                        */
   /* ------------------------------------------------------------------ */
 
   async function handleFileUpload(file: File) {
@@ -194,8 +174,8 @@ export default function MVP() {
           id: uid(),
           role: "assistant",
           content: data.reply || "File processed successfully.",
-          attachments: (data.attachments || []) as Attachment[],
-          
+          attachments: (data.attachments || []) as any[],
+          meta: data.meta,
           ts: Date.now(),
         } as Message,
       ]);
@@ -216,12 +196,11 @@ export default function MVP() {
   }
 
   /* ------------------------------------------------------------------ */
-  /*  Send message / trigger next actions                               */
+  /*  Send message / trigger next action                                */
   /* ------------------------------------------------------------------ */
 
   async function handleSend(nextActionTrigger?: string) {
     const trimmed = input.trim();
-
     if (!trimmed && !nextActionTrigger) {
       console.warn("🟠 Nothing to send.");
       return;
@@ -237,13 +216,17 @@ export default function MVP() {
         ? `[Triggered Action: ${nextActionTrigger}]`
         : trimmed,
       ts: Date.now(),
-    } as Message;
+    };
 
-    // Add user message + temporary system "spinner"
     setMessages((m) => [
       ...m,
       userMsg,
-      { id: uid(), role: "system", content: "…", ts: Date.now() } as Message,
+      {
+        id: uid(),
+        role: "system",
+        content: "…",
+        ts: Date.now(),
+      } as Message,
     ]);
 
     try {
@@ -267,8 +250,8 @@ export default function MVP() {
           id: uid(),
           role: "assistant",
           content: data.reply,
-          attachments: (data.attachments || []) as Attachment[],
-          
+          attachments: (data.attachments || []) as any[],
+          meta: data.meta,
           ts: Date.now(),
         } as Message,
       ]);
@@ -288,18 +271,32 @@ export default function MVP() {
     }
   }
 
+  const handleNextAction = (action: string) => {
+    void handleSend(action);
+  };
+
   /* ------------------------------------------------------------------ */
-  /*  Identity snapshot for overlay                                     */
+  /*  Identity snapshot                                                  */
   /* ------------------------------------------------------------------ */
+
+  const currentIdentityMessage = [...messages]
+    .reverse()
+    .find((m) => (m as any).meta?.identity) as Message | undefined;
 
   const currentIdentity =
-    [...messages]
-      .reverse()
-      .find((m) => (m.meta as any)?.identity)?.meta?.identity || null;
+    (currentIdentityMessage as any)?.meta?.identity || null;
 
   /* ------------------------------------------------------------------ */
-  /*  Sidebar node                                                      */
+  /*  Sidebar node                                                       */
   /* ------------------------------------------------------------------ */
+
+  const toneSelectorNode = (
+    <ToneSelector
+      companion={companion}
+      value={tone}
+      onChange={setTone}
+    />
+  );
 
   const sidebarNode = (
     <Sidebar
@@ -309,74 +306,91 @@ export default function MVP() {
       setSalarMode={setSalarMode}
       lyraMode={lyraMode}
       setLyraMode={setLyraMode}
-      toneSelector={
-        <ToneSelector
-          companion={companion}
-          value={tone}
-          onChange={setTone}
-        />
-      }
+      toneSelector={toneSelectorNode}
       onFileUpload={handleFileUpload}
     />
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Chat window node (message list)                                   */
+  /*  Chat window node                                                   */
   /* ------------------------------------------------------------------ */
 
   const chatWindowNode = (
-    <div
-      ref={listRef}
-      className="flex flex-col gap-3 min-h-[420px] bg-white"
-    >
-      {messages.length === 0 && (
-        <div className="h-full flex items-center justify-center text-xs text-gray-400">
-          Start a conversation with{" "}
-          {companion === "salar" ? "Salar" : "Lyra"}…
+    <div className="flex flex-col h-full">
+      {/* Inline header inside chat column */}
+      <div className="mb-4 flex items-center justify-between text-xs text-gray-600">
+        <div>
+          <div className="font-semibold text-amber-800 text-sm">
+            Kora Companion Studio (MVP)
+          </div>
+          <div>
+            You’re talking to{" "}
+            <span className="font-medium">
+              {companion === "salar" ? "Salar" : "Lyra"}
+            </span>{" "}
+            in{" "}
+            <span className="font-medium">
+              {companion === "salar"
+                ? SALAR_MODE_LABELS[salarMode]
+                : LYRA_MODE_LABELS[lyraMode]}
+            </span>{" "}
+            mode.
+          </div>
+          {sessionId && (
+            <div className="text-[10px] text-gray-400 mt-1">
+              Session: {sessionId} · Tone: {tone}
+            </div>
+          )}
         </div>
-      )}
 
-      {messages.map((m) => (
-        <MessageBubble
-          key={m.id}
-          message={m}
-          onOpenAttachment={(att) => setPreviewAttachment(att)}
-          onNextAction={(action) => handleSend(action)}
-        />
-      ))}
+        <button
+          type="button"
+          onClick={() => setShowIdentity(true)}
+          className="text-xs px-3 py-1 rounded-full border border-amber-300 text-amber-800 hover:bg-amber-50"
+        >
+          View Identity
+        </button>
+      </div>
+
+      {/* Scrollable messages */}
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto space-y-3"
+        id="chat-scroll-container"
+      >
+        {messages.length === 0 && (
+          <div className="h-full flex items-center justify-center text-xs text-gray-400">
+            Start a conversation with{" "}
+            {companion === "salar" ? "Salar" : "Lyra"}…
+          </div>
+        )}
+
+        {messages.map((m) => (
+          <MessageBubble
+            key={m.id}
+            // cast to any so Bubble can use its own meta/attachment types
+            message={m as any}
+            onOpenAttachment={(att: any) => setPreviewAttachment(att)}
+            onNextAction={handleNextAction}
+          />
+        ))}
+      </div>
     </div>
   );
 
   /* ------------------------------------------------------------------ */
-  /*  Chat input node                                                   */
+  /*  Chat input node                                                    */
   /* ------------------------------------------------------------------ */
 
   const chatInputNode = (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSend();
-      }}
-      className="flex gap-2"
-    >
-      <textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder={
-          companion === "salar"
-            ? "Ask Salar about pricing, contracts, proposals or strategy…"
-            : "Ask Lyra about messaging, campaigns, outreach or nurture…"
-        }
-        className="flex-1 border border-amber-200 rounded-2xl px-3 py-2 text-sm resize-none min-h-[2.5rem] focus:outline-none focus:ring-2 focus:ring-amber-400"
-      />
-      <button
-        type="submit"
-        disabled={sending}
-        className="px-5 py-2 rounded-2xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-60"
-      >
-        {sending ? "Sending…" : "Send"}
-      </button>
-    </form>
+    <ChatInput
+      value={input}
+      onChange={setInput}
+      onSend={handleSend}
+      onUpload={handleFileUpload}
+      sending={sending}
+      disabled={uploading}
+    />
   );
 
   /* ------------------------------------------------------------------ */
@@ -392,7 +406,7 @@ export default function MVP() {
       ? SALAR_MODE_LABELS[salarMode]
       : LYRA_MODE_LABELS[lyraMode]
   }
-  identity={currentIdentity || null}
+  identity={currentIdentity}
   onClose={() => setShowIdentity(false)}
 />
   ) : null;
@@ -405,58 +419,16 @@ export default function MVP() {
   ) : null;
 
   /* ------------------------------------------------------------------ */
-  /*  Render MVP                                                        */
+  /*  Render                                                             */
   /* ------------------------------------------------------------------ */
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-teal-50 py-8">
-      <div className="max-w-6xl mx-auto space-y-4">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-2 md:px-0">
-          <div>
-            <h1 className="text-2xl font-semibold text-amber-800">
-              Kora Companion Studio (MVP)
-            </h1>
-            <p className="text-xs text-gray-600 mt-1">
-              You’re talking to{" "}
-              <span className="font-medium">
-                {companion === "salar" ? "Salar" : "Lyra"}
-              </span>{" "}
-              in{" "}
-              <span className="font-medium">
-                {companion === "salar"
-                  ? SALAR_MODE_LABELS[salarMode]
-                  : LYRA_MODE_LABELS[lyraMode]}
-              </span>{" "}
-              mode.
-            </p>
-            {sessionId && (
-              <p className="text-[10px] text-gray-400 mt-1">
-                Session: {sessionId} · Tone: {tone}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowIdentity(true)}
-              className="text-xs px-3 py-1 rounded-full border border-amber-300 text-amber-800 hover:bg-amber-50"
-            >
-              View Identity
-            </button>
-          </div>
-        </header>
-
-        {/* Main Chat Layout */}
-        <ChatLayout
-          sidebar={sidebarNode}
-          chatWindow={chatWindowNode}
-          chatInput={chatInputNode}
-          identityOverlay={identityOverlayNode}
-          attachmentDrawer={attachmentDrawerNode}
-        />
-      </div>
-    </main>
+    <ChatLayout
+      sidebar={sidebarNode}
+      chatWindow={chatWindowNode}
+      chatInput={chatInputNode}
+      identityOverlay={identityOverlayNode}
+      attachmentDrawer={attachmentDrawerNode}
+    />
   );
 }
