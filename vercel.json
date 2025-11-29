@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/unified.ts": {
-      "maxRequestBodySize": "20mb"
-    }
-  }
-}
