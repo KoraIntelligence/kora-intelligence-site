@@ -1,4 +1,15 @@
 // src/pages/api/unified.ts
+
+// Increase upload limit for this API route only.
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb", // you can safely use up to "4mb" or "5mb" on Vercel Hobby
+    },
+  },
+};
+
+
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { runSalar, SalarMode, SalarOrchestratorInput } from "@/companions/orchestrators/salar";
