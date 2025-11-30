@@ -194,79 +194,88 @@ export default function MVP() {
   /* Send message / trigger next action                                 */
   /* ------------------------------------------------------------------ */
 
-  async function handleSend(payload: { text?: string; action?: string }) {
-    const { text, action } = payload;
-    const trimmed = text?.trim();
+async function handleSend(payload: { text?: string; action?: string }) {
+  const { text, action } = payload;
+  const trimmed = text?.trim();
 
-    if (!trimmed && !action) {
-      console.warn("🟠 Nothing to send.");
-      return;
-    }
+  if (!trimmed && !action) {
+    console.warn("🟠 Nothing to send.");
+    return;
+  }
 
-    setSending(true);
-    setInput("");
+  setSending(true);
+  setInput("");
 
-    const userMsg: Message = {
+  // ---- USER MESSAGE ------------------------------------------------
+  const userMsg: Message = {
+    id: uid(),
+    role: "user",
+    content: action ? `[Triggered Action: ${action}]` : trimmed!,
+    ts: Date.now(),
+  };
+
+  setMessages((m) => [
+    ...m,
+    userMsg,
+    {
       id: uid(),
-      role: "user",
-      content: action ? `[Triggered Action: ${action}]` : trimmed!,
+      role: "system",
+      content: "…",
+      ts: Date.now(),
+    } as Message,
+  ]);
+
+  try {
+    const apiPayload: Record<string, unknown> = {
+      companion,
+      mode: activeMode,
+      tone,
+      input: trimmed || null,
+      nextAction: action || null,
+    };
+
+    const data = await callUnified(apiPayload);
+    if (data.sessionId) setSessionId(data.sessionId);
+
+    // ---- ASSISTANT MESSAGE WITH WORKFLOW META -----------------------
+    const assistantMsg: Message = {
+      id: uid(),
+      role: "assistant",
+      content: data.reply,
+      attachments: data.attachments || [],
+      meta: {
+        ...data.meta,
+        // Ensure guaranteed properties for UI:
+        nextActions: data.meta?.nextActions || [],
+        workflow: data.meta?.workflow || null,
+      },
       ts: Date.now(),
     };
 
     setMessages((m) => [
-      ...m,
-      userMsg,
+      ...m.filter((msg) => msg.role !== "system"),
+      assistantMsg,
+    ]);
+  } catch (err) {
+    console.error("❌ Chat error:", err);
+
+    setMessages((m) => [
+      ...m.filter((msg) => msg.role !== "system"),
       {
         id: uid(),
-        role: "system",
-        content: "…",
+        role: "assistant",
+        content: "⚠️ Companion connection lost. Try again.",
         ts: Date.now(),
       } as Message,
     ]);
-
-    try {
-      const apiPayload: Record<string, unknown> = {
-        companion,
-        mode: activeMode,
-        tone,
-        input: trimmed || null,
-        nextAction: action || null,
-      };
-
-      const data = await callUnified(apiPayload);
-      if (data.sessionId) setSessionId(data.sessionId);
-
-      setMessages((m) => [
-        ...m.filter((msg) => msg.role !== "system"),
-        {
-          id: uid(),
-          role: "assistant",
-          content: data.reply,
-          attachments: (data.attachments || []) as any[],
-          meta: data.meta,
-          ts: Date.now(),
-        } as Message,
-      ]);
-    } catch (err) {
-      console.error("❌ Chat error:", err);
-
-      setMessages((m) => [
-        ...m.filter((msg) => msg.role !== "system"),
-        {
-          id: uid(),
-          role: "assistant",
-          content: "⚠️ Companion connection lost. Try again.",
-          ts: Date.now(),
-        } as Message,
-      ]);
-    } finally {
-      setSending(false);
-    }
+  } finally {
+    setSending(false);
   }
+}
 
   const handleNextAction = (action: string) => {
-    handleSend({ action });
-  };
+  handleSend({ action, text: "" });
+};
 
   /* ------------------------------------------------------------------ */
   /* Identity snapshot                                                  */
@@ -354,11 +363,11 @@ export default function MVP() {
 
         {messages.map((m) => (
           <MessageBubble
-            key={m.id}
-            message={m as any}
-            onOpenAttachment={(att: any) => setPreviewAttachment(att)}
-            onNextAction={handleNextAction}
-          />
+  key={m.id}
+  message={m}
+  onOpenAttachment={setPreviewAttachment}
+  onNextAction={handleNextAction}
+/>
         ))}
       </div>
     </div>

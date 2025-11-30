@@ -6,6 +6,8 @@
 
 import OpenAI from "openai";
 
+import { getWorkflow } from "../workflows";
+
 // Prompt Packs
 import { SALAR_COMMERCIAL_CHAT_PROMPTS } from "../prompts/salar/commercial_chat";
 import { SALAR_PROPOSAL_PROMPTS } from "../prompts/salar/proposal";
@@ -317,7 +319,29 @@ Requested Tone: ${tone}
     toneBase: toneText || "Warm professionalism, calm confidence",
   };
 
-  // ----- 6) Return canonical response -----
+  // ----- 6) Attach workflow metadata (if workflow defined) -----
+  const workflow = getWorkflow("salar", mode);
+  let workflowMeta: any = undefined;
+
+  if (workflow) {
+    const stageIdFromAction =
+      (nextAction && workflow.nextActionToStage[nextAction]) ||
+      workflow.initialStageId;
+
+    const stage = workflow.stages[stageIdFromAction];
+
+    if (stage) {
+      workflowMeta = {
+        stageId: stage.id,
+        stageLabel: stage.label,
+        stageDescription: stage.description,
+        nextStageIds: stage.nextStageIds,
+        isTerminal: !!stage.isTerminal,
+      };
+    }
+  }
+
+  // ----- 7) Return canonical response -----
   return {
     reply: outputText,
     attachments,
@@ -330,6 +354,7 @@ Requested Tone: ${tone}
       memory: {
         shortTerm: [],
       },
+      workflow: workflowMeta,
     },
   };
 }

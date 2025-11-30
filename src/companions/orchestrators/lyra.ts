@@ -4,6 +4,7 @@
 // Modes: creative_chat | messaging | campaign | outreach | nurture
 // =====================================================================
 
+import { getWorkflow } from "../workflows";
 import { loadIdentity } from "../identity/loader";
 import OpenAI from "openai";
 
@@ -308,6 +309,28 @@ Tone: ${tone}
     toneBase: toneText,
   };
 
+  // ----- Attach workflow metadata (if workflow defined) -----
+  const workflow = getWorkflow("lyra", mode);
+  let workflowMeta: any = undefined;
+
+  if (workflow) {
+    const stageIdFromAction =
+      (nextAction && workflow.nextActionToStage[nextAction]) ||
+      workflow.initialStageId;
+
+    const stage = workflow.stages[stageIdFromAction];
+
+    if (stage) {
+      workflowMeta = {
+        stageId: stage.id,
+        stageLabel: stage.label,
+        stageDescription: stage.description,
+        nextStageIds: stage.nextStageIds,
+        isTerminal: !!stage.isTerminal,
+      };
+    }
+  }
+
   // ----- Return canonical payload -----
   return {
     reply: outputText,
@@ -321,6 +344,7 @@ Tone: ${tone}
       memory: {
         shortTerm: [],
       },
+      workflow: workflowMeta,
     },
   };
 }
