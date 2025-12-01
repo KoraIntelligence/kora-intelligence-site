@@ -43,6 +43,11 @@ export interface SalarOrchestratorInput {
   extractedText: string;
   tone: string;
   nextAction?: string;
+  conversationHistory?: {
+    role: "user" | "assistant" | "system";
+    content: string;
+    meta?: any;
+  }[];
 }
 
 // Each prompt file must conform to:
@@ -216,7 +221,7 @@ function resolvePrompt(
 // ======================================================
 
 export async function runSalar(input: SalarOrchestratorInput) {
-  const { mode, input: userInput, extractedText, tone, nextAction } = input;
+  const { mode, input: userInput, extractedText, tone, nextAction, conversationHistory } = input;
   const pack = PACKS[mode];
 
   if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
@@ -257,13 +262,29 @@ ${identity.codex ?? ""}
 `;
 
   // ----- 2) Resolve mode-specific prompt -----
-  const prompt = resolvePrompt(pack, nextAction);
+  const prompt = resolvePrompt(pack, nextAction || undefined);
+
+    const historyBlock =
+    conversationHistory && conversationHistory.length
+      ? `
+Previous conversation (latest last):
+${conversationHistory
+  .slice(-8)
+  .map(
+    (turn) =>
+      `${turn.role.toUpperCase()}: ${turn.content}`
+  )
+  .join("\n\n")}
+`
+      : "";
 
   // ----- 3) Build final prompt -----
   const fullPrompt = `
 ${identityPrompt}
 
 ${prompt}
+
+${historyBlock}
 
 User Input:
 """

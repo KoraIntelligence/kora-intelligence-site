@@ -4,7 +4,7 @@
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "10mb", // you can safely use up to "4mb" or "5mb" on Vercel Hobby
+      sizeLimit: "10mb",
     },
   },
 };
@@ -13,17 +13,25 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import {
   runSalar,
-  SalarMode,
+  type SalarMode,
   type SalarOrchestratorInput,
 } from "@/companions/orchestrators/salar";
 import {
   runLyra,
-  LyraMode,
+  type LyraMode,
   type LyraOrchestratorInput,
 } from "@/companions/orchestrators/lyra";
 
 import { parseUploadedFile } from "@/pages/api/session/utils/parseFiles";
 import { loadIdentity } from "@/companions/identity/loader";
+
+import {
+  getOrCreateUserProfile,
+  createSession,
+  getMessages,
+  saveMessage,
+  saveTone,
+} from "@/lib/memory";
 
 // -----------------------------
 // Types for this API
@@ -33,18 +41,30 @@ type CompanionSlug = "salar" | "lyra";
 
 interface UnifiedRequestBody {
   companion?: CompanionSlug;
-  mode: string; // we'll narrow per companion
+  mode: string; // narrowed per companion
   tone?: string;
-  input?: string;
-  nextAction?: string;
+  input?: string | null;
+  nextAction?: string | null;
   filePayload?: any; // { name, type, contentBase64 } – from frontend
+
+  // NEW: memory fields
+  userId?: string | null;
+  sessionId?: string | null;
 }
 
 // Shape of orchestrator result
 interface OrchestratorResult {
-  reply: string;
+  reply?: string;
+  outputText?: string;
   attachments?: any[];
   meta?: Record<string, any>;
+}
+
+// For passing memory into orchestrators
+export interface ConversationTurn {
+  role: "user" | "assistant" | "system";
+  content: string;
+  meta?: any;
 }
 
 // -----------------------------
@@ -54,7 +74,7 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
   if (typeof req.body === "string") {
     try {
       return JSON.parse(req.body);
-    } catch (err) {
+    } catch {
       throw new Error("Invalid JSON body.");
     }
   }
@@ -62,29 +82,63 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
 }
 
 // -----------------------------
-// API Handler
+// GET = fetch history
+// POST = send message / nextAction
 // -----------------------------
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method === "GET") {
+    // -------------------------------------------------------
+    // GET /api/unified?sessionId=...
+    // → return previous messages for this session
+    // -------------------------------------------------------
+    const sessionId = req.query.sessionId;
+    if (!sessionId || typeof sessionId !== "string") {
+      return res.status(400).json({ error: "Missing or invalid sessionId" });
+    }
+
+    const rows = await getMessages(sessionId);
+
+    const messages = rows.map((row: any) => ({
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      ts: new Date(row.created_at).getTime(),
+      // meta was stored inside attachments._meta
+      meta: row.attachments?._meta || undefined,
+      // ignore historical attachments for now – we still show
+      // fresh ones coming back from orchestrators
+    }));
+
+    return res.status(200).json({ messages });
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
     const body = parseBody(req);
-    const {
+    let {
       companion = "salar",
       mode,
       tone = "calm",
       input = "",
-      nextAction,
+      nextAction = null,
       filePayload,
+      userId = null,
+      sessionId = null,
     } = body;
 
     if (!mode) {
       return res.status(400).json({ error: "Missing mode in request." });
+    }
+
+    // Fallback guest id if frontend didn't send one (should be rare)
+    if (!userId) {
+      userId = "guest-" + (req.headers["x-guest"] || "anon");
     }
 
     // -----------------------------
@@ -103,7 +157,56 @@ export default async function handler(
     }
 
     // -----------------------------
-    // 2) Load identity (for fallback identity meta)
+    // 2) Ensure user profile exists
+    // -----------------------------
+    await getOrCreateUserProfile(userId);
+
+    // -----------------------------
+    // 3) Ensure session exists
+    // -----------------------------
+    if (!sessionId) {
+      const newSession = await createSession(userId, companion, "general");
+      sessionId = newSession.id;
+    }
+
+    // -------------------------------------------------------
+// 4) Load conversation history (only if sessionId exists)
+// -------------------------------------------------------
+if (!sessionId) {
+  return res.status(500).json({
+    error: "Session ID missing before loading conversation history.",
+  });
+}
+
+const rawHistory = await getMessages(sessionId);
+
+const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
+  role: m.role,
+  content: m.content,
+  meta: m.attachments?._meta || null,
+}));
+
+    // -----------------------------
+    // 5) Save USER message first
+    // -----------------------------
+    const trimmedInput = input ? input.trim() : "";
+
+    if (trimmedInput || nextAction) {
+      const userContent =
+        trimmedInput ||
+        (nextAction ? `[Triggered Action: ${nextAction}]` : "");
+
+      await saveMessage(sessionId, "user", userContent, {
+        meta: {
+          nextAction: nextAction || undefined,
+          mode,
+          companion,
+        },
+      });
+    }
+
+    // -----------------------------
+    // 6) Load identity (for meta)
     // -----------------------------
     const rawIdentity: any = loadIdentity(companion, mode);
 
@@ -113,66 +216,86 @@ export default async function handler(
         : rawIdentity?.tone?.base;
 
     // -----------------------------
-    // 3) Call the correct orchestrator
+    // 7) Call the correct orchestrator
     // -----------------------------
-    let result: OrchestratorResult;
+    let orchestratorResult: OrchestratorResult;
 
     if (companion === "salar") {
-      const salarInput: SalarOrchestratorInput = {
+      const salarInput: SalarOrchestratorInput & {
+        conversationHistory?: ConversationTurn[];
+      } = {
         mode: mode as SalarMode,
-        input,
+        input: trimmedInput,
         extractedText,
         tone,
-        nextAction,
+        nextAction: nextAction || undefined,
+        conversationHistory,
       };
 
-      result = await runSalar(salarInput);
+      orchestratorResult = await runSalar(salarInput);
     } else {
-      const lyraInput: LyraOrchestratorInput = {
+      const lyraInput: LyraOrchestratorInput & {
+        conversationHistory?: ConversationTurn[];
+      } = {
         mode: mode as LyraMode,
-        input,
+        input: trimmedInput,
         extractedText,
         tone,
-        nextAction,
+        nextAction: nextAction || undefined,
+        conversationHistory,
       };
 
-      result = await runLyra(lyraInput);
+      orchestratorResult = await runLyra(lyraInput);
     }
 
-    const reply = result.reply || "No response generated.";
-    const attachments = result.attachments || [];
+    // -------------------------------------------------------
+    // 8) Extract orchestrator output
+    // -------------------------------------------------------
+    const reply =
+      orchestratorResult.outputText ||
+      orchestratorResult.reply ||
+      "No response generated.";
 
-    // -----------------------------
-    // 4) Unify meta + inject fallback identity
-    // -----------------------------
-    const metaFromOrchestrator = result.meta || {};
+    const attachments: any[] = orchestratorResult.attachments || [];
+
+    const metaFromOrchestrator = orchestratorResult.meta || {};
 
     const meta = {
       ...metaFromOrchestrator,
-      companion: metaFromOrchestrator.companion ?? companion, // "salar" | "lyra"
-      mode: metaFromOrchestrator.mode ?? mode,
-      tone: metaFromOrchestrator.tone ?? tone,
-      identity:
-        metaFromOrchestrator.identity ??
-        {
-          persona: rawIdentity?.persona,
-          toneBase: toneBaseFromIdentity,
-          mode,
-        },
-      // ensure memory at least exists as a placeholder
-      memory: metaFromOrchestrator.memory ?? {
-        shortTerm: [],
+      companion,
+      mode,
+      tone,
+      identity: metaFromOrchestrator.identity ?? {
+        persona: rawIdentity?.persona,
+        toneBase: toneBaseFromIdentity,
+        mode,
+      },
+      memory: {
+        shortTerm: conversationHistory.slice(-8),
       },
     };
 
+    // -------------------------------------------------------
+    // 9) Save assistant message
+    // -------------------------------------------------------
+    await saveMessage(sessionId, "assistant", reply, {
+      attachments,
+      meta,
+    });
+
+    // -------------------------------------------------------
+    // 10) Save tone history (optional but nice)
+    // -------------------------------------------------------
+    await saveTone(userId, companion, tone || "calm", "post-response update");
+
     // -----------------------------
-    // 5) Return response
+    // 11) Return response
     // -----------------------------
     return res.status(200).json({
       reply,
       attachments,
       meta,
-      sessionId: null, // reserved for future Supabase sessions
+      sessionId,
     });
   } catch (err: any) {
     console.error("❌ /api/unified error:", err?.message || err);

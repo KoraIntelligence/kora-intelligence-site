@@ -22,6 +22,8 @@ type Message = BaseMessage & {
 
 const uid = () => Math.random().toString(36).slice(2);
 const LOCAL_KEY = "kora-mvp-chat-v1";
+const USER_ID_KEY = "kora-user-id";
+const SESSION_KEY_PREFIX = "kora-session";
 
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
   commercial_chat: "Commercial Chat",
@@ -49,7 +51,13 @@ export default function MVP() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<Record<Companion, string | null>>({
+    salar: null,
+    lyra: null,
+  });
+
+  const activeSessionId = sessionId[companion];
 
   const [showIdentity, setShowIdentity] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
@@ -62,6 +70,57 @@ export default function MVP() {
 
   const activeMode: SalarMode | LyraMode =
     companion === "salar" ? salarMode : lyraMode;
+
+  // Restore or create a stable userId
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let stored = localStorage.getItem(USER_ID_KEY);
+    if (!stored) {
+      if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+        stored = crypto.randomUUID();
+      } else {
+        stored = uid();
+      }
+      localStorage.setItem(USER_ID_KEY, stored);
+    }
+    setUserId(stored);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = `${SESSION_KEY_PREFIX}_${companion}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      setSessionId((prev) => ({ ...prev, [companion]: stored }));
+    }
+  }, [companion]);
+
+    // Load previous messages from Supabase when we have a session
+  useEffect(() => {
+    if (!activeSessionId) return;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/unified?sessionId=${activeSessionId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (Array.isArray(data.messages)) {
+          setMessages(
+            data.messages.map((m: any) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              ts: m.ts,
+              meta: m.meta,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("⚠️ Failed to load history:", err);
+      }
+    })();
+  }, [activeSessionId, companion]);
 
   /* ------------------------------------------------------------------ */
   /* Restore + persist basic UI state                                   */
@@ -102,10 +161,19 @@ export default function MVP() {
   /* Unified API helper                                                 */
   /* ------------------------------------------------------------------ */
 
-  async function callUnified(payload: Record<string, unknown>) {
+  async function callUnified(extraPayload: Record<string, unknown>) {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(isGuest ? { "x-guest": "true" } : {}),
+    };
+
+    const payload = {
+      companion,
+      mode: activeMode,
+      tone,
+      userId,
+      sessionId: activeSessionId,
+      ...extraPayload,
     };
 
     const res = await fetch("/api/unified", {
@@ -118,6 +186,19 @@ export default function MVP() {
     if (!res.ok) {
       throw new Error(data.error || "Unified API request failed");
     }
+
+    // If backend created / returned a sessionId, persist it
+    if (data.sessionId && typeof window !== "undefined") {
+      setSessionId((prev) => ({
+        ...prev,
+        [companion]: data.sessionId as string,
+      }));
+      localStorage.setItem(
+        `${SESSION_KEY_PREFIX}_${companion}`,
+        data.sessionId as string
+      );
+    }
+
     return data;
   }
 
@@ -159,7 +240,15 @@ export default function MVP() {
         },
       };
 
-      const data = await callUnified(payload);
+      const data = await callUnified({
+        filePayload: {
+          name: file.name,
+          type: file.type,
+          contentBase64,
+        },
+        input: null,
+        nextAction: null,
+      });
       if (data.sessionId) setSessionId(data.sessionId);
 
       setMessages((m) => [
@@ -230,7 +319,7 @@ async function handleSend(payload: { text?: string; action?: string }) {
       companion,
       mode: activeMode,
       tone,
-      input: trimmed || null,
+      input: trimmed || "",
       nextAction: action || null,
     };
 
@@ -333,9 +422,9 @@ async function handleSend(payload: { text?: string; action?: string }) {
             </span>{" "}
             mode.
           </div>
-          {sessionId && (
+          {activeSessionId && (
             <div className="text-[10px] text-gray-400 mt-1">
-              Session: {sessionId} · Tone: {tone}
+              Session: {activeSessionId} · Tone: {tone}
             </div>
           )}
         </div>

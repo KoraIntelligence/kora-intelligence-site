@@ -39,6 +39,11 @@ export interface LyraOrchestratorInput {
   extractedText: string;
   tone: string;
   nextAction?: string;
+  conversationHistory?: {
+    role: "user" | "assistant" | "system";
+    content: string;
+    meta?: any;
+  }[];
 }
 
 // Shape that each Lyra prompt pack follows
@@ -227,7 +232,7 @@ function resolvePrompt(
 // =====================================================================
 
 export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
-  const { mode, input, extractedText, tone, nextAction } = orchestratorInput;
+  const { mode, input, extractedText, tone, nextAction, conversationHistory } = orchestratorInput;
 
   const pack = PACKS[mode];
   if (!pack) {
@@ -243,7 +248,21 @@ export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
       : identity.tone?.base) || "warm, clear, brand-conscious";
 
   // ----- Prompt resolution -----
-  const promptBlock = resolvePrompt(pack, mode, nextAction);
+  const promptBlock = resolvePrompt(pack, mode, nextAction || undefined);
+
+    const historyBlock =
+    conversationHistory && conversationHistory.length
+      ? `
+Previous conversation (latest last):
+${conversationHistory
+  .slice(-8)
+  .map(
+    (turn) =>
+      `${turn.role.toUpperCase()}: ${turn.content}`
+  )
+  .join("\n\n")}
+`
+      : "";
 
   // ----- Build final prompt -----
   const fullPrompt = `
@@ -252,6 +271,8 @@ ${promptBlock}
 You are operating as **Lyra** in mode: **${mode}**.
 Persona: ${identity.persona || "Creative Partner"}
 Base Tone: ${toneText}
+
+${historyBlock}
 
 User Input:
 """
