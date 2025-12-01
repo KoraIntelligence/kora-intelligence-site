@@ -18,6 +18,7 @@ type Companion = "salar" | "lyra";
 
 type Message = BaseMessage & {
   meta?: any;
+  attachments?: any[];
 };
 
 const uid = () => Math.random().toString(36).slice(2);
@@ -53,10 +54,8 @@ export default function MVP() {
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Stable user id (guest or auth user)
+  // --------- MEMORY-SAFE IDs ----------
   const [userId, setUserId] = useState<string | null>(null);
-
-  // One session id per companion
   const [sessionIds, setSessionIds] = useState<Record<Companion, string | null>>({
     salar: null,
     lyra: null,
@@ -64,9 +63,9 @@ export default function MVP() {
 
   const activeSessionId = sessionIds[companion];
 
+  // UI stuff
   const [showIdentity, setShowIdentity] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
-
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const isGuest =
@@ -76,52 +75,50 @@ export default function MVP() {
   const activeMode: SalarMode | LyraMode =
     companion === "salar" ? salarMode : lyraMode;
 
-  /* ------------------------------------------------------------------ */
-  /* Bootstrap: userId + UI state + per-companion session ids           */
-  /* ------------------------------------------------------------------ */
-
-  // Restore or create a stable userId
+  /* --------------------------------------------------------- */
+  /* USER ID INITIALISATION                                    */
+  /* --------------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     let stored = localStorage.getItem(USER_ID_KEY);
     if (!stored) {
-      if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-        stored = crypto.randomUUID();
-      } else {
-        stored = uid();
-      }
+      stored = crypto?.randomUUID?.() ?? uid();
       localStorage.setItem(USER_ID_KEY, stored);
     }
     setUserId(stored);
   }, []);
 
-  // Restore basic UI state (tone, companion, modes)
+  /* --------------------------------------------------------- */
+  /* RESTORE UI STATE                                           */
+  /* --------------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return;
+
     try {
       const parsed = JSON.parse(raw);
       if (parsed.tone) setTone(parsed.tone);
       if (parsed.companion) setCompanion(parsed.companion);
       if (parsed.salarMode) setSalarMode(parsed.salarMode);
       if (parsed.lyraMode) setLyraMode(parsed.lyraMode);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
 
-  // Persist basic UI state
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(
-      LOCAL_KEY,
-      JSON.stringify({ tone, companion, salarMode, lyraMode })
-    );
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        LOCAL_KEY,
+        JSON.stringify({ tone, companion, salarMode, lyraMode })
+      );
+    }
   }, [tone, companion, salarMode, lyraMode]);
 
-  // Restore per-companion session id when the active companion changes
+  /* --------------------------------------------------------- */
+  /* RESTORE PER-COMPANION SESSION                             */
+  /* --------------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const key = `${SESSION_KEY_PREFIX}_${companion}`;
@@ -131,11 +128,9 @@ export default function MVP() {
     }
   }, [companion]);
 
-  /* ------------------------------------------------------------------ */
-  /* (Optional) Load history for an existing session                    */
-  /* ------------------------------------------------------------------ */
-  // NOTE: This assumes the backend GET /api/unified?sessionId=... returns
-  // { messages: [{ id, role, content, ts, meta }] }. We'll wire that in unified.ts.
+  /* --------------------------------------------------------- */
+  /* LOAD HISTORY FROM BACKEND                                 */
+  /* --------------------------------------------------------- */
   useEffect(() => {
     if (!activeSessionId) return;
 
@@ -163,20 +158,18 @@ export default function MVP() {
     })();
   }, [activeSessionId, companion]);
 
-  /* ------------------------------------------------------------------ */
-  /* Auto-scroll on new messages                                       */
-  /* ------------------------------------------------------------------ */
-
+  /* --------------------------------------------------------- */
+  /* AUTO-SCROLL                                               */
+  /* --------------------------------------------------------- */
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages.length]);
 
-  /* ------------------------------------------------------------------ */
-  /* Unified API helper                                                 */
-  /* ------------------------------------------------------------------ */
-
+  /* --------------------------------------------------------- */
+  /* UNIFIED API CALL                                           */
+  /* --------------------------------------------------------- */
   async function callUnified(extraPayload: Record<string, unknown>) {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -187,8 +180,8 @@ export default function MVP() {
       companion,
       mode: activeMode,
       tone,
-      userId,
-      sessionId: activeSessionId,
+      userId,             // 🔥 ensures memory links messages → user
+      sessionId: activeSessionId,  // 🔥 ensures backend loads correct session
       ...extraPayload,
     };
 
@@ -199,31 +192,27 @@ export default function MVP() {
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Unified API request failed");
-    }
+    if (!res.ok) throw new Error(data.error || "Unified API request failed");
 
-    // If backend created / returned a sessionId, persist it per companion
+    // If backend returns a sessionId, store it
     if (data.sessionId && typeof data.sessionId === "string") {
       setSessionIds((prev) => ({
         ...prev,
-        [companion]: data.sessionId as string,
+        [companion]: data.sessionId!,
       }));
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          `${SESSION_KEY_PREFIX}_${companion}`,
-          data.sessionId as string
-        );
-      }
+
+      localStorage.setItem(
+        `${SESSION_KEY_PREFIX}_${companion}`,
+        data.sessionId!
+      );
     }
 
     return data;
   }
 
-  /* ------------------------------------------------------------------ */
-  /* File upload                                                        */
-  /* ------------------------------------------------------------------ */
-
+  /* --------------------------------------------------------- */
+  /* FILE UPLOAD                                               */
+  /* --------------------------------------------------------- */
   async function handleFileUpload(file: File) {
     if (!file || uploading) return;
     setUploading(true);
@@ -231,27 +220,18 @@ export default function MVP() {
     const tempId = uid();
     setMessages((m) => [
       ...m,
-      {
-        id: tempId,
-        role: "system",
-        content: `Uploading "${file.name}"…`,
-        ts: Date.now(),
-      } as Message,
+      { id: tempId, role: "system", content: `Uploading "${file.name}"…`, ts: Date.now() },
     ]);
 
     try {
       const arrayBuf = await file.arrayBuffer();
-      const contentBase64 = btoa(
-        Array.from(new Uint8Array(arrayBuf))
-          .map((b) => String.fromCharCode(b))
-          .join("")
-      );
+      const base64 = btoa(String.fromCharCode(...Array.from(new Uint8Array(arrayBuf))));
 
       const data = await callUnified({
         filePayload: {
           name: file.name,
           type: file.type,
-          contentBase64,
+          contentBase64: base64,
         },
         input: null,
         nextAction: null,
@@ -262,45 +242,32 @@ export default function MVP() {
         {
           id: uid(),
           role: "assistant",
-          content: data.reply || "File processed successfully.",
-          attachments: (data.attachments || []) as any[],
+          content: data.reply,
+          attachments: data.attachments || [],
           meta: data.meta,
           ts: Date.now(),
-        } as Message,
+        },
       ]);
     } catch (err) {
-      console.error("❌ Upload error:", err);
-
-      setMessages((m) => [
-        ...m.filter((msg) => msg.id !== tempId),
-        {
-          id: uid(),
-          role: "assistant",
-          content: "💥 File parsing failed. Try a different file.",
-          ts: Date.now(),
-        } as Message,
-      ]);
-    } finally {
-      setUploading(false);
+      console.error(err);
     }
+
+    setUploading(false);
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Send message / trigger next action                                 */
-  /* ------------------------------------------------------------------ */
-
+  /* --------------------------------------------------------- */
+  /* SEND MESSAGE / NEXT ACTION                                */
+  /* --------------------------------------------------------- */
   async function handleSend(payload: { text?: string; action?: string }) {
     const { text, action } = payload;
     const trimmed = text?.trim();
 
-    if (!trimmed && !action) {
-      console.warn("🟠 Nothing to send.");
-      return;
-    }
+    if (!trimmed && !action) return;
 
     setSending(true);
     setInput("");
 
+    // USER message
     const userMsg: Message = {
       id: uid(),
       role: "user",
@@ -311,12 +278,7 @@ export default function MVP() {
     setMessages((m) => [
       ...m,
       userMsg,
-      {
-        id: uid(),
-        role: "system",
-        content: "…",
-        ts: Date.now(),
-      } as Message,
+      { id: uid(), role: "system", content: "…", ts: Date.now() },
     ]);
 
     try {
@@ -352,32 +314,28 @@ export default function MVP() {
           role: "assistant",
           content: "⚠️ Companion connection lost. Try again.",
           ts: Date.now(),
-        } as Message,
+        },
       ]);
-    } finally {
-      setSending(false);
     }
+
+    setSending(false);
   }
 
-  const handleNextAction = (action: string) => {
+  const handleNextAction = (action: string) =>
     handleSend({ action, text: "" });
-  };
 
-  /* ------------------------------------------------------------------ */
-  /* Identity snapshot                                                  */
-  /* ------------------------------------------------------------------ */
-
-  const currentIdentityMessage = [...messages]
+  /* --------------------------------------------------------- */
+  /* IDENTITY SNAPSHOT                                         */
+  /* --------------------------------------------------------- */
+  const currentIdentityMsg = [...messages]
     .reverse()
-    .find((m) => (m as any).meta?.identity) as Message | undefined;
+    .find((m) => m.meta?.identity);
 
-  const currentIdentity =
-    (currentIdentityMessage as any)?.meta?.identity || null;
+  const currentIdentity = currentIdentityMsg?.meta?.identity || null;
 
-  /* ------------------------------------------------------------------ */
-  /* Sidebar node                                                       */
-  /* ------------------------------------------------------------------ */
-
+  /* --------------------------------------------------------- */
+  /* UI COMPONENT NODES                                        */
+  /* --------------------------------------------------------- */
   const toneSelectorNode = (
     <ToneSelector companion={companion} value={tone} onChange={setTone} />
   );
@@ -395,10 +353,6 @@ export default function MVP() {
     />
   );
 
-  /* ------------------------------------------------------------------ */
-  /* Chat window node                                                   */
-  /* ------------------------------------------------------------------ */
-
   const chatWindowNode = (
     <div className="flex flex-col h-full">
       <div className="mb-4 flex items-center justify-between text-xs text-gray-600">
@@ -408,9 +362,7 @@ export default function MVP() {
           </div>
           <div>
             You’re talking to{" "}
-            <span className="font-medium">
-              {companion === "salar" ? "Salar" : "Lyra"}
-            </span>{" "}
+            <span className="font-medium">{companion === "salar" ? "Salar" : "Lyra"}</span>{" "}
             in{" "}
             <span className="font-medium">
               {companion === "salar"
@@ -419,6 +371,7 @@ export default function MVP() {
             </span>{" "}
             mode.
           </div>
+
           {activeSessionId && (
             <div className="text-[10px] text-gray-400 mt-1">
               Session: {activeSessionId} · Tone: {tone}
@@ -427,7 +380,6 @@ export default function MVP() {
         </div>
 
         <button
-          type="button"
           onClick={() => setShowIdentity(true)}
           className="text-xs px-3 py-1 rounded-full border border-amber-300 text-amber-800 hover:bg-amber-50"
         >
@@ -435,11 +387,7 @@ export default function MVP() {
         </button>
       </div>
 
-      <div
-        ref={listRef}
-        className="flex-1 overflow-y-auto space-y-3"
-        id="chat-scroll-container"
-      >
+      <div ref={listRef} className="flex-1 overflow-y-auto space-y-3">
         {messages.length === 0 && (
           <div className="h-full flex items-center justify-center text-xs text-gray-400">
             Start a conversation with{" "}
@@ -459,10 +407,6 @@ export default function MVP() {
     </div>
   );
 
-  /* ------------------------------------------------------------------ */
-  /* Chat input node                                                    */
-  /* ------------------------------------------------------------------ */
-
   const chatInputNode = (
     <ChatInput
       value={input}
@@ -473,10 +417,6 @@ export default function MVP() {
       disabled={uploading}
     />
   );
-
-  /* ------------------------------------------------------------------ */
-  /* Identity overlay + attachment preview                              */
-  /* ------------------------------------------------------------------ */
 
   const identityOverlayNode = showIdentity ? (
     <IdentityOverlay
@@ -499,10 +439,9 @@ export default function MVP() {
     />
   ) : null;
 
-  /* ------------------------------------------------------------------ */
-  /* Render                                                             */
-  /* ------------------------------------------------------------------ */
-
+  /* --------------------------------------------------------- */
+  /* RENDER                                                    */
+  /* --------------------------------------------------------- */
   return (
     <ChatLayout
       sidebar={sidebarNode}

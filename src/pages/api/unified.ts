@@ -1,8 +1,5 @@
 // src/pages/api/unified.ts
 
-// -----------------------------
-// Upload size
-// -----------------------------
 export const config = {
   api: {
     bodyParser: {
@@ -36,10 +33,6 @@ import {
   saveTone,
 } from "@/lib/memory";
 
-// -----------------------------
-// Types
-// -----------------------------
-
 type CompanionSlug = "salar" | "lyra";
 
 interface UnifiedRequestBody {
@@ -49,8 +42,6 @@ interface UnifiedRequestBody {
   input?: string | null;
   nextAction?: string | null;
   filePayload?: any;
-
-  // memory + identity
   userId?: string | null;
   sessionId?: string | null;
 }
@@ -68,9 +59,6 @@ export interface ConversationTurn {
   meta?: any;
 }
 
-// -----------------------------
-// Helper
-// -----------------------------
 function parseBody(req: NextApiRequest): UnifiedRequestBody {
   if (typeof req.body === "string") {
     return JSON.parse(req.body);
@@ -78,16 +66,10 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
   return req.body as UnifiedRequestBody;
 }
 
-// ===================================================================
-// MAIN HANDLER
-// ===================================================================
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // ===============================================================
-  // GET → return conversation history for a given sessionId
-  // ===============================================================
   if (req.method === "GET") {
     const sessionId = req.query.sessionId;
 
@@ -103,15 +85,12 @@ export default async function handler(
         role: row.role,
         content: row.content,
         ts: new Date(row.created_at).getTime(),
-        meta: row.attachments?._meta || undefined,
-        attachments: row.attachments || {},
+        meta: row.meta || undefined, // ✅ CORRECTED: now returns root meta
+        attachments: row.attachments || [],
       })),
     });
   }
 
-  // ===============================================================
-  // POST → core logic
-  // ===============================================================
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -134,18 +113,12 @@ export default async function handler(
       return res.status(400).json({ error: "Missing mode in request." });
     }
 
-    // --------------------------------------------
-    // 1) Ensure userId exists (guest fallback)
-    // --------------------------------------------
     if (!userId) {
       userId = "guest-" + (req.headers["x-guest"] || "anon");
     }
 
     await getOrCreateUserProfile(userId);
 
-    // --------------------------------------------
-    // 2) Extract uploaded file if present
-    // --------------------------------------------
     let extractedText = "";
     if (filePayload) {
       try {
@@ -159,42 +132,22 @@ export default async function handler(
       }
     }
 
-    // --------------------------------------------
-    // 3) Ensure session exists
-    // --------------------------------------------
     let sessionId = incomingSessionId || null;
-
     if (!sessionId) {
-      const newSession = await createSession(
-        userId,
-        companion,
-        "general"
-      );
+      const newSession = await createSession(userId, companion, "general");
       sessionId = newSession.id;
     }
 
-    // --------------------------------------------
-    // 4) Load conversation history
-    // --------------------------------------------
-const rawHistory = await getMessages(sessionId as string);
+    const rawHistory = await getMessages(sessionId as string);
+    const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
+      role: m.role,
+      content: m.content,
+      meta: m.meta || null, // ✅ restored memory
+    }));
 
-    const conversationHistory: ConversationTurn[] = rawHistory.map(
-      (m: any) => ({
-        role: m.role,
-        content: m.content,
-        meta: m.attachments?._meta || null,
-      })
-    );
-
-    // --------------------------------------------
-    // 5) Save USER message
-    // --------------------------------------------
     const trimmed = input?.trim() || "";
-
     if (trimmed || nextAction) {
-      const userContent =
-        trimmed || `[Triggered Action: ${nextAction}]`;
-
+      const userContent = trimmed || `[Triggered Action: ${nextAction}]`;
       await saveMessage(sessionId as string, "user", userContent, {
         meta: {
           nextAction: nextAction || undefined,
@@ -204,19 +157,12 @@ const rawHistory = await getMessages(sessionId as string);
       });
     }
 
-    // --------------------------------------------
-    // 6) Load identity template
-    // --------------------------------------------
     const rawIdentity = loadIdentity(companion, mode);
-
     const toneBase =
       typeof rawIdentity?.tone === "string"
         ? rawIdentity.tone
         : rawIdentity?.tone?.base;
 
-    // --------------------------------------------
-    // 7) Call orchestrator
-    // --------------------------------------------
     let orchestratorResult: OrchestratorResult;
 
     if (companion === "salar") {
@@ -247,9 +193,6 @@ const rawHistory = await getMessages(sessionId as string);
       orchestratorResult = await runLyra(lyraInput);
     }
 
-    // --------------------------------------------
-    // 8) Extract orchestrator output
-    // --------------------------------------------
     const reply =
       orchestratorResult.outputText ||
       orchestratorResult.reply ||
@@ -273,17 +216,11 @@ const rawHistory = await getMessages(sessionId as string);
       },
     };
 
-    // --------------------------------------------
-    // 9) Save ASSISTANT message
-    // --------------------------------------------
     await saveMessage(sessionId as string, "assistant", reply, {
       attachments,
       meta,
     });
 
-    // --------------------------------------------
-    // 10) Store tone history
-    // --------------------------------------------
     await saveTone(
       userId as string,
       companion,
@@ -291,9 +228,6 @@ const rawHistory = await getMessages(sessionId as string);
       "post-response update"
     );
 
-    // --------------------------------------------
-    // 11) Return
-    // --------------------------------------------
     return res.status(200).json({
       reply,
       attachments,
