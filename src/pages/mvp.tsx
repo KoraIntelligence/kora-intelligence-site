@@ -172,7 +172,7 @@ export default function MVP() {
       mode: activeMode,
       tone,
       userId,
-      sessionId: activeSessionId,
+      sessionId: sessionId || null,
       ...extraPayload,
     };
 
@@ -315,13 +315,14 @@ async function handleSend(payload: { text?: string; action?: string }) {
   ]);
 
   try {
-    const apiPayload: Record<string, unknown> = {
-      companion,
-      mode: activeMode,
-      tone,
-      input: trimmed || "",
-      nextAction: action || null,
-    };
+    const apiPayload = {
+  companion,
+  mode: activeMode,
+  tone,
+  input: trimmed || null,
+  nextAction: action || null,
+  sessionId: sessionId || null,   // 🔥 NEW
+};
 
     const data = await callUnified(apiPayload);
     if (data.sessionId) setSessionId(data.sessionId);

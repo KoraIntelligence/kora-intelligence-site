@@ -94,6 +94,7 @@ export default async function handler(
     // GET /api/unified?sessionId=...
     // → return previous messages for this session
     // -------------------------------------------------------
+    const userId = "guest-user"; // later replaced by AuthPanel
     const sessionId = req.query.sessionId;
     if (!sessionId || typeof sessionId !== "string") {
       return res.status(400).json({ error: "Missing or invalid sessionId" });
@@ -129,7 +130,7 @@ export default async function handler(
       nextAction = null,
       filePayload,
       userId = null,
-      sessionId = null,
+      sessionId: incomingSessionId = null,   // 🔥 FIX
     } = body;
 
     if (!mode) {
@@ -161,13 +162,15 @@ export default async function handler(
     // -----------------------------
     await getOrCreateUserProfile(userId);
 
-    // -----------------------------
-    // 3) Ensure session exists
-    // -----------------------------
-    if (!sessionId) {
-      const newSession = await createSession(userId, companion, "general");
-      sessionId = newSession.id;
-    }
+    // -------------------------------------------------------
+// 1) Determine sessionId (reuse or create new)
+// -------------------------------------------------------
+let sessionId = incomingSessionId ?? null;
+
+if (!sessionId) {
+  const newSession = await createSession(userId, companion, "general");
+  sessionId = newSession.id;
+}
 
     // -------------------------------------------------------
 // 4) Load conversation history (only if sessionId exists)
