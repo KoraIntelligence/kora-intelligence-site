@@ -21,8 +21,9 @@ type Message = BaseMessage & {
 };
 
 const uid = () => Math.random().toString(36).slice(2);
+
 const LOCAL_KEY = "kora-mvp-chat-v1";
-const USER_ID_KEY = "kora-user-id";
+const USER_ID_KEY = "kora_user_id";
 const SESSION_KEY_PREFIX = "kora-session";
 
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
@@ -51,13 +52,17 @@ export default function MVP() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-    const [userId, setUserId] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<Record<Companion, string | null>>({
+
+  // Stable user id (guest or auth user)
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // One session id per companion
+  const [sessionIds, setSessionIds] = useState<Record<Companion, string | null>>({
     salar: null,
     lyra: null,
   });
 
-  const activeSessionId = sessionId[companion];
+  const activeSessionId = sessionIds[companion];
 
   const [showIdentity, setShowIdentity] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
@@ -71,9 +76,14 @@ export default function MVP() {
   const activeMode: SalarMode | LyraMode =
     companion === "salar" ? salarMode : lyraMode;
 
+  /* ------------------------------------------------------------------ */
+  /* Bootstrap: userId + UI state + per-companion session ids           */
+  /* ------------------------------------------------------------------ */
+
   // Restore or create a stable userId
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     let stored = localStorage.getItem(USER_ID_KEY);
     if (!stored) {
       if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -86,16 +96,46 @@ export default function MVP() {
     setUserId(stored);
   }, []);
 
+  // Restore basic UI state (tone, companion, modes)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.tone) setTone(parsed.tone);
+      if (parsed.companion) setCompanion(parsed.companion);
+      if (parsed.salarMode) setSalarMode(parsed.salarMode);
+      if (parsed.lyraMode) setLyraMode(parsed.lyraMode);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Persist basic UI state
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      LOCAL_KEY,
+      JSON.stringify({ tone, companion, salarMode, lyraMode })
+    );
+  }, [tone, companion, salarMode, lyraMode]);
+
+  // Restore per-companion session id when the active companion changes
   useEffect(() => {
     if (typeof window === "undefined") return;
     const key = `${SESSION_KEY_PREFIX}_${companion}`;
     const stored = localStorage.getItem(key);
     if (stored) {
-      setSessionId((prev) => ({ ...prev, [companion]: stored }));
+      setSessionIds((prev) => ({ ...prev, [companion]: stored }));
     }
   }, [companion]);
 
-    // Load previous messages from Supabase when we have a session
+  /* ------------------------------------------------------------------ */
+  /* (Optional) Load history for an existing session                    */
+  /* ------------------------------------------------------------------ */
+  // NOTE: This assumes the backend GET /api/unified?sessionId=... returns
+  // { messages: [{ id, role, content, ts, meta }] }. We'll wire that in unified.ts.
   useEffect(() => {
     if (!activeSessionId) return;
 
@@ -113,6 +153,7 @@ export default function MVP() {
               content: m.content,
               ts: m.ts,
               meta: m.meta,
+              attachments: m.attachments || [],
             }))
           );
         }
@@ -121,31 +162,6 @@ export default function MVP() {
       }
     })();
   }, [activeSessionId, companion]);
-
-  /* ------------------------------------------------------------------ */
-  /* Restore + persist basic UI state                                   */
-  /* ------------------------------------------------------------------ */
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = localStorage.getItem(LOCAL_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed.tone) setTone(parsed.tone);
-      if (parsed.companion) setCompanion(parsed.companion);
-      if (parsed.salarMode) setSalarMode(parsed.salarMode);
-      if (parsed.lyraMode) setLyraMode(parsed.lyraMode);
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(
-      LOCAL_KEY,
-      JSON.stringify({ tone, companion, salarMode, lyraMode })
-    );
-  }, [tone, companion, salarMode, lyraMode]);
 
   /* ------------------------------------------------------------------ */
   /* Auto-scroll on new messages                                       */
@@ -172,7 +188,7 @@ export default function MVP() {
       mode: activeMode,
       tone,
       userId,
-      sessionId: sessionId || null,
+      sessionId: activeSessionId,
       ...extraPayload,
     };
 
@@ -187,16 +203,18 @@ export default function MVP() {
       throw new Error(data.error || "Unified API request failed");
     }
 
-    // If backend created / returned a sessionId, persist it
-    if (data.sessionId && typeof window !== "undefined") {
-      setSessionId((prev) => ({
+    // If backend created / returned a sessionId, persist it per companion
+    if (data.sessionId && typeof data.sessionId === "string") {
+      setSessionIds((prev) => ({
         ...prev,
         [companion]: data.sessionId as string,
       }));
-      localStorage.setItem(
-        `${SESSION_KEY_PREFIX}_${companion}`,
-        data.sessionId as string
-      );
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          `${SESSION_KEY_PREFIX}_${companion}`,
+          data.sessionId as string
+        );
+      }
     }
 
     return data;
@@ -229,17 +247,6 @@ export default function MVP() {
           .join("")
       );
 
-      const payload = {
-        companion,
-        mode: activeMode,
-        tone,
-        filePayload: {
-          name: file.name,
-          type: file.type,
-          contentBase64,
-        },
-      };
-
       const data = await callUnified({
         filePayload: {
           name: file.name,
@@ -249,7 +256,6 @@ export default function MVP() {
         input: null,
         nextAction: null,
       });
-      if (data.sessionId) setSessionId(data.sessionId);
 
       setMessages((m) => [
         ...m.filter((msg) => msg.id !== tempId),
@@ -283,89 +289,79 @@ export default function MVP() {
   /* Send message / trigger next action                                 */
   /* ------------------------------------------------------------------ */
 
-async function handleSend(payload: { text?: string; action?: string }) {
-  const { text, action } = payload;
-  const trimmed = text?.trim();
+  async function handleSend(payload: { text?: string; action?: string }) {
+    const { text, action } = payload;
+    const trimmed = text?.trim();
 
-  if (!trimmed && !action) {
-    console.warn("🟠 Nothing to send.");
-    return;
-  }
+    if (!trimmed && !action) {
+      console.warn("🟠 Nothing to send.");
+      return;
+    }
 
-  setSending(true);
-  setInput("");
+    setSending(true);
+    setInput("");
 
-  // ---- USER MESSAGE ------------------------------------------------
-  const userMsg: Message = {
-    id: uid(),
-    role: "user",
-    content: action ? `[Triggered Action: ${action}]` : trimmed!,
-    ts: Date.now(),
-  };
-
-  setMessages((m) => [
-    ...m,
-    userMsg,
-    {
+    const userMsg: Message = {
       id: uid(),
-      role: "system",
-      content: "…",
-      ts: Date.now(),
-    } as Message,
-  ]);
-
-  try {
-    const apiPayload = {
-  companion,
-  mode: activeMode,
-  tone,
-  input: trimmed || null,
-  nextAction: action || null,
-  sessionId: sessionId || null,   // 🔥 NEW
-};
-
-    const data = await callUnified(apiPayload);
-    if (data.sessionId) setSessionId(data.sessionId);
-
-    // ---- ASSISTANT MESSAGE WITH WORKFLOW META -----------------------
-    const assistantMsg: Message = {
-      id: uid(),
-      role: "assistant",
-      content: data.reply,
-      attachments: data.attachments || [],
-      meta: {
-        ...data.meta,
-        // Ensure guaranteed properties for UI:
-        nextActions: data.meta?.nextActions || [],
-        workflow: data.meta?.workflow || null,
-      },
+      role: "user",
+      content: action ? `[Triggered Action: ${action}]` : trimmed!,
       ts: Date.now(),
     };
 
     setMessages((m) => [
-      ...m.filter((msg) => msg.role !== "system"),
-      assistantMsg,
-    ]);
-  } catch (err) {
-    console.error("❌ Chat error:", err);
-
-    setMessages((m) => [
-      ...m.filter((msg) => msg.role !== "system"),
+      ...m,
+      userMsg,
       {
         id: uid(),
-        role: "assistant",
-        content: "⚠️ Companion connection lost. Try again.",
+        role: "system",
+        content: "…",
         ts: Date.now(),
       } as Message,
     ]);
-  } finally {
-    setSending(false);
+
+    try {
+      const data = await callUnified({
+        input: trimmed || null,
+        nextAction: action || null,
+      });
+
+      const assistantMsg: Message = {
+        id: uid(),
+        role: "assistant",
+        content: data.reply,
+        attachments: data.attachments || [],
+        meta: {
+          ...data.meta,
+          nextActions: data.meta?.nextActions || [],
+          workflow: data.meta?.workflow || null,
+        },
+        ts: Date.now(),
+      };
+
+      setMessages((m) => [
+        ...m.filter((msg) => msg.role !== "system"),
+        assistantMsg,
+      ]);
+    } catch (err) {
+      console.error("❌ Chat error:", err);
+
+      setMessages((m) => [
+        ...m.filter((msg) => msg.role !== "system"),
+        {
+          id: uid(),
+          role: "assistant",
+          content: "⚠️ Companion connection lost. Try again.",
+          ts: Date.now(),
+        } as Message,
+      ]);
+    } finally {
+      setSending(false);
+    }
   }
-}
 
   const handleNextAction = (action: string) => {
-  handleSend({ action, text: "" });
-};
+    handleSend({ action, text: "" });
+  };
 
   /* ------------------------------------------------------------------ */
   /* Identity snapshot                                                  */
@@ -453,11 +449,11 @@ async function handleSend(payload: { text?: string; action?: string }) {
 
         {messages.map((m) => (
           <MessageBubble
-  key={m.id}
-  message={m}
-  onOpenAttachment={setPreviewAttachment}
-  onNextAction={handleNextAction}
-/>
+            key={m.id}
+            message={m}
+            onOpenAttachment={setPreviewAttachment}
+            onNextAction={handleNextAction}
+          />
         ))}
       </div>
     </div>

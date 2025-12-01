@@ -1,6 +1,8 @@
 // src/pages/api/unified.ts
 
-// Increase upload limit for this API route only.
+// -----------------------------
+// Upload size
+// -----------------------------
 export const config = {
   api: {
     bodyParser: {
@@ -16,6 +18,7 @@ import {
   type SalarMode,
   type SalarOrchestratorInput,
 } from "@/companions/orchestrators/salar";
+
 import {
   runLyra,
   type LyraMode,
@@ -34,25 +37,24 @@ import {
 } from "@/lib/memory";
 
 // -----------------------------
-// Types for this API
+// Types
 // -----------------------------
 
 type CompanionSlug = "salar" | "lyra";
 
 interface UnifiedRequestBody {
   companion?: CompanionSlug;
-  mode: string; // narrowed per companion
+  mode: string;
   tone?: string;
   input?: string | null;
   nextAction?: string | null;
-  filePayload?: any; // { name, type, contentBase64 } – from frontend
+  filePayload?: any;
 
-  // NEW: memory fields
+  // memory + identity
   userId?: string | null;
   sessionId?: string | null;
 }
 
-// Shape of orchestrator result
 interface OrchestratorResult {
   reply?: string;
   outputText?: string;
@@ -60,7 +62,6 @@ interface OrchestratorResult {
   meta?: Record<string, any>;
 }
 
-// For passing memory into orchestrators
 export interface ConversationTurn {
   role: "user" | "assistant" | "system";
   content: string;
@@ -68,60 +69,56 @@ export interface ConversationTurn {
 }
 
 // -----------------------------
-// Helper: safely parse JSON body
+// Helper
 // -----------------------------
 function parseBody(req: NextApiRequest): UnifiedRequestBody {
   if (typeof req.body === "string") {
-    try {
-      return JSON.parse(req.body);
-    } catch {
-      throw new Error("Invalid JSON body.");
-    }
+    return JSON.parse(req.body);
   }
   return req.body as UnifiedRequestBody;
 }
 
-// -----------------------------
-// GET = fetch history
-// POST = send message / nextAction
-// -----------------------------
+// ===================================================================
+// MAIN HANDLER
+// ===================================================================
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // ===============================================================
+  // GET → return conversation history for a given sessionId
+  // ===============================================================
   if (req.method === "GET") {
-    // -------------------------------------------------------
-    // GET /api/unified?sessionId=...
-    // → return previous messages for this session
-    // -------------------------------------------------------
-    const userId = "guest-user"; // later replaced by AuthPanel
     const sessionId = req.query.sessionId;
+
     if (!sessionId || typeof sessionId !== "string") {
       return res.status(400).json({ error: "Missing or invalid sessionId" });
     }
 
     const rows = await getMessages(sessionId);
 
-    const messages = rows.map((row: any) => ({
-      id: row.id,
-      role: row.role,
-      content: row.content,
-      ts: new Date(row.created_at).getTime(),
-      // meta was stored inside attachments._meta
-      meta: row.attachments?._meta || undefined,
-      // ignore historical attachments for now – we still show
-      // fresh ones coming back from orchestrators
-    }));
-
-    return res.status(200).json({ messages });
+    return res.status(200).json({
+      messages: rows.map((row: any) => ({
+        id: row.id,
+        role: row.role,
+        content: row.content,
+        ts: new Date(row.created_at).getTime(),
+        meta: row.attachments?._meta || undefined,
+        attachments: row.attachments || {},
+      })),
+    });
   }
 
+  // ===============================================================
+  // POST → core logic
+  // ===============================================================
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
     const body = parseBody(req);
+
     let {
       companion = "salar",
       mode,
@@ -129,77 +126,76 @@ export default async function handler(
       input = "",
       nextAction = null,
       filePayload,
-      userId = null,
-      sessionId: incomingSessionId = null,   // 🔥 FIX
+      userId,
+      sessionId: incomingSessionId,
     } = body;
 
     if (!mode) {
       return res.status(400).json({ error: "Missing mode in request." });
     }
 
-    // Fallback guest id if frontend didn't send one (should be rare)
+    // --------------------------------------------
+    // 1) Ensure userId exists (guest fallback)
+    // --------------------------------------------
     if (!userId) {
       userId = "guest-" + (req.headers["x-guest"] || "anon");
     }
 
-    // -----------------------------
-    // 1) Extract text from file (if any)
-    // -----------------------------
+    await getOrCreateUserProfile(userId);
+
+    // --------------------------------------------
+    // 2) Extract uploaded file if present
+    // --------------------------------------------
     let extractedText = "";
     if (filePayload) {
       try {
-        extractedText = await parseUploadedFile(filePayload, filePayload.type);
+        extractedText = await parseUploadedFile(
+          filePayload,
+          filePayload.type
+        );
       } catch (err) {
-        console.error("❌ File parsing failed in /api/unified:", err);
-        return res.status(400).json({
-          error: "File parsing failed. Try a different file.",
-        });
+        console.error("❌ File parse error:", err);
+        return res.status(400).json({ error: "File parsing failed." });
       }
     }
 
-    // -----------------------------
-    // 2) Ensure user profile exists
-    // -----------------------------
-    await getOrCreateUserProfile(userId);
+    // --------------------------------------------
+    // 3) Ensure session exists
+    // --------------------------------------------
+    let sessionId = incomingSessionId || null;
 
-    // -------------------------------------------------------
-// 1) Determine sessionId (reuse or create new)
-// -------------------------------------------------------
-let sessionId = incomingSessionId ?? null;
+    if (!sessionId) {
+      const newSession = await createSession(
+        userId,
+        companion,
+        "general"
+      );
+      sessionId = newSession.id;
+    }
 
-if (!sessionId) {
-  const newSession = await createSession(userId, companion, "general");
-  sessionId = newSession.id;
-}
+    // --------------------------------------------
+    // 4) Load conversation history
+    // --------------------------------------------
+const rawHistory = await getMessages(sessionId as string);
 
-    // -------------------------------------------------------
-// 4) Load conversation history (only if sessionId exists)
-// -------------------------------------------------------
-if (!sessionId) {
-  return res.status(500).json({
-    error: "Session ID missing before loading conversation history.",
-  });
-}
+    const conversationHistory: ConversationTurn[] = rawHistory.map(
+      (m: any) => ({
+        role: m.role,
+        content: m.content,
+        meta: m.attachments?._meta || null,
+      })
+    );
 
-const rawHistory = await getMessages(sessionId);
+    // --------------------------------------------
+    // 5) Save USER message
+    // --------------------------------------------
+    const trimmed = input?.trim() || "";
 
-const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
-  role: m.role,
-  content: m.content,
-  meta: m.attachments?._meta || null,
-}));
-
-    // -----------------------------
-    // 5) Save USER message first
-    // -----------------------------
-    const trimmedInput = input ? input.trim() : "";
-
-    if (trimmedInput || nextAction) {
+    if (trimmed || nextAction) {
       const userContent =
-        trimmedInput ||
-        (nextAction ? `[Triggered Action: ${nextAction}]` : "");
+        trimmed || `[Triggered Action: ${nextAction}]`;
 
-      await saveMessage(sessionId, "user", userContent, {
+      await saveMessage(sessionId as string, "user", userContent, {
         meta: {
           nextAction: nextAction || undefined,
           mode,
@@ -208,27 +204,27 @@ const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
       });
     }
 
-    // -----------------------------
-    // 6) Load identity (for meta)
-    // -----------------------------
-    const rawIdentity: any = loadIdentity(companion, mode);
+    // --------------------------------------------
+    // 6) Load identity template
+    // --------------------------------------------
+    const rawIdentity = loadIdentity(companion, mode);
 
-    const toneBaseFromIdentity: string | undefined =
+    const toneBase =
       typeof rawIdentity?.tone === "string"
         ? rawIdentity.tone
         : rawIdentity?.tone?.base;
 
-    // -----------------------------
-    // 7) Call the correct orchestrator
-    // -----------------------------
+    // --------------------------------------------
+    // 7) Call orchestrator
+    // --------------------------------------------
     let orchestratorResult: OrchestratorResult;
 
     if (companion === "salar") {
       const salarInput: SalarOrchestratorInput & {
-        conversationHistory?: ConversationTurn[];
+        conversationHistory: ConversationTurn[];
       } = {
         mode: mode as SalarMode,
-        input: trimmedInput,
+        input: trimmed,
         extractedText,
         tone,
         nextAction: nextAction || undefined,
@@ -238,10 +234,10 @@ const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
       orchestratorResult = await runSalar(salarInput);
     } else {
       const lyraInput: LyraOrchestratorInput & {
-        conversationHistory?: ConversationTurn[];
+        conversationHistory: ConversationTurn[];
       } = {
         mode: mode as LyraMode,
-        input: trimmedInput,
+        input: trimmed,
         extractedText,
         tone,
         nextAction: nextAction || undefined,
@@ -251,26 +247,25 @@ const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
       orchestratorResult = await runLyra(lyraInput);
     }
 
-    // -------------------------------------------------------
+    // --------------------------------------------
     // 8) Extract orchestrator output
-    // -------------------------------------------------------
+    // --------------------------------------------
     const reply =
       orchestratorResult.outputText ||
       orchestratorResult.reply ||
       "No response generated.";
 
-    const attachments: any[] = orchestratorResult.attachments || [];
-
-    const metaFromOrchestrator = orchestratorResult.meta || {};
+    const attachments = orchestratorResult.attachments || [];
+    const metaFromOrch = orchestratorResult.meta || {};
 
     const meta = {
-      ...metaFromOrchestrator,
+      ...metaFromOrch,
       companion,
       mode,
       tone,
-      identity: metaFromOrchestrator.identity ?? {
+      identity: metaFromOrch.identity ?? {
         persona: rawIdentity?.persona,
-        toneBase: toneBaseFromIdentity,
+        toneBase,
         mode,
       },
       memory: {
@@ -278,22 +273,27 @@ const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
       },
     };
 
-    // -------------------------------------------------------
-    // 9) Save assistant message
-    // -------------------------------------------------------
-    await saveMessage(sessionId, "assistant", reply, {
+    // --------------------------------------------
+    // 9) Save ASSISTANT message
+    // --------------------------------------------
+    await saveMessage(sessionId as string, "assistant", reply, {
       attachments,
       meta,
     });
 
-    // -------------------------------------------------------
-    // 10) Save tone history (optional but nice)
-    // -------------------------------------------------------
-    await saveTone(userId, companion, tone || "calm", "post-response update");
+    // --------------------------------------------
+    // 10) Store tone history
+    // --------------------------------------------
+    await saveTone(
+      userId as string,
+      companion,
+      tone || "calm",
+      "post-response update"
+    );
 
-    // -----------------------------
-    // 11) Return response
-    // -----------------------------
+    // --------------------------------------------
+    // 11) Return
+    // --------------------------------------------
     return res.status(200).json({
       reply,
       attachments,
@@ -301,11 +301,9 @@ const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
       sessionId,
     });
   } catch (err: any) {
-    console.error("❌ /api/unified error:", err?.message || err);
-
+    console.error("❌ unified.ts error:", err);
     return res.status(500).json({
-      error:
-        err?.message || "Unknown error in unified companion endpoint.",
+      error: err?.message || "Unknown unified.ts error",
     });
   }
 }
