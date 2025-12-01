@@ -39,11 +39,7 @@ export interface LyraOrchestratorInput {
   extractedText: string;
   tone: string;
   nextAction?: string;
-  conversationHistory?: {
-    role: "user" | "assistant" | "system";
-    content: string;
-    meta?: any;
-  }[];
+  conversationHistory?: { role: string; content: string; meta?: any | null }[];
 }
 
 // Shape that each Lyra prompt pack follows
@@ -264,6 +260,17 @@ ${conversationHistory
 `
       : "";
 
+function formatConversation(history: any[]) {
+  if (!history || history.length === 0) return "";
+  return history
+    .map((turn) => `${turn.role.toUpperCase()}: ${turn.content}`)
+    .join("\n");
+}
+  
+const memoryBlock = conversationHistory?.length
+  ? `\nHere is the conversation so far:\n${formatConversation(conversationHistory)}\n`
+  : "";
+
   // ----- Build final prompt -----
   const fullPrompt = `
 ${promptBlock}
@@ -271,6 +278,8 @@ ${promptBlock}
 You are operating as **Lyra** in mode: **${mode}**.
 Persona: ${identity.persona || "Creative Partner"}
 Base Tone: ${toneText}
+
+${memoryBlock}
 
 ${historyBlock}
 

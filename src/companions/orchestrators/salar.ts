@@ -43,11 +43,7 @@ export interface SalarOrchestratorInput {
   extractedText: string;
   tone: string;
   nextAction?: string;
-  conversationHistory?: {
-    role: "user" | "assistant" | "system";
-    content: string;
-    meta?: any;
-  }[];
+  conversationHistory?: { role: string; content: string; meta?: any | null }[];
 }
 
 // Each prompt file must conform to:
@@ -278,9 +274,24 @@ ${conversationHistory
 `
       : "";
 
+
+  function formatConversation(history: any[]) {
+  if (!history || history.length === 0) return "";
+  return history
+    .map((turn) => `${turn.role.toUpperCase()}: ${turn.content}`)
+    .join("\n");
+}
+
+const memoryBlock = conversationHistory?.length
+  ? `\nHere is the conversation so far:\n${formatConversation(conversationHistory)}\n`
+  : "";
+
+  
   // ----- 3) Build final prompt -----
   const fullPrompt = `
 ${identityPrompt}
+
+${memoryBlock}
 
 ${prompt}
 
