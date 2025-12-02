@@ -230,6 +230,8 @@ function resolvePrompt(
 export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
   const { mode, input, extractedText, tone, nextAction, conversationHistory } = orchestratorInput;
 
+const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  
   const pack = PACKS[mode];
   if (!pack) {
     throw new Error(`Unknown Lyra mode: ${mode}`);
@@ -247,10 +249,10 @@ export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
   const promptBlock = resolvePrompt(pack, mode, nextAction || undefined);
 
     const historyBlock =
-    conversationHistory && conversationHistory.length
+    safeHistory.length
       ? `
 Previous conversation (latest last):
-${conversationHistory
+${safeHistory
   .slice(-8)
   .map(
     (turn) =>
@@ -268,7 +270,7 @@ function formatConversation(history: any[]) {
 }
   
 const memoryBlock = conversationHistory?.length
-  ? `\nHere is the conversation so far:\n${formatConversation(conversationHistory)}\n`
+  ? `\nHere is the conversation so far:\n${formatConversation(safeHistory)}\n`
   : "";
 
   // ----- Build final prompt -----
@@ -372,8 +374,8 @@ Tone: ${tone}
       nextActions: flatNextActions,
       identity: identityMeta,
       memory: {
-        shortTerm: [],
-      },
+        shortTerm: safeHistory.slice(-6),
+},
       workflow: workflowMeta,
     },
   };

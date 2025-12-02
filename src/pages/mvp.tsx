@@ -395,14 +395,20 @@ export default function MVP() {
           </div>
         )}
 
-        {messages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            message={m}
-            onOpenAttachment={setPreviewAttachment}
-            onNextAction={handleNextAction}
-          />
-        ))}
+        {messages.map((m) => {
+  if (m.meta?.workflow) {
+    console.log("🧭 WorkflowMeta:", m.meta.workflow);
+  }
+
+  return (
+    <MessageBubble
+      key={m.id}
+      message={m}
+      onOpenAttachment={setPreviewAttachment}
+      onNextAction={handleNextAction}
+    />
+  );
+})}
       </div>
     </div>
   );
