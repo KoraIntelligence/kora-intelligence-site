@@ -125,16 +125,19 @@ export default function MVP() {
   }, [companion]);
 
   /* -------------------------------------------- */
-  /* LOAD HISTORY FROM BACKEND                    */
-  /* -------------------------------------------- */
-  useEffect(() => {
-    if (!activeSessionId) return;
+/* LOAD HISTORY FROM BACKEND (PATCHED)          */
+/* -------------------------------------------- */
+useEffect(() => {
+  const sid = sessionIds[companion];
+  console.log("✅ Switching to companion:", companion, "sessionId:", sid);
 
+  if (sid) {
     (async () => {
       try {
-        const res = await fetch(`/api/unified?sessionId=${activeSessionId}`);
-        if (!res.ok) return;
+        const res = await fetch(`/api/unified?sessionId=${sid}`);
+        console.log("📦 History fetch status:", res.status);
         const data = await res.json();
+        console.log("📥 Loaded messages:", data.messages?.length);
 
         if (Array.isArray(data.messages)) {
           setMessages(
@@ -148,11 +151,15 @@ export default function MVP() {
             }))
           );
         }
-      } catch (err) {
-        console.error("⚠️ Failed to load history:", err);
+      } catch (e) {
+        console.error("❌ Error loading history after companion switch", e);
       }
     })();
-  }, [activeSessionId, companion]);
+  } else {
+    console.warn("⚠️ No sessionId for companion — won’t load history");
+    setMessages([]); // clear stale messages if no session
+  }
+}, [companion, sessionIds]);
 
   /* -------------------------------------------- */
   /* UNIFIED API CALL                             */
