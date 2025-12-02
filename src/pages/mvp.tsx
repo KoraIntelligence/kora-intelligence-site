@@ -85,6 +85,42 @@ export default function MVP() {
     setUserId(stored);
   }, []);
 
+  // Immediately request a session for the active companion if none is stored
+useEffect(() => {
+  if (!userId || sessionIds[companion]) return;
+
+  (async () => {
+    try {
+      const res = await fetch("/api/unified", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(isGuest ? { "x-guest": "true" } : {}),
+        },
+        body: JSON.stringify({
+          companion,
+          mode: activeMode,
+          tone,
+          userId,
+          sessionId: null,
+          input: null,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.sessionId) {
+        setSessionIds((prev) => ({ ...prev, [companion]: data.sessionId }));
+        localStorage.setItem(
+          `${SESSION_KEY_PREFIX}_${companion}`,
+          data.sessionId
+        );
+      }
+    } catch (e) {
+      console.error("⚠️ Failed to initialize session:", e);
+    }
+  })();
+}, [userId, companion, sessionIds, activeMode, tone]);
+
   /* -------------------------------------------- */
   /* RESTORE UI STATE                             */
   /* -------------------------------------------- */
