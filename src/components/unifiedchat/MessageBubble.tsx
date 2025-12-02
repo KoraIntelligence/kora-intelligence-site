@@ -1,3 +1,5 @@
+// src/components/unifiedchat/MessageBubble.tsx
+
 import React from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -20,71 +22,62 @@ export default function MessageBubble({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
-  // Safely extract meta
   const meta = (message as any).meta || {};
+  const companion = meta?.companion?.toLowerCase?.() || "salar";
+  const isLyra = companion === "lyra";
 
-  // Normalise companion display ("salar" → "Salar")
-  const normalizedMeta = {
-    ...meta,
-    companion: meta.companion
-      ? meta.companion.charAt(0).toUpperCase() + meta.companion.slice(1)
-      : meta.companion,
-  };
+  const bubbleBase = "max-w-2xl px-4 py-3 rounded-2xl text-sm";
+  const bubbleUser = "bg-gray-100 text-gray-900";
+  const bubbleSystem = "text-gray-500 text-xs italic bg-transparent shadow-none";
+  const bubbleAssistant = "bg-white border shadow-sm";
 
-  const companionLabel =
-    normalizedMeta.companion ||
-    (message.role === "assistant" ? "Companion" : undefined);
+  const roleStyle = isSystem
+    ? bubbleSystem
+    : isUser
+    ? bubbleUser
+    : `${bubbleAssistant} ${
+        isLyra ? "border-teal-500" : "border-amber-500"
+      }`;
 
-  // ----- NEW: Workflow Stage -----
-  const workflow = normalizedMeta.workflow;
-  const showWorkflow = !isUser && !isSystem && workflow;
+  const showWorkflow = !isUser && !isSystem && meta.workflow;
 
   return (
-    <div
-      className={`flex ${
-        isUser ? "justify-end" : "justify-start"
-      } text-sm w-full`}
-    >
-      <div
-        className={[
-          "max-w-[90%] rounded-xl px-3 py-2 shadow-sm",
-          isSystem
-            ? "text-gray-500 text-xs italic bg-transparent shadow-none"
-            : isUser
-            ? "bg-amber-100 text-gray-900"
-            : "bg-amber-50 border-l-4 border-amber-400 text-gray-900",
-          showWorkflow && workflow.isTerminal
-            ? "border-l-4 border-green-600"
-            : "",
-        ].join(" ")}
-      >
-        {/* Header: Companion + Mode */}
-        {!isUser && !isSystem && companionLabel && (
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-amber-700">
-              {companionLabel}
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
+      <div className={`${bubbleBase} ${roleStyle}`}>
+        {/* Header: Mode & Companion */}
+        {!isUser && !isSystem && (
+          <div className="flex justify-between items-center mb-1">
+            <span
+              className={`text-[11px] font-semibold ${
+                isLyra ? "text-teal-600" : "text-amber-600"
+              }`}
+            >
+              {companion[0].toUpperCase() + companion.slice(1)}
             </span>
-            {normalizedMeta.mode && (
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                {normalizedMeta.mode}
+            {meta.mode && (
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                {meta.mode}
               </span>
             )}
           </div>
         )}
 
-        {/* ----- NEW: Workflow Indicator ----- */}
+        {/* Workflow Stage */}
         {showWorkflow && (
           <div className="mb-2">
-            <div className="text-[11px] font-semibold text-amber-700">
-              {workflow.stageLabel}
-              {workflow.isTerminal && (
-                <span className="ml-1 text-green-700">(Final Stage)</span>
+            <div
+              className={`text-[11px] font-semibold ${
+                isLyra ? "text-teal-700" : "text-amber-700"
+              }`}
+            >
+              {meta.workflow.stageLabel}
+              {meta.workflow.isTerminal && (
+                <span className="ml-1 text-green-600">(Final Stage)</span>
               )}
             </div>
-
-            {workflow.stageDescription && (
+            {meta.workflow.stageDescription && (
               <div className="text-[10px] text-gray-500 whitespace-pre-line mt-0.5">
-                {workflow.stageDescription}
+                {meta.workflow.stageDescription}
               </div>
             )}
           </div>
@@ -100,7 +93,7 @@ export default function MessageBubble({
         )}
 
         {/* Attachments */}
-        {message.attachments && message.attachments.length > 0 && (
+        {Array.isArray(message.attachments) && message.attachments.length > 0 && (
           <div className="mt-3">
             <MessageAttachments
               items={message.attachments as any}
@@ -110,16 +103,11 @@ export default function MessageBubble({
         )}
 
         {/* Next Actions */}
-        {normalizedMeta.nextActions &&
-          Array.isArray(normalizedMeta.nextActions) &&
-          normalizedMeta.nextActions.length > 0 && (
-            <div className="mt-2">
-              <NextActionButtons
-                meta={normalizedMeta}
-                onSend={onNextAction}
-              />
-            </div>
-          )}
+        {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
+          <div className="mt-2">
+            <NextActionButtons meta={meta} onSend={onNextAction} />
+          </div>
+        )}
 
         {/* Timestamp */}
         <div className="mt-1 text-[10px] text-gray-400 text-right">

@@ -1,15 +1,12 @@
 // src/pages/mvp.tsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import ChatWindow from "@/components/unifiedchat/ChatWindow";
 import ChatLayout from "@/components/unifiedchat/ChatLayout";
 import Sidebar from "@/components/unifiedchat/Sidebar";
 import ToneSelector from "@/components/unifiedchat/ToneSelector";
-import MessageBubble from "@/components/unifiedchat/MessageBubble";
-import ChatInput from "@/components/unifiedchat/ChatInput";
 import IdentityOverlay from "@/components/unifiedchat/IdentityOverlay";
-import AttachmentPreviewModal from "@/components/unifiedchat/AttachmentPreviewModal";
 
 import type { Message as BaseMessage } from "@/types/chat";
 import type { SalarMode } from "@/companions/orchestrators/salar";
@@ -64,10 +61,8 @@ export default function MVP() {
 
   const activeSessionId = sessionIds[companion];
 
-  // UI stuff
+  // UI
   const [showIdentity, setShowIdentity] = useState(false);
-  const [previewAttachment, setPreviewAttachment] = useState<any | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
 
   const isGuest =
     typeof window !== "undefined" &&
@@ -76,9 +71,9 @@ export default function MVP() {
   const activeMode: SalarMode | LyraMode =
     companion === "salar" ? salarMode : lyraMode;
 
-  /* --------------------------------------------------------- */
-  /* USER ID INITIALISATION                                    */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* USER ID INITIALIZATION                       */
+  /* -------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -90,9 +85,9 @@ export default function MVP() {
     setUserId(stored);
   }, []);
 
-  /* --------------------------------------------------------- */
-  /* RESTORE UI STATE                                           */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* RESTORE UI STATE                             */
+  /* -------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -117,9 +112,9 @@ export default function MVP() {
     }
   }, [tone, companion, salarMode, lyraMode]);
 
-  /* --------------------------------------------------------- */
-  /* RESTORE PER-COMPANION SESSION                             */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* RESTORE SESSION PER COMPANION                */
+  /* -------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const key = `${SESSION_KEY_PREFIX}_${companion}`;
@@ -129,9 +124,9 @@ export default function MVP() {
     }
   }, [companion]);
 
-  /* --------------------------------------------------------- */
-  /* LOAD HISTORY FROM BACKEND                                 */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* LOAD HISTORY FROM BACKEND                    */
+  /* -------------------------------------------- */
   useEffect(() => {
     if (!activeSessionId) return;
 
@@ -159,18 +154,9 @@ export default function MVP() {
     })();
   }, [activeSessionId, companion]);
 
-  /* --------------------------------------------------------- */
-  /* AUTO-SCROLL                                               */
-  /* --------------------------------------------------------- */
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-  }, [messages.length]);
-
-  /* --------------------------------------------------------- */
-  /* UNIFIED API CALL                                           */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* UNIFIED API CALL                             */
+  /* -------------------------------------------- */
   async function callUnified(extraPayload: Record<string, unknown>) {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -181,8 +167,9 @@ export default function MVP() {
       companion,
       mode: activeMode,
       tone,
-      userId,             // 🔥 ensures memory links messages → user
-      sessionId: activeSessionId,  // 🔥 ensures backend loads correct session
+      userId,
+      sessionId: activeSessionId,
+      conversationHistory: messages, // 🧠 Fix for Salar memory
       ...extraPayload,
     };
 
@@ -195,7 +182,7 @@ export default function MVP() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Unified API request failed");
 
-    // If backend returns a sessionId, store it
+    // Save new sessionId
     if (data.sessionId && typeof data.sessionId === "string") {
       setSessionIds((prev) => ({
         ...prev,
@@ -211,9 +198,9 @@ export default function MVP() {
     return data;
   }
 
-  /* --------------------------------------------------------- */
-  /* FILE UPLOAD                                               */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* FILE UPLOAD                                  */
+  /* -------------------------------------------- */
   async function handleFileUpload(file: File) {
     if (!file || uploading) return;
     setUploading(true);
@@ -256,9 +243,9 @@ export default function MVP() {
     setUploading(false);
   }
 
-  /* --------------------------------------------------------- */
-  /* SEND MESSAGE / NEXT ACTION                                */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* SEND MESSAGE                                 */
+  /* -------------------------------------------- */
   async function handleSend(payload: { text?: string; action?: string }) {
     const { text, action } = payload;
     const trimmed = text?.trim();
@@ -268,7 +255,6 @@ export default function MVP() {
     setSending(true);
     setInput("");
 
-    // USER message
     const userMsg: Message = {
       id: uid(),
       role: "user",
@@ -293,11 +279,7 @@ export default function MVP() {
         role: "assistant",
         content: data.reply,
         attachments: data.attachments || [],
-        meta: {
-          ...data.meta,
-          nextActions: data.meta?.nextActions || [],
-          workflow: data.meta?.workflow || null,
-        },
+        meta: data.meta,
         ts: Date.now(),
       };
 
@@ -322,21 +304,18 @@ export default function MVP() {
     setSending(false);
   }
 
-  const handleNextAction = (action: string) =>
-    handleSend({ action, text: "" });
-
-  /* --------------------------------------------------------- */
-  /* IDENTITY SNAPSHOT                                         */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* IDENTITY SNAPSHOT                            */
+  /* -------------------------------------------- */
   const currentIdentityMsg = [...messages]
     .reverse()
     .find((m) => m.meta?.identity);
 
   const currentIdentity = currentIdentityMsg?.meta?.identity || null;
 
-  /* --------------------------------------------------------- */
-  /* UI COMPONENT NODES                                        */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* UI COMPONENT NODES                           */
+  /* -------------------------------------------- */
   const toneSelectorNode = (
     <ToneSelector companion={companion} value={tone} onChange={setTone} />
   );
@@ -355,38 +334,12 @@ export default function MVP() {
   );
 
   const chatWindowNode = (
-  <ChatWindow
-    messages={messages}
-    onSend={handleSend}
-    onUpload={handleFileUpload}
-    sending={sending}
-    companion={companion}
-  />
-);
-
-        {messages.map((m) => {
-  if (m.meta?.workflow) {
-    console.log("🧭 WorkflowMeta:", m.meta.workflow);
-  }
-
-  return (
-    <MessageBubble
-      key={m.id}
-      message={m}
-      onOpenAttachment={setPreviewAttachment}
-      onNextAction={handleNextAction}
-    />
-  );
-})}
-
-  const chatInputNode = (
-    <ChatInput
-      value={input}
-      onChange={setInput}
+    <ChatWindow
+      messages={messages}
       onSend={handleSend}
       onUpload={handleFileUpload}
       sending={sending}
-      disabled={uploading}
+      companion={companion}
     />
   );
 
@@ -404,23 +357,16 @@ export default function MVP() {
     />
   ) : null;
 
-  const attachmentDrawerNode = previewAttachment ? (
-    <AttachmentPreviewModal
-      attachment={previewAttachment}
-      onClose={() => setPreviewAttachment(null)}
-    />
-  ) : null;
-
-  /* --------------------------------------------------------- */
-  /* RENDER                                                    */
-  /* --------------------------------------------------------- */
+  /* -------------------------------------------- */
+  /* RENDER                                       */
+  /* -------------------------------------------- */
   return (
     <ChatLayout
       sidebar={sidebarNode}
       chatWindow={chatWindowNode}
-      chatInput={chatInputNode}
+      chatInput={null}
       identityOverlay={identityOverlayNode}
-      attachmentDrawer={attachmentDrawerNode}
+      attachmentDrawer={null}
     />
   );
 }
