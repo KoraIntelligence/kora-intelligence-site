@@ -1,11 +1,11 @@
+// src/components/unifiedchat/ChatWindow.tsx
+
 import React, { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import AttachmentPreviewModal from "./AttachmentPreviewModal";
 
 import type { Message, Attachment } from "@/types/chat";
-
-const [input, setInput] = useState("");
 
 type ChatWindowProps = {
   messages: Message[];
@@ -23,8 +23,8 @@ export default function ChatWindow({
   companion,
 }: ChatWindowProps) {
   const listRef = useRef<HTMLDivElement>(null);
-  const [previewAttachment, setPreviewAttachment] =
-    useState<Attachment | null>(null);
+  const [input, setInput] = useState("");
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
 
   // Auto-scroll to bottom when messages update
   useEffect(() => {
@@ -33,25 +33,21 @@ export default function ChatWindow({
     }
   }, [messages]);
 
-  // Workflow next-action logic
   const handleNextAction = (action: string) => {
-  onSend({ action });
-};
+    onSend({ action });
+  };
 
   return (
-    <div className="flex flex-col h-full w-full bg-white">
+    <div className="flex flex-col h-full w-full bg-neutral-50">
       {/* Messages list */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-amber-50/40 to-white"
+        className="flex-1 overflow-y-auto p-6 space-y-4"
       >
         {messages.length === 0 && (
           <div className="text-center text-gray-400 text-sm mt-8">
             Start a conversation with{" "}
-            <span className="font-semibold text-amber-700 capitalize">
-              {companion}
-            </span>
-            .
+            <span className="font-semibold text-gray-700 capitalize">{companion}</span>.
           </div>
         )}
 
@@ -64,7 +60,6 @@ export default function ChatWindow({
           />
         ))}
 
-        {/* Typing Indicator */}
         {sending && (
           <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse">
             <span className="w-2 h-2 rounded-full bg-gray-400" />
@@ -86,13 +81,13 @@ export default function ChatWindow({
       {/* Chat Input */}
       <div className="border-t bg-white">
         <ChatInput
-  value={input}
-  onChange={setInput}
-  onSend={({ text, action }) => onSend({ text, action })}
-  onUpload={onUpload}
-  sending={sending}
-  disabled={sending}
-/>
+          value={input}
+          onChange={setInput}
+          onSend={({ text, action }) => onSend({ text, action })}
+          onUpload={onUpload}
+          sending={sending}
+          disabled={sending}
+        />
       </div>
     </div>
   );

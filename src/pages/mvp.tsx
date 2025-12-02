@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
+import ChatWindow from "@/components/unifiedchat/ChatWindow";
 import ChatLayout from "@/components/unifiedchat/ChatLayout";
 import Sidebar from "@/components/unifiedchat/Sidebar";
 import ToneSelector from "@/components/unifiedchat/ToneSelector";
@@ -354,46 +355,14 @@ export default function MVP() {
   );
 
   const chatWindowNode = (
-    <div className="flex flex-col h-full">
-      <div className="mb-4 flex items-center justify-between text-xs text-gray-600">
-        <div>
-          <div className="font-semibold text-amber-800 text-sm">
-            Kora Companion Studio (MVP)
-          </div>
-          <div>
-            You’re talking to{" "}
-            <span className="font-medium">{companion === "salar" ? "Salar" : "Lyra"}</span>{" "}
-            in{" "}
-            <span className="font-medium">
-              {companion === "salar"
-                ? SALAR_MODE_LABELS[salarMode]
-                : LYRA_MODE_LABELS[lyraMode]}
-            </span>{" "}
-            mode.
-          </div>
-
-          {activeSessionId && (
-            <div className="text-[10px] text-gray-400 mt-1">
-              Session: {activeSessionId} · Tone: {tone}
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => setShowIdentity(true)}
-          className="text-xs px-3 py-1 rounded-full border border-amber-300 text-amber-800 hover:bg-amber-50"
-        >
-          View Identity
-        </button>
-      </div>
-
-      <div ref={listRef} className="flex-1 overflow-y-auto space-y-3">
-        {messages.length === 0 && (
-          <div className="h-full flex items-center justify-center text-xs text-gray-400">
-            Start a conversation with{" "}
-            {companion === "salar" ? "Salar" : "Lyra"}…
-          </div>
-        )}
+  <ChatWindow
+    messages={messages}
+    onSend={handleSend}
+    onUpload={handleFileUpload}
+    sending={sending}
+    companion={companion}
+  />
+);
 
         {messages.map((m) => {
   if (m.meta?.workflow) {
@@ -409,9 +378,6 @@ export default function MVP() {
     />
   );
 })}
-      </div>
-    </div>
-  );
 
   const chatInputNode = (
     <ChatInput
