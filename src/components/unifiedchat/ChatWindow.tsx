@@ -13,6 +13,7 @@ type ChatWindowProps = {
   onUpload: (file: File) => void;
   sending: boolean;
   companion: "salar" | "lyra";
+  topBarHeight?: number; // optional future-proofing
 };
 
 export default function ChatWindow({
@@ -21,33 +22,39 @@ export default function ChatWindow({
   onUpload,
   sending,
   companion,
+  topBarHeight = 64, // reserve 64px for future workflow/top bar
 }: ChatWindowProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
-  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(
+    null
+  );
 
-  // Auto-scroll to bottom when messages update
+  // Auto-scroll
   useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  const handleNextAction = (action: string) => {
-    onSend({ action });
-  };
+  const handleNextAction = (action: string) => onSend({ action });
 
   return (
-    <div className="flex flex-col h-full w-full bg-neutral-50">
-      {/* Messages list */}
+    <div
+      className="relative w-full bg-white"
+      style={{ height: `calc(100vh - ${topBarHeight}px)` }}
+    >
+      {/* Message list */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto p-6 space-y-4"
+        className="absolute top-0 left-0 right-0 bottom-16 overflow-y-auto px-6 py-6 space-y-4"
       >
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 text-sm mt-8">
+          <div className="text-center text-gray-400 text-sm mt-10">
             Start a conversation with{" "}
-            <span className="font-semibold text-gray-700 capitalize">{companion}</span>.
+            <span className="font-semibold text-gray-700 capitalize">
+              {companion}
+            </span>
+            .
           </div>
         )}
 
@@ -61,7 +68,7 @@ export default function ChatWindow({
         ))}
 
         {sending && (
-          <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse">
+          <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse pl-1 pt-2">
             <span className="w-2 h-2 rounded-full bg-gray-400" />
             <span className="w-2 h-2 rounded-full bg-gray-400" />
             <span className="w-2 h-2 rounded-full bg-gray-400" />
@@ -70,7 +77,7 @@ export default function ChatWindow({
         )}
       </div>
 
-      {/* File preview modal */}
+      {/* Attachment preview */}
       {previewAttachment && (
         <AttachmentPreviewModal
           attachment={previewAttachment}
@@ -78,8 +85,8 @@ export default function ChatWindow({
         />
       )}
 
-      {/* Chat Input */}
-      <div className="border-t bg-white">
+      {/* Input at page bottom */}
+      <div className="absolute bottom-0 left-0 right-0 border-t bg-white shadow-sm p-3">
         <ChatInput
           value={input}
           onChange={setInput}

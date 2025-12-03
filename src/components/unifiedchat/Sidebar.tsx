@@ -1,3 +1,5 @@
+// src/components/unifiedchat/Sidebar.tsx
+
 import React from "react";
 import { SalarMode } from "@/companions/orchestrators/salar";
 import { LyraMode } from "@/companions/orchestrators/lyra";
@@ -16,9 +18,9 @@ interface SidebarProps {
   onFileUpload?: (file: File) => void;
 }
 
-/* -------------------------------------- */
-/* LABEL MAPS                              */
-/* -------------------------------------- */
+/* -------------------------------------------------- */
+/* LABEL MAPS                                          */
+/* -------------------------------------------------- */
 
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
   commercial_chat: "Commercial Chat",
@@ -36,9 +38,9 @@ const LYRA_MODE_LABELS: Record<LyraMode, string> = {
   customer_nurture: "Customer Nurture",
 };
 
-/* -------------------------------------- */
-/* COMPONENT                               */
-/* -------------------------------------- */
+/* -------------------------------------------------- */
+/* COMPONENT                                           */
+/* -------------------------------------------------- */
 
 export default function Sidebar({
   companion,
@@ -50,32 +52,33 @@ export default function Sidebar({
   toneSelector,
   onFileUpload,
 }: SidebarProps) {
-  const isSalar = companion === "salar";
-  const activeModeList = isSalar ? SALAR_MODE_LABELS : LYRA_MODE_LABELS;
+  const isLyra = companion === "lyra";
+  const modeLabels = isLyra ? LYRA_MODE_LABELS : SALAR_MODE_LABELS;
 
-  const palette =
-    companion === "lyra"
-      ? "text-teal-700 bg-teal-50 border-teal-200"
-      : "text-amber-700 bg-amber-50 border-amber-200";
+  const accent = isLyra
+    ? { bg: "bg-teal-600", border: "border-teal-600", text: "text-teal-700" }
+    : { bg: "bg-amber-600", border: "border-amber-600", text: "text-amber-700" };
+
+  const activePill = `${accent.bg} text-white border ${accent.border} shadow`;
+  const inactivePill =
+    "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100";
 
   return (
-    <div className="space-y-6 text-sm p-3">
+    <div className="flex flex-col gap-6 text-sm w-full">
 
       {/* ---------------------------------- */}
       {/* Companion Switch */}
       {/* ---------------------------------- */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 w-full">
         {(["salar", "lyra"] as const).map((c) => {
-          const label = c === "salar" ? "Salar" : "Lyra";
           const isActive = c === companion;
+          const label = c === "salar" ? "Salar" : "Lyra";
 
           return (
             <button
               key={c}
-              className={`flex-1 px-4 py-2 rounded-xl border text-sm transition
-              ${isActive
-                ? "bg-amber-600 text-white border-amber-600 shadow"
-                : "bg-white border-gray-200 hover:bg-gray-100 text-gray-700"
+              className={`flex-1 px-4 py-2 rounded-xl text-sm transition ${
+                isActive ? activePill : inactivePill
               }`}
               onClick={() => setCompanion(c)}
             >
@@ -89,28 +92,24 @@ export default function Sidebar({
       {/* Mode Selector */}
       {/* ---------------------------------- */}
       <div>
-        <h2 className="text-xs font-semibold text-gray-600 mb-2">
-          Modes
-        </h2>
+        <h2 className="text-xs font-semibold text-gray-600 mb-2">Modes</h2>
 
-        <div className="space-y-1">
-          {Object.entries(activeModeList).map(([key, label]) => {
-            const isActive = isSalar
-              ? key === salarMode
-              : key === lyraMode;
+        <div className="flex flex-col gap-1">
+          {Object.entries(modeLabels).map(([key, label]) => {
+            const isActive = isLyra
+              ? key === lyraMode
+              : key === salarMode;
 
             return (
               <button
                 key={key}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs transition border
-                ${isActive
-                  ? `bg-amber-600 text-white border-amber-600`
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs transition border ${
+                  isActive ? activePill : inactivePill
                 }`}
                 onClick={() =>
-                  isSalar
-                    ? setSalarMode(key as SalarMode)
-                    : setLyraMode(key as LyraMode)
+                  isLyra
+                    ? setLyraMode(key as LyraMode)
+                    : setSalarMode(key as SalarMode)
                 }
               >
                 {label}
@@ -152,6 +151,10 @@ export default function Sidebar({
         </div>
       )}
 
+      {/* ---------------------------------- */}
+      {/* Spare Area for Future (blank) */}
+      {/* ---------------------------------- */}
+      <div className="flex-1" />
     </div>
   );
 }

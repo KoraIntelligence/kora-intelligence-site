@@ -26,6 +26,7 @@ export default function MessageBubble({
   const companion = meta?.companion?.toLowerCase?.() || "salar";
   const isLyra = companion === "lyra";
 
+  // ---- Bubble Styling ----
   const bubbleBase = "max-w-2xl px-4 py-3 rounded-2xl text-sm";
   const bubbleUser = "bg-gray-100 text-gray-900";
   const bubbleSystem = "text-gray-500 text-xs italic bg-transparent shadow-none";
@@ -44,7 +45,7 @@ export default function MessageBubble({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div className={`${bubbleBase} ${roleStyle}`}>
-        {/* Header: Mode & Companion */}
+        {/* Header */}
         {!isUser && !isSystem && (
           <div className="flex justify-between items-center mb-1">
             <span
@@ -75,6 +76,7 @@ export default function MessageBubble({
                 <span className="ml-1 text-green-600">(Final Stage)</span>
               )}
             </div>
+
             {meta.workflow.stageDescription && (
               <div className="text-[10px] text-gray-500 whitespace-pre-line mt-0.5">
                 {meta.workflow.stageDescription}
@@ -83,7 +85,7 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Message content */}
+        {/* Message Content */}
         {isSystem ? (
           <span>{message.content}</span>
         ) : (

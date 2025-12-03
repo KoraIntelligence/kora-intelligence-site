@@ -70,12 +70,10 @@ export default function NextActionButtons({
 }: Props) {
   if (!meta?.nextActions || meta.nextActions.length === 0) return null;
 
-  const companion = meta?.companion
-    ? meta.companion[0].toUpperCase() + meta.companion.slice(1)
-    : "Salar";
+  const companionName = meta?.companion?.toLowerCase?.() || "salar";
+  const isLyra = companionName === "lyra";
 
-  const isLyra = companion === "Lyra";
-
+  // ---- workflow state ----
   const currentStage = meta.workflow?.stageId;
   const nextStageIds = new Set(meta.workflow?.nextStageIds || []);
   const completedStages = new Set(
@@ -90,30 +88,38 @@ export default function NextActionButtons({
     <div className="flex flex-wrap gap-2 mt-2">
       {uniqueActions.map((action) => {
         const label = LABEL_MAP[action] || action.replace(/_/g, " ");
-        const stageId = action;
 
+        // Determine color style
         let style = "";
-        if (completedStages.has(stageId)) {
-          style = "bg-gray-300 hover:bg-gray-400 text-gray-800";
-        } else if (stageId === currentStage) {
-          style = "bg-blue-600 hover:bg-blue-700";
-        } else if (nextStageIds.has(stageId)) {
-          style = "bg-green-600 hover:bg-green-700";
+
+        if (completedStages.has(action)) {
+          style =
+            "bg-gray-200 text-gray-700 border border-gray-300 hover:bg-gray-300";
+        } else if (action === currentStage) {
+          style =
+            "bg-blue-600 text-white hover:bg-blue-700 border border-blue-700";
+        } else if (nextStageIds.has(action)) {
+          style =
+            "bg-green-600 text-white hover:bg-green-700 border border-green-700";
         } else {
           style = isLyra
-            ? "bg-teal-600 hover:bg-teal-700"
-            : "bg-amber-600 hover:bg-amber-700";
+            ? "bg-teal-600 text-white hover:bg-teal-700 border border-teal-700"
+            : "bg-amber-600 text-white hover:bg-amber-700 border border-amber-700";
         }
 
+        const common =
+          `px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${style} ` +
+          (sending ? "opacity-50 cursor-not-allowed" : "");
+
+        // Special handling for visual render
         if (action === "render_visual") {
           return (
             <button
               key={action}
               type="button"
+              disabled={sending}
               onClick={() => !sending && onRenderVisual?.()}
-              className={`px-3 py-1 text-xs rounded-lg text-white ${style} ${
-                sending ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={common}
             >
               {label}
             </button>
@@ -124,10 +130,9 @@ export default function NextActionButtons({
           <button
             key={action}
             type="button"
+            disabled={sending}
             onClick={() => !sending && onSend?.(action)}
-            className={`px-3 py-1 text-xs rounded-lg text-white ${style} ${
-              sending ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={common}
           >
             {label}
           </button>

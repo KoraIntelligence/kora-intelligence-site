@@ -424,7 +424,6 @@ useEffect(() => {
     <ChatLayout
       sidebar={sidebarNode}
       chatWindow={chatWindowNode}
-      chatInput={null}
       identityOverlay={identityOverlayNode}
       attachmentDrawer={null}
     />

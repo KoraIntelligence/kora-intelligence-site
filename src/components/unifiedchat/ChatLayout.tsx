@@ -1,151 +1,120 @@
+// src/components/unifiedchat/ChatLayout.tsx
+
 import React from "react";
 
 interface ChatLayoutProps {
   sidebar: React.ReactNode;
+  topBar?: React.ReactNode;
   chatWindow: React.ReactNode;
-  chatInput: React.ReactNode;
   identityOverlay?: React.ReactNode;
   attachmentDrawer?: React.ReactNode;
 }
 
 export default function ChatLayout({
   sidebar,
+  topBar,
   chatWindow,
-  chatInput,
   identityOverlay,
   attachmentDrawer,
 }: ChatLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-amber-50 to-white flex justify-center px-4 py-6">
-      <div
+    <div className="w-full h-screen bg-white text-gray-900 flex overflow-hidden">
+
+      {/* --------------------------------------------------- */}
+      {/* SIDEBAR (DESKTOP)                                   */}
+      {/* --------------------------------------------------- */}
+      <aside
         className="
-          relative 
-          w-full 
-          max-w-7xl 
-          rounded-3xl 
-          shadow-lg 
-          border 
-          border-amber-100 
-          bg-white/50 
-          backdrop-blur-md 
-          overflow-hidden 
-          grid 
-          grid-cols-1 
-          md:grid-cols-[260px_1fr]
+          hidden 
+          lg:flex 
+          flex-col 
+          w-64 
+          border-r 
+          border-gray-200 
+          bg-gray-50 
+          p-4 
+          overflow-y-auto
         "
       >
-        {/* ================================================= */}
-        {/* SIDEBAR (DESKTOP) */}
-        {/* ================================================= */}
-        <aside
-          className="
-            hidden 
-            md:block 
-            border-r 
-            border-amber-100 
-            bg-amber-50/40 
-            p-4 
-            overflow-y-auto
-          "
-        >
-          {sidebar}
-        </aside>
+        {sidebar}
+      </aside>
 
-        {/* ================================================= */}
-        {/* MAIN CHAT AREA */}
-        {/* ================================================= */}
-        <section className="flex flex-col max-h-screen relative">
-          {/* CHAT WINDOW */}
-          <div
-            id="chat-scroll-container"
-            className="
-              flex-1 
-              overflow-y-auto 
-              p-6 
-              bg-white/80 
-              scroll-smooth
-            "
-          >
-            {chatWindow}
-          </div>
+      {/* --------------------------------------------------- */}
+      {/* MOBILE TOP BAR (SIDEBAR COLLAPSED)                  */}
+      {/* --------------------------------------------------- */}
+      <div
+        className="
+          lg:hidden
+          fixed
+          top-0 left-0 right-0
+          z-30
+          bg-white
+          shadow-sm
+          border-b border-gray-200
+          p-3
+        "
+      >
+        {sidebar}
+      </div>
 
-          {/* CHAT INPUT BAR */}
+      {/* --------------------------------------------------- */}
+      {/* MAIN AREA                                           */}
+      {/* --------------------------------------------------- */}
+      <main className="flex-1 flex flex-col relative">
+
+        {/* TOP BAR AREA (Workflow, mode info, etc.) */}
+        {topBar && (
           <div
             className="
-              border-t 
-              border-amber-100 
+              h-16
+              border-b 
+              border-gray-200 
               bg-white 
-              p-4 
-              sticky 
-              bottom-0 
-              z-20
-            "
-          >
-            {chatInput}
-          </div>
-        </section>
-
-        {/* ================================================= */}
-        {/* MOBILE SIDEBAR */}
-        {/* ================================================= */}
-        <div
-          className="
-            md:hidden 
-            fixed 
-            top-0 
-            left-0 
-            right-0 
-            bg-amber-50/95 
-            border-b 
-            border-amber-200 
-            z-40 
-            shadow-sm 
-            p-3 
-            backdrop-blur-md
-          "
-        >
-          {sidebar}
-        </div>
-
-        {/* ================================================= */}
-        {/* IDENTITY OVERLAY */}
-        {/* ================================================= */}
-        {identityOverlay && (
-          <div
-            className="
-              absolute 
-              inset-0 
-              z-50 
               flex 
               items-center 
-              justify-center 
-              bg-black/40
+              px-4 
+              z-10 
+              relative
             "
           >
-            {identityOverlay}
+            {topBar}
           </div>
         )}
 
-        {/* ================================================= */}
-        {/* ATTACHMENT DRAWER */}
-        {/* ================================================= */}
-        {attachmentDrawer && (
-          <div
-            className="
-              absolute 
-              inset-x-0 
-              bottom-0 
-              z-30 
-              bg-white 
-              border-t 
-              border-gray-200 
-              shadow-xl
-            "
-          >
-            {attachmentDrawer}
-          </div>
-        )}
-      </div>
+        {/* CHAT WINDOW (full remaining height) */}
+        <div className="flex-1 relative overflow-hidden">
+          {chatWindow}
+        </div>
+      </main>
+
+      {/* --------------------------------------------------- */}
+      {/* IDENTITY OVERLAY                                    */}
+      {/* --------------------------------------------------- */}
+      {identityOverlay && (
+        <div className="absolute inset-0 z-40 bg-black/40 flex items-center justify-center">
+          {identityOverlay}
+        </div>
+      )}
+
+      {/* --------------------------------------------------- */}
+      {/* ATTACHMENT DRAWER                                   */}
+      {/* --------------------------------------------------- */}
+      {attachmentDrawer && (
+        <div
+          className="
+            absolute 
+            inset-x-0 
+            bottom-0 
+            z-40 
+            bg-white 
+            border-t 
+            border-gray-300 
+            shadow-xl
+          "
+        >
+          {attachmentDrawer}
+        </div>
+      )}
     </div>
   );
 }
