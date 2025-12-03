@@ -5,30 +5,15 @@
 // ======================================================
 
 import OpenAI from "openai";
-
 import { getWorkflow } from "../workflows";
-
-// Prompt Packs
 import { SALAR_COMMERCIAL_CHAT_PROMPTS } from "../prompts/salar/commercial_chat";
 import { SALAR_PROPOSAL_PROMPTS } from "../prompts/salar/proposal";
 import { SALAR_CONTRACT_PROMPTS } from "../prompts/salar/contract_advice";
 import { SALAR_PRICING_PROMPTS } from "../prompts/salar/pricing";
 import { SALAR_STRATEGY_PROMPTS } from "../prompts/salar/strategy";
-
-// Identity loader
 import type { CompanionIdentity } from "../identity/loader";
 import { loadIdentity } from "../identity/loader";
-
-// Attachments (for workflow modes)
-import {
-  createPDF,
-  createDocx,
-  createXlsx,
-} from "../../pages/api/session/utils/generateDocs";
-
-// ======================================================
-//  TYPES
-// ======================================================
+import { createPDF, createDocx, createXlsx } from "../../pages/api/session/utils/generateDocs";
 
 export type SalarMode =
   | "commercial_chat"
@@ -43,12 +28,11 @@ export interface SalarOrchestratorInput {
   extractedText: string;
   tone: string;
   nextAction?: string;
-  history?: { role: string; content: string; meta?: any | null }[];
+  conversationHistory?: { role: string; content: string; meta?: any | null }[];
 }
 
 export interface SalarPromptPack {
   mode: SalarMode;
-
   system: string;
   error: string;
 
@@ -61,15 +45,12 @@ export interface SalarPromptPack {
   finalise?: string;
 
   paths?: Record<string, string>;
-
   requestContext?: string;
   insight?: string;
   deepDive?: Record<string, string>;
-
   requestTemplate?: string;
   analyseTemplate?: string;
   pricingStrategy?: string;
-
   nextActions: Record<string, string[]>;
 
   attachments?: {
@@ -77,10 +58,6 @@ export interface SalarPromptPack {
     final?: string[];
   };
 }
-
-// ======================================================
-//  REGISTRY
-// ======================================================
 
 const PACKS: Record<SalarMode, SalarPromptPack> = {
   commercial_chat: SALAR_COMMERCIAL_CHAT_PROMPTS,
@@ -90,22 +67,11 @@ const PACKS: Record<SalarMode, SalarPromptPack> = {
   commercial_strategist: SALAR_STRATEGY_PROMPTS,
 };
 
-// ======================================================
-//  OPENAI CLIENT
-// ======================================================
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// ======================================================
-//  PROMPT RESOLUTION
-// ======================================================
-
-function resolvePrompt(
-  pack: SalarPromptPack,
-  nextAction?: string
-): string {
+function resolvePrompt(pack: SalarPromptPack, nextAction?: string): string {
   if (pack.mode === "commercial_chat") {
     switch (nextAction) {
       case "refine_thinking":
@@ -132,7 +98,6 @@ function resolvePrompt(
       return pack.refine || pack.error;
     case "finalise_proposal":
       return pack.finalise || pack.error;
-
     case "clarify_contract_context":
       return pack.clarify || pack.error;
     case "request_contract_upload":
@@ -145,7 +110,6 @@ function resolvePrompt(
       return pack.refine || pack.error;
     case "finalise_contract_pack":
       return pack.finalise || pack.error;
-
     case "clarify_pricing_requirements":
       return pack.clarify || pack.error;
     case "request_pricing_template":
@@ -160,7 +124,6 @@ function resolvePrompt(
       return pack.refine || pack.error;
     case "finalise_pricing":
       return pack.finalise || pack.error;
-
     case "request_context":
       return pack.clarify || pack.error;
     case "provide_insight":
@@ -171,15 +134,10 @@ function resolvePrompt(
       return pack.refine || pack.error;
     case "finalise_strategy_summary":
       return pack.finalise || pack.error;
-
     default:
       return pack.system;
   }
 }
-
-// ======================================================
-//  MAIN FUNCTION (CANONICAL FORMAT - v2)
-// ======================================================
 
 export async function runSalar(input: SalarOrchestratorInput) {
   const {
@@ -188,16 +146,16 @@ export async function runSalar(input: SalarOrchestratorInput) {
     extractedText,
     tone,
     nextAction,
-    history,
+    conversationHistory,
   } = input;
 
-  // 🔧 FIX: Normalized history without redeclaration conflict
-  const safeHistory = Array.isArray(history) ? history : [];
+  const safeHistory = Array.isArray(conversationHistory)
+    ? conversationHistory
+    : [];
 
   const pack = PACKS[mode];
   if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
 
-  // ----- 1) Load Identity -----
   const identity: CompanionIdentity = loadIdentity("salar", mode);
 
   const toneText =
@@ -220,24 +178,17 @@ Tone: ${toneText || "Warm professionalism, calm confidence"}
 ========================
 
 Key Behaviours:
-${
-  behavioursList.length
-    ? behavioursList.map((b) => `• ${b}`).join("\n")
-    : ""
-}
+${behavioursList.length ? behavioursList.map((b) => `• ${b}`).join("\n") : ""}
 
 Shared Codex:
 ${identity.codex ?? ""}
 --------------------------------------------------
 `;
 
-  // ----- 2) Resolve Prompt + Memory -----
   const prompt = resolvePrompt(pack, nextAction || undefined);
 
-  const formatConversation = (historyArr: any[]) =>
-    historyArr
-      .map((turn) => `${turn.role.toUpperCase()}: ${turn.content}`)
-      .join("\n");
+  const formatConversation = (arr: any[]) =>
+    arr.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
 
   const memoryBlock =
     safeHistory.length > 0
@@ -246,7 +197,6 @@ ${identity.codex ?? ""}
         )}\n`
       : "";
 
-  // ----- 3) Compose Final Prompt -----
   const fullPrompt = `
 ${identityPrompt}
 ${memoryBlock}
@@ -266,7 +216,6 @@ ${extractedText || "N/A"}
 Requested Tone: ${tone}
 `;
 
-  // ----- 4) Generate Completion -----
   const completion = await openai.responses.create({
     model: "gpt-4.1",
     input: fullPrompt,
@@ -275,7 +224,6 @@ Requested Tone: ${tone}
   const outputText =
     completion.output_text || "Salar was unable to generate a response.";
 
-  // ----- 5) Generate Attachments (workflow modes only) -----
   const attachments: any[] = [];
 
   if (
@@ -284,7 +232,6 @@ Requested Tone: ${tone}
     pack.attachments
   ) {
     const finalAttachments = pack.attachments.final || [];
-
     for (const type of finalAttachments) {
       if (type === "docx") attachments.push(await createDocx(outputText));
       if (type === "pdf") attachments.push(await createPDF(outputText));
@@ -292,15 +239,6 @@ Requested Tone: ${tone}
     }
   }
 
-  // ----- 6) Build Identity Meta -----
-  const identityMeta = {
-    persona: identity.persona ?? "Commercial Partner",
-    title: "Commercial Intelligence Companion",
-    mode,
-    toneBase: toneText || "Warm professionalism, calm confidence",
-  };
-
-  // ----- 7) Attach Workflow Meta -----
   const workflow = getWorkflow("salar", mode);
   let workflowMeta: any = undefined;
 
@@ -321,7 +259,13 @@ Requested Tone: ${tone}
     }
   }
 
-  // ----- 8) Return Canonical Response -----
+  const identityMeta = {
+    persona: identity.persona ?? "Commercial Partner",
+    title: "Commercial Intelligence Companion",
+    mode,
+    toneBase: toneText,
+  };
+
   return {
     reply: outputText,
     attachments,
@@ -329,13 +273,11 @@ Requested Tone: ${tone}
       companion: "salar",
       mode,
       tone,
-      identity: identityMeta,
       nextActions: Array.isArray(pack.nextActions)
         ? pack.nextActions
         : Object.values(pack.nextActions || {}).flat(),
-      memory: {
-        shortTerm: safeHistory.slice(-6),
-      },
+      identity: identityMeta,
+      memory: { shortTerm: safeHistory.slice(-6) },
       workflow: workflowMeta,
     },
   };

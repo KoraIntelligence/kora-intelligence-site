@@ -85,6 +85,23 @@ export default function MVP() {
     setUserId(stored);
   }, []);
 
+  useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  const salarStored = localStorage.getItem("kora-session_salar");
+  const lyraStored = localStorage.getItem("kora-session_lyra");
+
+  setSessionIds({
+    salar: salarStored || null,
+    lyra: lyraStored || null,
+  });
+
+  console.log("🔧 Restored sessions:", {
+    salar: salarStored,
+    lyra: lyraStored,
+  });
+}, []);
+
   // Immediately request a session for the active companion if none is stored
 useEffect(() => {
   if (!userId || sessionIds[companion]) return;
