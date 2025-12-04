@@ -13,7 +13,7 @@ type ChatWindowProps = {
   onUpload: (file: File) => void;
   sending: boolean;
   companion: "salar" | "lyra";
-  topBarHeight?: number; // optional future-proofing
+  topBarHeight?: number; // reserved space for future workflow bar
 };
 
 export default function ChatWindow({
@@ -22,34 +22,55 @@ export default function ChatWindow({
   onUpload,
   sending,
   companion,
-  topBarHeight = 64, // reserve 64px for future workflow/top bar
+  topBarHeight = 56, // default height of top UI region
 }: ChatWindowProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
-  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(
-    null
-  );
+  const [previewAttachment, setPreviewAttachment] =
+    useState<Attachment | null>(null);
 
-  // Auto-scroll
+  /* Auto-scroll on update */
   useEffect(() => {
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, sending]);
 
   const handleNextAction = (action: string) => onSend({ action });
 
   return (
     <div
-      className="relative w-full bg-white"
-      style={{ height: `calc(100vh - ${topBarHeight}px)` }}
+      className="
+        relative 
+        w-full 
+        bg-white 
+        flex 
+        flex-col 
+      "
+      style={{
+        height: `calc(100vh - ${topBarHeight}px)`,
+      }}
     >
-      {/* Message list */}
+      {/* ------------------------------------------------ */}
+      {/* MESSAGE LIST */}
+      {/* ------------------------------------------------ */}
       <div
         ref={listRef}
-        className="absolute top-0 left-0 right-0 bottom-16 overflow-y-auto px-6 py-6 space-y-4"
+        className="
+          flex-1
+          overflow-y-auto
+          px-4
+          md:px-6
+          py-6
+          space-y-4
+          scroll-smooth
+        "
+        style={{
+          WebkitOverflowScrolling: "touch",
+        }}
       >
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 text-sm mt-10">
+          <div className="text-center text-gray-400 text-sm mt-14">
             Start a conversation with{" "}
             <span className="font-semibold text-gray-700 capitalize">
               {companion}
@@ -77,7 +98,9 @@ export default function ChatWindow({
         )}
       </div>
 
-      {/* Attachment preview */}
+      {/* ------------------------------------------------ */}
+      {/* ATTACHMENT PREVIEW */}
+      {/* ------------------------------------------------ */}
       {previewAttachment && (
         <AttachmentPreviewModal
           attachment={previewAttachment}
@@ -85,8 +108,21 @@ export default function ChatWindow({
         />
       )}
 
-      {/* Input at page bottom */}
-      <div className="absolute bottom-0 left-0 right-0 border-t bg-white shadow-sm p-3">
+      {/* ------------------------------------------------ */}
+      {/* INPUT BAR */}
+      {/* ------------------------------------------------ */}
+      <div
+        className="
+          border-t 
+          bg-white 
+          shadow-sm 
+          p-3 
+          relative
+        "
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)", // iOS keyboard safety
+        }}
+      >
         <ChatInput
           value={input}
           onChange={setInput}

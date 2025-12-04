@@ -7,13 +7,13 @@ type IdentityOverlayProps = {
   onClose: () => void;
 
   identity?: {
-    persona?: string;
-    tone?: string;
-    mode?: string;
-    description?: string;
-    systemPrompt?: string;
-    [key: string]: any;
-  };
+  persona?: string;
+  tone?: string;
+  mode?: string;
+  description?: string;
+  systemPrompt?: string;
+  [key: string]: any;
+} | null;
 
   companion: "salar" | "lyra";
 };
@@ -23,6 +23,7 @@ export default function IdentityOverlay({
   onClose,
   identity,
   companion,
+  mode,
 }: IdentityOverlayProps) {
   if (!isOpen) return null;
 
