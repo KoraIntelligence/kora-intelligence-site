@@ -14,12 +14,11 @@ export type NextActionMeta = {
   companion?: string;
   mode?: string;
   workflow?: WorkflowMeta | null;
-  [key: string]: any; // allow any extra fields backend sends
+  [key: string]: any;
 };
 
 type Props = {
   meta: NextActionMeta;
-  history?: { meta?: { workflow?: WorkflowMeta | null } }[];
   onSend?: (action: string) => void;
   onRenderVisual?: () => void;
   sending?: boolean;
@@ -49,13 +48,12 @@ const LABEL_MAP: Record<string, string> = {
   clarify_requirements: "Clarify Requirements",
   generate_draft_proposal: "Generate Draft",
   refine_proposal: "Refine Proposal",
-  finalise_proposal: "Finalise Proposal",
+  finalise_proposal: "Finalize Proposal",
   request_contract_upload: "Upload Contract",
   confirm_summary: "Summarise Contract",
   choose_analysis_path: "Choose Analysis Path",
   refine_contract_analysis: "Refine Analysis",
   finalise_contract_pack: "Finalise Pack",
-  clarify_pricing_requirements: "Clarify Requirements",
   request_pricing_template: "Upload Template",
   analyse_pricing_template: "Analyse Template",
   set_pricing_strategy: "Set Pricing Strategy",
@@ -72,71 +70,46 @@ const LABEL_MAP: Record<string, string> = {
 
 export default function NextActionButtons({
   meta,
-  history,
   onSend,
   onRenderVisual,
   sending,
 }: Props) {
-  // Always ensure we have a history array
-  const safeHistory = Array.isArray(history) ? history : [];
+  const actions = Array.isArray(meta?.nextActions)
+    ? meta.nextActions
+    : [];
 
-  if (!meta?.nextActions || meta.nextActions.length === 0) return null;
+  if (actions.length === 0) return null;
 
   const companionName = meta?.companion?.toLowerCase?.() || "salar";
   const isLyra = companionName === "lyra";
 
-  // ---- workflow state ----
-  const currentStage = meta.workflow?.stageId ?? null;
-
-// History workflow stages
-const completedStages = new Set(
-  (history ?? [])
-    .map((h) => h.meta?.workflow?.stageId)
-    .filter(Boolean)
-);
-
-// Next stage IDs come from workflow metadata
-const nextStageIds = new Set(meta.workflow?.nextStageIds ?? []);
-
-  const uniqueActions = Array.from(new Set(meta.nextActions));
+  const workflow = meta.workflow ?? null;
+  const nextStageIds = new Set(workflow?.nextStageIds || []);
 
   return (
     <div className="flex flex-wrap gap-2 mt-2">
-      {uniqueActions.map((action) => {
-    // Ensure React does NOT wipe buttons aggressively
-    const stableKey = `${action}-${currentStage ?? "root"}`;
+      {actions.map((action) => {
         const label = LABEL_MAP[action] || action.replace(/_/g, " ");
+        const isNextStage = nextStageIds.has(action);
 
-        // Determine color style
-        let style = "";
+        let style = isNextStage
+          ? "bg-green-600 text-white border border-green-700"
+          : isLyra
+          ? "bg-teal-600 text-white border border-teal-700"
+          : "bg-amber-600 text-white border border-amber-700";
 
-        const isCompleted = completedStages.has(meta.workflow?.stageId ?? "");
-const isCurrent = false; // you do not have action === stage mapping
-const isNext = nextStageIds.has(action);
+        const classes =
+          `px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all ` +
+          style +
+          (sending ? " opacity-50 cursor-not-allowed" : "");
 
-if (isCompleted) {
-  style = "bg-gray-200 text-gray-700 border border-gray-300";
-} else if (isNext) {
-  style = "bg-green-600 text-white border border-green-700";
-} else {
-  style = isLyra
-    ? "bg-teal-600 text-white border border-teal-700"
-    : "bg-amber-600 text-white border border-amber-700";
-}
-
-        const common =
-          `px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${style} ` +
-          (sending ? "opacity-50 cursor-not-allowed" : "");
-
-        // Special handling for visual render
         if (action === "render_visual") {
           return (
             <button
-              key={stableKey}
-              type="button"
+              key={action}
+              className={classes}
               disabled={sending}
               onClick={() => !sending && onRenderVisual?.()}
-              className={common}
             >
               {label}
             </button>
@@ -146,10 +119,9 @@ if (isCompleted) {
         return (
           <button
             key={action}
-            type="button"
+            className={classes}
             disabled={sending}
             onClick={() => !sending && onSend?.(action)}
-            className={common}
           >
             {label}
           </button>

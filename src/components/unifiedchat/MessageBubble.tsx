@@ -1,5 +1,4 @@
 // src/components/unifiedchat/MessageBubble.tsx
-
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,7 +21,7 @@ type ExtendedMeta = {
   companion?: string;
   mode?: string;
   nextActions?: string[];
-  workflow?: WorkflowMeta;
+  workflow?: WorkflowMeta | null;
   [key: string]: any;
 };
 
@@ -40,24 +39,20 @@ export default function MessageBubble({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
-  // Meta coming back from the backend (workflow, identity, nextActions, etc.)
-  const rawMeta: ExtendedMeta = ((message as any).meta || {}) as ExtendedMeta;
+  const rawMeta: ExtendedMeta = (message.meta || {}) as ExtendedMeta;
 
-  // Fallback to active companion from context if meta.companion is missing
   const { companion: activeCompanion } = useCompanion();
-  const metaCompanion = rawMeta.companion?.toLowerCase?.();
+  const metaCompanion = rawMeta?.companion?.toLowerCase?.();
   const companion = (metaCompanion || activeCompanion || "salar").toLowerCase();
   const isLyra = companion === "lyra";
 
   const meta = rawMeta;
-  const workflow = meta.workflow;
+  const workflow = rawMeta.workflow;
 
-  // ---- Bubble styling -------------------------------------------------------
-
+  // ---- Bubble Styling ----
   const bubbleBase = "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm";
   const bubbleUser = "bg-gray-100 text-gray-900";
-  const bubbleSystem =
-    "text-gray-500 text-xs italic bg-transparent shadow-none";
+  const bubbleSystem = "text-gray-500 text-xs italic bg-transparent shadow-none";
   const bubbleAssistant = "bg-white border shadow-sm";
 
   const roleStyle = isSystem
@@ -68,14 +63,11 @@ export default function MessageBubble({
         isLyra ? "border-teal-500" : "border-amber-500"
       }`;
 
-  const showWorkflow = !isUser && !isSystem && !!workflow;
-
-  // ---------------------------------------------------------------------------
-
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div className={`${bubbleBase} ${roleStyle}`}>
-        {/* Header: Companion + Mode ------------------------------------------ */}
+
+        {/* Header */}
         {!isUser && !isSystem && (
           <div className="flex justify-between items-center mb-1">
             <span
@@ -94,28 +86,29 @@ export default function MessageBubble({
           </div>
         )}
 
-        {!isUser && !isSystem && meta?.workflow?.stageLabel && (
-  <div className="mb-2">
-    <div
-      className={`text-[12px] font-semibold ${
-        isLyra ? "text-teal-700" : "text-amber-700"
-      }`}
-    >
-      {meta.workflow.stageLabel}
-      {meta.workflow.isTerminal && (
-        <span className="ml-1 text-green-600">(Final Stage)</span>
-      )}
-    </div>
+        {/* Workflow Stage Block */}
+        {!isUser && !isSystem && workflow?.stageLabel && (
+          <div className="mb-2">
+            <div
+              className={`text-[12px] font-semibold ${
+                isLyra ? "text-teal-700" : "text-amber-700"
+              }`}
+            >
+              {workflow.stageLabel}
+              {workflow.isTerminal && (
+                <span className="ml-1 text-green-600">(Final Stage)</span>
+              )}
+            </div>
 
-    {meta.workflow.stageDescription && (
-      <div className="text-[11px] text-gray-500 whitespace-pre-line mt-1">
-        {meta.workflow.stageDescription}
-      </div>
-    )}
-  </div>
-)}
+            {workflow.stageDescription && (
+              <div className="text-[11px] text-gray-500 whitespace-pre-line mt-1">
+                {workflow.stageDescription}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Message content ---------------------------------------------------- */}
+        {/* Message Content */}
         {isSystem ? (
           <span>{message.content}</span>
         ) : (
@@ -126,25 +119,24 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Attachments -------------------------------------------------------- */}
-        {Array.isArray((message as any).attachments) &&
-          (message as any).attachments.length > 0 && (
-            <div className="mt-3">
-              <MessageAttachments
-                items={(message as any).attachments as any}
-                onOpenAttachment={onOpenAttachment as any}
-              />
-            </div>
-          )}
-
-        {/* Next Actions ------------------------------------------------------- */}
-        {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
-          <div className="mt-2">
-            <NextActionButtons meta={meta} onSend={onNextAction} />
+        {/* Attachments */}
+        {Array.isArray(message.attachments) && message.attachments.length > 0 && (
+          <div className="mt-3">
+            <MessageAttachments
+              items={message.attachments as any}
+              onOpenAttachment={onOpenAttachment as any}
+            />
           </div>
         )}
 
-        {/* Timestamp ---------------------------------------------------------- */}
+        {/* Next Actions */}
+        {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
+          <div className="mt-2">
+            <NextActionButtons meta={meta} />
+          </div>
+        )}
+
+        {/* Timestamp */}
         <div className="mt-1 text-[10px] text-gray-400 text-right">
           {new Date(message.ts).toLocaleTimeString()}
         </div>

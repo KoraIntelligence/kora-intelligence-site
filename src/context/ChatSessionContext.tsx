@@ -1,4 +1,5 @@
 // src/context/ChatSessionContext.tsx
+
 import React, {
   createContext,
   useContext,
@@ -28,12 +29,12 @@ type ChatSessionContextValue = {
   activeSessionId: string | null;
   sendMessage: (payload: { text?: string; action?: string }) => Promise<void>;
   uploadFile: (file: File) => Promise<void>;
-  clearMessagesForCompanion: (companion: Companion) => void;
+  clearMessagesForCompanion: (c: Companion) => void;
 };
 
 const ChatSessionContext = createContext<ChatSessionContextValue | null>(null);
 
-// keys (match your old mvp.tsx)
+// localStorage keys
 const USER_ID_KEY = "kora_user_id";
 const SESSION_KEY_PREFIX = "kora-session";
 
@@ -41,8 +42,8 @@ const uid = () => Math.random().toString(36).slice(2);
 
 interface ProviderProps {
   children: React.ReactNode;
-  tone: string; // current tone from UI
-  isGuest: boolean; // guest flag from localStorage
+  tone: string;
+  isGuest: boolean;
 }
 
 export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) {
@@ -52,20 +53,19 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
     companion === "salar" ? salarMode : lyraMode;
 
   const [userId, setUserId] = useState<string | null>(null);
-  const [sessionIds, setSessionIds] = useState<Record<Companion, string | null>>({
-    salar: null,
-    lyra: null,
-  });
-
-  const activeSessionId = sessionIds[companion];
+  const [sessionIds, setSessionIds] = useState<Record<Companion, string | null>>(
+    { salar: null, lyra: null }
+  );
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  /* -------------------------------------------------- */
-  /* USER ID INITIALISATION                             */
-  /* -------------------------------------------------- */
+  const activeSessionId = sessionIds[companion];
+
+  /* ============================
+     USER ID INITIALISATION
+  ============================= */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -77,32 +77,24 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
     setUserId(stored);
   }, []);
 
-  /* -------------------------------------------------- */
-  /* RESTORE PER-COMPANION SESSIONS                     */
-  /* -------------------------------------------------- */
+  /* ============================
+     RESTORE SESSIONS
+  ============================= */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const salarStored = localStorage.getItem(`${SESSION_KEY_PREFIX}_salar`);
-    const lyraStored = localStorage.getItem(`${SESSION_KEY_PREFIX}_lyra`);
-
     setSessionIds({
-      salar: salarStored || null,
-      lyra: lyraStored || null,
-    });
-
-    console.log("🔧 Restored sessions:", {
-      salar: salarStored,
-      lyra: lyraStored,
+      salar: localStorage.getItem(`${SESSION_KEY_PREFIX}_salar`),
+      lyra: localStorage.getItem(`${SESSION_KEY_PREFIX}_lyra`),
     });
   }, []);
 
-  /* -------------------------------------------------- */
-  /* LAZY SESSION INITIALISATION FOR ACTIVE COMPANION   */
-  /* -------------------------------------------------- */
+  /* ============================
+     LAZY SESSION INITIALISATION
+  ============================= */
   useEffect(() => {
     if (!userId) return;
-    if (sessionIds[companion]) return; // already have one
+    if (sessionIds[companion]) return;
 
     (async () => {
       try {
@@ -124,30 +116,24 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
 
         const data = await res.json();
         if (res.ok && data.sessionId) {
-          setSessionIds((prev) => ({ ...prev, [companion]: data.sessionId }));
           localStorage.setItem(
             `${SESSION_KEY_PREFIX}_${companion}`,
             data.sessionId
           );
-          console.log("🆕 Created session for companion:", companion, data.sessionId);
-        } else {
-          console.warn("⚠️ Failed to create session:", data.error);
+          setSessionIds((prev) => ({ ...prev, [companion]: data.sessionId }));
         }
       } catch (e) {
-        console.error("⚠️ Failed to initialize session:", e);
+        console.error("Error creating session:", e);
       }
     })();
-  }, [userId, companion, sessionIds, activeMode, tone, isGuest]);
+  }, [userId, companion, activeMode, tone]);
 
-  /* -------------------------------------------------- */
-  /* LOAD HISTORY WHEN COMPANION / SESSION CHANGES      */
-  /* -------------------------------------------------- */
+  /* ============================
+     LOAD HISTORY
+  ============================= */
   useEffect(() => {
     const sid = sessionIds[companion];
-    console.log("✅ Switching to companion:", companion, "sessionId:", sid);
-
     if (!sid) {
-      console.warn("⚠️ No sessionId for companion — won’t load history");
       setMessages([]);
       return;
     }
@@ -155,9 +141,7 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
     (async () => {
       try {
         const res = await fetch(`/api/unified?sessionId=${sid}`);
-        console.log("📦 History fetch status:", res.status);
         const data = await res.json();
-        console.log("📥 Loaded messages:", data.messages?.length);
 
         if (Array.isArray(data.messages)) {
           setMessages(
@@ -166,39 +150,33 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
               role: m.role,
               content: m.content,
               ts: m.ts,
-              meta: {
-  ...(m.meta || {}),
-  companion,
-  workflow: m.meta?.workflow || null,
-  nextActions: m.meta?.nextActions || [],
-  mode: m.meta?.mode || activeMode
-},
               attachments: m.attachments || [],
+              meta: {
+                ...(m.meta || {}),
+
+                companion: m.meta?.companion || companion,
+                mode: m.meta?.mode || activeMode,
+
+                workflow: m.meta?.workflow ?? null,
+                nextActions: Array.isArray(m.meta?.nextActions)
+                  ? m.meta.nextActions
+                  : [],
+              },
             }))
           );
         }
-      } catch (e) {
-        console.error("❌ Error loading history after companion switch", e);
+      } catch (err) {
+        console.error("Failed to load history:", err);
       }
     })();
   }, [companion, sessionIds]);
 
-  /* -------------------------------------------------- */
-  /* HELPER: CALL UNIFIED API                           */
-  /* -------------------------------------------------- */
+  /* ============================
+     CALL UNIFIED (backend)
+  ============================= */
   const callUnified = useCallback(
-    async (
-      extraPayload: Record<string, unknown>,
-      overrideHistory?: Message[]
-    ) => {
-      if (!userId) {
-        throw new Error("No userId initialised yet.");
-      }
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...(isGuest ? { "x-guest": "true" } : {}),
-      };
+    async (extra: Record<string, unknown>, overrideHistory?: Message[]) => {
+      if (!userId) throw new Error("Missing userId");
 
       const historyToSend = overrideHistory ?? messages;
 
@@ -211,49 +189,42 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
         conversationHistory: historyToSend.map((m) => ({
           role: m.role,
           content: m.content,
-          meta: {
-            ...(m.meta || {}),
-            companion, // sessions are per-companion, keep it explicit
-          },
+          meta: { ...(m.meta || {}) },
         })),
-        ...extraPayload,
+        ...extra,
       };
 
       const res = await fetch("/api/unified", {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          ...(isGuest ? { "x-guest": "true" } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unified API request failed");
+      if (!res.ok) throw new Error(data.error || "Backend error");
 
-      // If backend returns a sessionId, store it
-      if (data.sessionId && typeof data.sessionId === "string") {
-        setSessionIds((prev) => ({
-          ...prev,
-          [companion]: data.sessionId!,
-        }));
-
+      if (data.sessionId) {
         localStorage.setItem(
           `${SESSION_KEY_PREFIX}_${companion}`,
-          data.sessionId!
+          data.sessionId
         );
+        setSessionIds((prev) => ({ ...prev, [companion]: data.sessionId }));
       }
 
       return data;
     },
-    [companion, activeMode, tone, userId, activeSessionId, isGuest, messages]
+    [messages, companion, activeMode, tone, userId, activeSessionId, isGuest]
   );
 
-  /* -------------------------------------------------- */
-  /* SEND MESSAGE                                       */
-  /* -------------------------------------------------- */
+  /* ============================
+     SEND MESSAGE
+  ============================= */
   const sendMessage = useCallback(
-    async (payload: { text?: string; action?: string }) => {
-      const { text, action } = payload;
+    async ({ text, action }: { text?: string; action?: string }) => {
       const trimmed = text?.trim();
-
       if (!trimmed && !action) return;
 
       setSending(true);
@@ -265,7 +236,6 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
         ts: Date.now(),
       };
 
-      // Put user + temp system "…" into UI
       setMessages((m) => [
         ...m,
         userMsg,
@@ -279,37 +249,42 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
       ]);
 
       try {
-        const historyForThisTurn = [...messages, userMsg];
+        const historyForTurn = [...messages, userMsg];
 
         const data = await callUnified(
-          {
-            input: trimmed || null,
-            nextAction: action || null,
-          },
-          historyForThisTurn
+          { input: trimmed || null, nextAction: action || null },
+          historyForTurn
         );
 
         const assistantMsg: Message = {
-  id: uid(),
-  role: "assistant",
-  content: data.reply,
-  attachments: data.attachments || [],
-  meta: {
-    ...(data.meta || {}),  // ★ Do NOT override workflow / nextActions
-    companion,
-    mode: activeMode,
-  },
-  ts: Date.now(),
-};
+          id: uid(),
+          role: "assistant",
+          content: data.reply,
+          attachments: data.attachments || [],
+          ts: Date.now(),
+          meta: {
+            ...(data.meta || {}),
 
-setMessages((m) => {
-  // Remove ONLY temporary system placeholder ("…")
-  const cleaned = m.filter((msg) => !(msg.role === "system" && msg.content === "…"));
+            companion: data.meta?.companion || companion,
+            mode: data.meta?.mode || activeMode,
 
-  return [...cleaned, assistantMsg];
-});
+            workflow: data.meta?.workflow ?? null,
+            nextActions: Array.isArray(data.meta?.nextActions)
+              ? data.meta.nextActions
+              : [],
+          },
+        };
+
+        setMessages((prev) =>
+          [
+            ...prev.filter(
+              (msg) => !(msg.role === "system" && msg.content === "…")
+            ),
+            assistantMsg,
+          ]
+        );
       } catch (err) {
-        console.error("❌ Chat error:", err);
+        console.error("Chat error:", err);
 
         setMessages((m) => [
           ...m.filter((msg) => msg.role !== "system"),
@@ -325,18 +300,19 @@ setMessages((m) => {
 
       setSending(false);
     },
-    [callUnified, messages, companion, activeMode]
+    [messages, companion, activeMode]
   );
 
-  /* -------------------------------------------------- */
-  /* FILE UPLOAD                                        */
-  /* -------------------------------------------------- */
+  /* ============================
+     FILE UPLOAD
+  ============================= */
   const uploadFile = useCallback(
     async (file: File) => {
       if (!file || uploading) return;
       setUploading(true);
 
       const tempId = uid();
+
       setMessages((m) => [
         ...m,
         {
@@ -360,27 +336,34 @@ setMessages((m) => {
             type: file.type,
             contentBase64: base64,
           },
-          input: null,
-          nextAction: null,
         });
+
+        const assistantMsg: Message = {
+          id: uid(),
+          role: "assistant",
+          content: data.reply,
+          attachments: data.attachments || [],
+          ts: Date.now(),
+          meta: {
+            ...(data.meta || {}),
+
+            companion: data.meta?.companion || companion,
+            mode: data.meta?.mode || activeMode,
+
+            workflow: data.meta?.workflow ?? null,
+            nextActions: Array.isArray(data.meta?.nextActions)
+              ? data.meta.nextActions
+              : [],
+          },
+        };
 
         setMessages((m) => [
           ...m.filter((msg) => msg.id !== tempId),
-          {
-  id: uid(),
-  role: "assistant",
-  content: data.reply,
-  attachments: data.attachments || [],
-  meta: {
-    ...(data.meta || {}), // keep backend workflow & nextActions intact
-    companion,
-    mode: activeMode,
-  },
-  ts: Date.now(),
-},
+          assistantMsg,
         ]);
       } catch (err) {
-        console.error("❌ File upload error:", err);
+        console.error("Upload error:", err);
+
         setMessages((m) => [
           ...m.filter((msg) => msg.id !== tempId),
           {
@@ -398,13 +381,11 @@ setMessages((m) => {
     [callUnified, uploading, companion, activeMode]
   );
 
-  /* -------------------------------------------------- */
-  /* CLEAR MESSAGES FOR A COMPANION (optional utility)  */
-  /* -------------------------------------------------- */
+  /* ============================
+     CLEAR MESSAGES
+  ============================= */
   const clearMessagesForCompanion = (c: Companion) => {
-    if (c === companion) {
-      setMessages([]);
-    }
+    if (c === companion) setMessages([]);
   };
 
   return (
@@ -428,8 +409,7 @@ setMessages((m) => {
 
 export function useChatSession() {
   const ctx = useContext(ChatSessionContext);
-  if (!ctx) {
+  if (!ctx)
     throw new Error("useChatSession must be used within <ChatSessionProvider>");
-  }
   return ctx;
 }
