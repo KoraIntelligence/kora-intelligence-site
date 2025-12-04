@@ -290,34 +290,23 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
         );
 
         const assistantMsg: Message = {
-          id: uid(),
-          role: "assistant",
-          content: data.reply,
-          attachments: data.attachments || [],
-          meta: {
-            ...(data.meta || {}),
-            companion,
-            mode: activeMode,
-          },
-          ts: Date.now(),
-        };
+  id: uid(),
+  role: "assistant",
+  content: data.reply,
+  attachments: data.attachments || [],
+  meta: {
+    ...(data.meta || {}),  // ★ Do NOT override workflow / nextActions
+    companion,
+    mode: activeMode,
+  },
+  ts: Date.now(),
+};
 
-        setMessages((m) => {
-  const cleaned = m.filter((msg) => msg.role !== "system");
+setMessages((m) => {
+  // Remove ONLY temporary system placeholder ("…")
+  const cleaned = m.filter((msg) => !(msg.role === "system" && msg.content === "…"));
 
-  return [
-    ...cleaned,
-    {
-      ...assistantMsg,
-      meta: {
-        ...(assistantMsg.meta || {}),
-        workflow: assistantMsg.meta?.workflow || null,
-        nextActions: assistantMsg.meta?.nextActions || [],
-        companion,       // 🧠 always preserve companion identity
-        mode: activeMode // 🧠 always include mode
-      }
-    }
-  ];
+  return [...cleaned, assistantMsg];
 });
       } catch (err) {
         console.error("❌ Chat error:", err);
@@ -378,17 +367,17 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
         setMessages((m) => [
           ...m.filter((msg) => msg.id !== tempId),
           {
-            id: uid(),
-            role: "assistant",
-            content: data.reply,
-            attachments: data.attachments || [],
-            meta: {
-              ...(data.meta || {}),
-              companion,
-              mode: activeMode,
-            },
-            ts: Date.now(),
-          },
+  id: uid(),
+  role: "assistant",
+  content: data.reply,
+  attachments: data.attachments || [],
+  meta: {
+    ...(data.meta || {}), // keep backend workflow & nextActions intact
+    companion,
+    mode: activeMode,
+  },
+  ts: Date.now(),
+},
         ]);
       } catch (err) {
         console.error("❌ File upload error:", err);
