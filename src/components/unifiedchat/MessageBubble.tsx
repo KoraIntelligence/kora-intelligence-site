@@ -1,3 +1,5 @@
+// src/components/unifiedchat/MessageBubble.tsx
+
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -8,17 +10,19 @@ import NextActionButtons from "./NextActionButtons";
 import type { Message, Attachment } from "@/types/chat";
 import { useCompanion } from "@/context/CompanionContext";
 
+type WorkflowMeta = {
+  stageId?: string;
+  stageLabel?: string;
+  stageDescription?: string;
+  nextStageIds?: string[];
+  isTerminal?: boolean;
+};
+
 type ExtendedMeta = {
-  nextActions?: string[];
   companion?: string;
   mode?: string;
-  workflow?: {
-    stageId?: string;
-    stageLabel?: string;
-    stageDescription?: string;
-    nextStageIds?: string[];
-    isTerminal?: boolean;
-  };
+  nextActions?: string[];
+  workflow?: WorkflowMeta;
   [key: string]: any;
 };
 
@@ -36,32 +40,42 @@ export default function MessageBubble({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
-  const meta: ExtendedMeta = (message as any).meta ?? {};
+  // Meta coming back from the backend (workflow, identity, nextActions, etc.)
+  const rawMeta: ExtendedMeta = ((message as any).meta || {}) as ExtendedMeta;
 
-  // Companion identity: prefer meta.companion, fall back to active companion
+  // Fallback to active companion from context if meta.companion is missing
   const { companion: activeCompanion } = useCompanion();
-  const metaCompanion = meta?.companion?.toLowerCase?.();
+  const metaCompanion = rawMeta.companion?.toLowerCase?.();
   const companion = (metaCompanion || activeCompanion || "salar").toLowerCase();
   const isLyra = companion === "lyra";
 
-  // ---- Bubble Styling ----
+  const meta = rawMeta;
+  const workflow = meta.workflow;
+
+  // ---- Bubble styling -------------------------------------------------------
+
   const bubbleBase = "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm";
   const bubbleUser = "bg-gray-100 text-gray-900";
-  const bubbleSystem = "text-gray-500 text-xs italic bg-transparent shadow-none";
+  const bubbleSystem =
+    "text-gray-500 text-xs italic bg-transparent shadow-none";
   const bubbleAssistant = "bg-white border shadow-sm";
 
   const roleStyle = isSystem
     ? bubbleSystem
     : isUser
     ? bubbleUser
-    : `${bubbleAssistant} ${isLyra ? "border-teal-500" : "border-amber-500"}`;
+    : `${bubbleAssistant} ${
+        isLyra ? "border-teal-500" : "border-amber-500"
+      }`;
 
-  const showWorkflow = !isUser && !isSystem && !!meta.workflow;
+  const showWorkflow = !isUser && !isSystem && !!workflow;
+
+  // ---------------------------------------------------------------------------
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div className={`${bubbleBase} ${roleStyle}`}>
-        {/* Header: companion + mode */}
+        {/* Header: Companion + Mode ------------------------------------------ */}
         {!isUser && !isSystem && (
           <div className="flex justify-between items-center mb-1">
             <span
@@ -71,6 +85,7 @@ export default function MessageBubble({
             >
               {companion[0].toUpperCase() + companion.slice(1)}
             </span>
+
             {meta.mode && (
               <span className="text-[10px] text-gray-400 uppercase tracking-wider">
                 {meta.mode}
@@ -79,29 +94,28 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Workflow stage indicator */}
-        {showWorkflow && meta.workflow?.stageLabel && (
-          <div className="mb-2">
-            <div
-              className={`text-[11px] font-semibold ${
-                isLyra ? "text-teal-700" : "text-amber-700"
-              }`}
-            >
-              {meta.workflow.stageLabel}
-              {meta.workflow.isTerminal && (
-                <span className="ml-1 text-green-600">(Final Stage)</span>
-              )}
-            </div>
+        {!isUser && !isSystem && meta?.workflow?.stageLabel && (
+  <div className="mb-2">
+    <div
+      className={`text-[12px] font-semibold ${
+        isLyra ? "text-teal-700" : "text-amber-700"
+      }`}
+    >
+      {meta.workflow.stageLabel}
+      {meta.workflow.isTerminal && (
+        <span className="ml-1 text-green-600">(Final Stage)</span>
+      )}
+    </div>
 
-            {meta.workflow.stageDescription && (
-              <div className="text-[10px] text-gray-500 whitespace-pre-line mt-0.5">
-                {meta.workflow.stageDescription}
-              </div>
-            )}
-          </div>
-        )}
+    {meta.workflow.stageDescription && (
+      <div className="text-[11px] text-gray-500 whitespace-pre-line mt-1">
+        {meta.workflow.stageDescription}
+      </div>
+    )}
+  </div>
+)}
 
-        {/* Message Content */}
+        {/* Message content ---------------------------------------------------- */}
         {isSystem ? (
           <span>{message.content}</span>
         ) : (
@@ -112,24 +126,25 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Attachments */}
-        {Array.isArray(message.attachments) && message.attachments.length > 0 && (
-          <div className="mt-3">
-            <MessageAttachments
-              items={message.attachments as any}
-              onOpenAttachment={onOpenAttachment as any}
-            />
-          </div>
-        )}
+        {/* Attachments -------------------------------------------------------- */}
+        {Array.isArray((message as any).attachments) &&
+          (message as any).attachments.length > 0 && (
+            <div className="mt-3">
+              <MessageAttachments
+                items={(message as any).attachments as any}
+                onOpenAttachment={onOpenAttachment as any}
+              />
+            </div>
+          )}
 
-        {/* Next Actions */}
+        {/* Next Actions ------------------------------------------------------- */}
         {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
           <div className="mt-2">
-            <NextActionButtons meta={meta as any} onSend={onNextAction} />
+            <NextActionButtons meta={meta} onSend={onNextAction} />
           </div>
         )}
 
-        {/* Timestamp */}
+        {/* Timestamp ---------------------------------------------------------- */}
         <div className="mt-1 text-[10px] text-gray-400 text-right">
           {new Date(message.ts).toLocaleTimeString()}
         </div>

@@ -1,16 +1,25 @@
 // src/components/unifiedchat/NextActionButtons.tsx
 import React from "react";
 
+export type WorkflowMeta = {
+  stageId?: string;
+  stageLabel?: string;
+  stageDescription?: string;
+  nextStageIds?: string[];
+  isTerminal?: boolean;
+};
+
+export type NextActionMeta = {
+  nextActions?: string[];
+  companion?: string;
+  mode?: string;
+  workflow?: WorkflowMeta | null;
+  [key: string]: any; // allow any extra fields backend sends
+};
+
 type Props = {
-  meta?: {
-    nextActions?: string[];
-    companion?: string;
-    workflow?: {
-      stageId: string;
-      nextStageIds?: string[];
-    };
-  };
-  history?: { meta?: { workflow?: { stageId: string } } }[];
+  meta: NextActionMeta;
+  history?: { meta?: { workflow?: WorkflowMeta | null } }[];
   onSend?: (action: string) => void;
   onRenderVisual?: () => void;
   sending?: boolean;
@@ -77,14 +86,18 @@ export default function NextActionButtons({
   const isLyra = companionName === "lyra";
 
   // ---- workflow state ----
-  const currentStage = meta.workflow?.stageId;
-  const nextStageIds = new Set(meta.workflow?.nextStageIds || []);
+  const currentStage = meta.workflow?.stageId ?? null;
 
-  const completedStages = new Set(
-    safeHistory
-      .map((msg) => msg.meta?.workflow?.stageId)
-      .filter((id): id is string => Boolean(id) && id !== currentStage)
-  );
+// History workflow stages
+const completedStages = new Set(
+  (history ?? [])
+    .map((h) => h.meta?.workflow?.stageId)
+    .filter(Boolean)
+);
+
+// Next stage IDs come from workflow metadata
+const nextStageIds = new Set(meta.workflow?.nextStageIds ?? []);
+
   const uniqueActions = Array.from(new Set(meta.nextActions));
 
   return (
@@ -97,20 +110,19 @@ export default function NextActionButtons({
         // Determine color style
         let style = "";
 
-        if (completedStages.has(action)) {
-          style =
-            "bg-gray-200 text-gray-700 border border-gray-300 hover:bg-gray-300";
-        } else if (action === currentStage) {
-          style =
-            "bg-blue-600 text-white hover:bg-blue-700 border border-blue-700";
-        } else if (nextStageIds.has(action)) {
-          style =
-            "bg-green-600 text-white hover:bg-green-700 border border-green-700";
-        } else {
-          style = isLyra
-            ? "bg-teal-600 text-white hover:bg-teal-700 border border-teal-700"
-            : "bg-amber-600 text-white hover:bg-amber-700 border border-amber-700";
-        }
+        const isCompleted = completedStages.has(meta.workflow?.stageId ?? "");
+const isCurrent = false; // you do not have action === stage mapping
+const isNext = nextStageIds.has(action);
+
+if (isCompleted) {
+  style = "bg-gray-200 text-gray-700 border border-gray-300";
+} else if (isNext) {
+  style = "bg-green-600 text-white border border-green-700";
+} else {
+  style = isLyra
+    ? "bg-teal-600 text-white border border-teal-700"
+    : "bg-amber-600 text-white border border-amber-700";
+}
 
         const common =
           `px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${style} ` +
