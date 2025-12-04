@@ -2,7 +2,7 @@
 
 import React from "react";
 import ReactMarkdown from "react-markdown";
-
+import remarkGfm from "remark-gfm";
 import MessageAttachments from "./MessageAttachments";
 import NextActionButtons from "./NextActionButtons";
 
@@ -27,7 +27,7 @@ export default function MessageBubble({
   const isLyra = companion === "lyra";
 
   // ---- Bubble Styling ----
-  const bubbleBase = "max-w-2xl px-4 py-3 rounded-2xl text-sm";
+  const bubbleBase = "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm";
   const bubbleUser = "bg-gray-100 text-gray-900";
   const bubbleSystem = "text-gray-500 text-xs italic bg-transparent shadow-none";
   const bubbleAssistant = "bg-white border shadow-sm";
@@ -90,7 +90,9 @@ export default function MessageBubble({
           <span>{message.content}</span>
         ) : (
           <div className="prose prose-sm max-w-none">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+  {message.content}
+</ReactMarkdown>
           </div>
         )}
 
