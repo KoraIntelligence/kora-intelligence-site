@@ -1,13 +1,26 @@
-// src/components/unifiedchat/MessageBubble.tsx
-
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
 import MessageAttachments from "./MessageAttachments";
 import NextActionButtons from "./NextActionButtons";
 
 import type { Message, Attachment } from "@/types/chat";
 import { useCompanion } from "@/context/CompanionContext";
+
+type ExtendedMeta = {
+  nextActions?: string[];
+  companion?: string;
+  mode?: string;
+  workflow?: {
+    stageId?: string;
+    stageLabel?: string;
+    stageDescription?: string;
+    nextStageIds?: string[];
+    isTerminal?: boolean;
+  };
+  [key: string]: any;
+};
 
 type MessageBubbleProps = {
   message: Message;
@@ -23,9 +36,9 @@ export default function MessageBubble({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
-  const meta = (message as any).meta || {};
+  const meta: ExtendedMeta = (message as any).meta ?? {};
 
-  // 🧠 Companion identity: prefer meta.companion, fall back to active companion
+  // Companion identity: prefer meta.companion, fall back to active companion
   const { companion: activeCompanion } = useCompanion();
   const metaCompanion = meta?.companion?.toLowerCase?.();
   const companion = (metaCompanion || activeCompanion || "salar").toLowerCase();
@@ -41,16 +54,14 @@ export default function MessageBubble({
     ? bubbleSystem
     : isUser
     ? bubbleUser
-    : `${bubbleAssistant} ${
-        isLyra ? "border-teal-500" : "border-amber-500"
-      }`;
+    : `${bubbleAssistant} ${isLyra ? "border-teal-500" : "border-amber-500"}`;
 
-  const showWorkflow = !isUser && !isSystem && Boolean(meta.workflow);
+  const showWorkflow = !isUser && !isSystem && !!meta.workflow;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div className={`${bubbleBase} ${roleStyle}`}>
-        {/* Header */}
+        {/* Header: companion + mode */}
         {!isUser && !isSystem && (
           <div className="flex justify-between items-center mb-1">
             <span
@@ -68,8 +79,8 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Workflow Stage */}
-        {showWorkflow && (
+        {/* Workflow stage indicator */}
+        {showWorkflow && meta.workflow?.stageLabel && (
           <div className="mb-2">
             <div
               className={`text-[11px] font-semibold ${
@@ -114,7 +125,7 @@ export default function MessageBubble({
         {/* Next Actions */}
         {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
           <div className="mt-2">
-            <NextActionButtons meta={meta} onSend={onNextAction} />
+            <NextActionButtons meta={meta as any} onSend={onNextAction} />
           </div>
         )}
 

@@ -63,11 +63,14 @@ const LABEL_MAP: Record<string, string> = {
 
 export default function NextActionButtons({
   meta,
-  history = [],
+  history,
   onSend,
   onRenderVisual,
   sending,
 }: Props) {
+  // Always ensure we have a history array
+  const safeHistory = Array.isArray(history) ? history : [];
+
   if (!meta?.nextActions || meta.nextActions.length === 0) return null;
 
   const companionName = meta?.companion?.toLowerCase?.() || "salar";
@@ -76,17 +79,19 @@ export default function NextActionButtons({
   // ---- workflow state ----
   const currentStage = meta.workflow?.stageId;
   const nextStageIds = new Set(meta.workflow?.nextStageIds || []);
+
   const completedStages = new Set(
-    history
+    safeHistory
       .map((msg) => msg.meta?.workflow?.stageId)
       .filter((id): id is string => Boolean(id) && id !== currentStage)
   );
-
   const uniqueActions = Array.from(new Set(meta.nextActions));
 
   return (
     <div className="flex flex-wrap gap-2 mt-2">
       {uniqueActions.map((action) => {
+    // Ensure React does NOT wipe buttons aggressively
+    const stableKey = `${action}-${currentStage ?? "root"}`;
         const label = LABEL_MAP[action] || action.replace(/_/g, " ");
 
         // Determine color style
@@ -115,7 +120,7 @@ export default function NextActionButtons({
         if (action === "render_visual") {
           return (
             <button
-              key={action}
+              key={stableKey}
               type="button"
               disabled={sending}
               onClick={() => !sending && onRenderVisual?.()}
