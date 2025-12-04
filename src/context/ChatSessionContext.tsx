@@ -33,7 +33,7 @@ type ChatSessionContextValue = {
 
 const ChatSessionContext = createContext<ChatSessionContextValue | null>(null);
 
-// keys (match your current mvp.tsx)
+// keys (match your old mvp.tsx)
 const USER_ID_KEY = "kora_user_id";
 const SESSION_KEY_PREFIX = "kora-session";
 
@@ -41,8 +41,8 @@ const uid = () => Math.random().toString(36).slice(2);
 
 interface ProviderProps {
   children: React.ReactNode;
-  tone: string;      // current tone from UI
-  isGuest: boolean;  // guest flag from localStorage
+  tone: string; // current tone from UI
+  isGuest: boolean; // guest flag from localStorage
 }
 
 export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) {
@@ -166,7 +166,10 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
               role: m.role,
               content: m.content,
               ts: m.ts,
-              meta: m.meta,
+              meta: {
+                ...(m.meta || {}),
+                companion,   // 🔒 ensure identity is always present client-side
+              },
               attachments: m.attachments || [],
             }))
           );
@@ -205,7 +208,10 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
         conversationHistory: historyToSend.map((m) => ({
           role: m.role,
           content: m.content,
-          meta: m.meta ?? null,
+          meta: {
+            ...(m.meta || {}),
+            companion, // sessions are per-companion, keep it explicit
+          },
         })),
         ...extraPayload,
       };
@@ -260,7 +266,13 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
       setMessages((m) => [
         ...m,
         userMsg,
-        { id: uid(), role: "system", content: "…", ts: Date.now() },
+        {
+          id: uid(),
+          role: "system",
+          content: "…",
+          meta: { companion, mode: activeMode },
+          ts: Date.now(),
+        },
       ]);
 
       try {
@@ -279,7 +291,11 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
           role: "assistant",
           content: data.reply,
           attachments: data.attachments || [],
-          meta: data.meta,
+          meta: {
+            ...(data.meta || {}),
+            companion,
+            mode: activeMode,
+          },
           ts: Date.now(),
         };
 
@@ -296,6 +312,7 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
             id: uid(),
             role: "assistant",
             content: "⚠️ Companion connection lost. Try again.",
+            meta: { companion, mode: activeMode },
             ts: Date.now(),
           },
         ]);
@@ -303,7 +320,7 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
 
       setSending(false);
     },
-    [callUnified, messages]
+    [callUnified, messages, companion, activeMode]
   );
 
   /* -------------------------------------------------- */
@@ -321,6 +338,7 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
           id: tempId,
           role: "system",
           content: `Uploading "${file.name}"…`,
+          meta: { companion, mode: activeMode },
           ts: Date.now(),
         },
       ]);
@@ -348,7 +366,11 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
             role: "assistant",
             content: data.reply,
             attachments: data.attachments || [],
-            meta: data.meta,
+            meta: {
+              ...(data.meta || {}),
+              companion,
+              mode: activeMode,
+            },
             ts: Date.now(),
           },
         ]);
@@ -360,6 +382,7 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
             id: uid(),
             role: "assistant",
             content: "⚠️ File upload failed. Try again.",
+            meta: { companion, mode: activeMode },
             ts: Date.now(),
           },
         ]);
@@ -367,7 +390,7 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
 
       setUploading(false);
     },
-    [callUnified, uploading]
+    [callUnified, uploading, companion, activeMode]
   );
 
   /* -------------------------------------------------- */

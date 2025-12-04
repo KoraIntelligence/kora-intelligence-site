@@ -7,6 +7,7 @@ import MessageAttachments from "./MessageAttachments";
 import NextActionButtons from "./NextActionButtons";
 
 import type { Message, Attachment } from "@/types/chat";
+import { useCompanion } from "@/context/CompanionContext";
 
 type MessageBubbleProps = {
   message: Message;
@@ -23,7 +24,11 @@ export default function MessageBubble({
   const isSystem = message.role === "system";
 
   const meta = (message as any).meta || {};
-  const companion = meta?.companion?.toLowerCase?.() || "salar";
+
+  // 🧠 Companion identity: prefer meta.companion, fall back to active companion
+  const { companion: activeCompanion } = useCompanion();
+  const metaCompanion = meta?.companion?.toLowerCase?.();
+  const companion = (metaCompanion || activeCompanion || "salar").toLowerCase();
   const isLyra = companion === "lyra";
 
   // ---- Bubble Styling ----
@@ -91,8 +96,8 @@ export default function MessageBubble({
         ) : (
           <div className="prose prose-sm max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-  {message.content}
-</ReactMarkdown>
+              {message.content}
+            </ReactMarkdown>
           </div>
         )}
 
