@@ -45,7 +45,7 @@ export default function MessageBubble({
         isLyra ? "border-teal-500" : "border-amber-500"
       }`;
 
-  const showWorkflow = !isUser && !isSystem && meta.workflow;
+  const showWorkflow = !isUser && !isSystem && Boolean(meta.workflow);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>

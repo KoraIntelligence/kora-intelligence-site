@@ -167,9 +167,12 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
               content: m.content,
               ts: m.ts,
               meta: {
-                ...(m.meta || {}),
-                companion,   // 🔒 ensure identity is always present client-side
-              },
+  ...(m.meta || {}),
+  companion,
+  workflow: m.meta?.workflow || null,
+  nextActions: m.meta?.nextActions || [],
+  mode: m.meta?.mode || activeMode
+},
               attachments: m.attachments || [],
             }))
           );
@@ -299,10 +302,23 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
           ts: Date.now(),
         };
 
-        setMessages((m) => [
-          ...m.filter((msg) => msg.role !== "system"),
-          assistantMsg,
-        ]);
+        setMessages((m) => {
+  const cleaned = m.filter((msg) => msg.role !== "system");
+
+  return [
+    ...cleaned,
+    {
+      ...assistantMsg,
+      meta: {
+        ...(assistantMsg.meta || {}),
+        workflow: assistantMsg.meta?.workflow || null,
+        nextActions: assistantMsg.meta?.nextActions || [],
+        companion,       // 🧠 always preserve companion identity
+        mode: activeMode // 🧠 always include mode
+      }
+    }
+  ];
+});
       } catch (err) {
         console.error("❌ Chat error:", err);
 
