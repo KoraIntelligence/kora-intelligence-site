@@ -98,85 +98,97 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
   }, []);
 
   /* -------------------------------------------------- */
-  /* LAZY SESSION INITIALISATION FOR ACTIVE COMPANION   */
-  /* -------------------------------------------------- */
-  useEffect(() => {
-    if (!userId) return;
-    if (sessionIds[companion]) return; // already have one
+/* LAZY SESSION INITIALISATION FOR ACTIVE COMPANION   */
+/* -------------------------------------------------- */
+useEffect(() => {
+  if (!userId) return;
+  if (sessionIds[companion]) return; // already have one
 
-    (async () => {
-      try {
-        const res = await fetch("/api/unified", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(isGuest ? { "x-guest": "true" } : {}),
-          },
-          body: JSON.stringify({
-            companion,
-            mode: activeMode,
-            tone,
-            userId,
-            sessionId: null,
-            input: null,
-          }),
-        });
+  (async () => {
+    try {
+      const res = await fetch("/api/unified", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(isGuest ? { "x-guest": "true" } : {}),
+        },
+        body: JSON.stringify({
+          companion,
+          mode: activeMode,
+          tone,
+          userId,
+          sessionId: null,
+          input: null,
+        }),
+      });
 
-        const data = await res.json();
-        if (res.ok && data.sessionId) {
-          setSessionIds((prev) => ({ ...prev, [companion]: data.sessionId }));
+      const data = await res.json();
+
+      if (res.ok && data.sessionId) {
+        setSessionIds((prev) => {
+          if (prev[companion] === data.sessionId) return prev;
+
+          const next = { ...prev, [companion]: data.sessionId as string };
           localStorage.setItem(
             `${SESSION_KEY_PREFIX}_${companion}`,
-            data.sessionId
+            data.sessionId as string
           );
-          console.log("🆕 Created session for companion:", companion, data.sessionId);
-        } else {
-          console.warn("⚠️ Failed to create session:", data.error);
-        }
-      } catch (e) {
-        console.error("⚠️ Failed to initialize session:", e);
+          return next;
+        });
+
+        console.log("🆕 Created session for companion:", companion, data.sessionId);
+      } else {
+        console.warn("⚠️ Failed to create session:", data.error);
       }
-    })();
-  }, [userId, companion, sessionIds, activeMode, tone, isGuest]);
-
-  /* -------------------------------------------------- */
-  /* LOAD HISTORY WHEN COMPANION / SESSION CHANGES      */
-  /* -------------------------------------------------- */
-  useEffect(() => {
-    const sid = sessionIds[companion];
-    console.log("✅ Switching to companion:", companion, "sessionId:", sid);
-
-    if (!sid) {
-      console.warn("⚠️ No sessionId for companion — won’t load history");
-      setMessages([]);
-      return;
+    } catch (e) {
+      console.error("⚠️ Failed to initialize session:", e);
     }
+  })(); // ✅ proper closing of the async IIFE
+}, [userId, companion, sessionIds, activeMode, tone, isGuest]);
 
-    (async () => {
-      try {
-        const res = await fetch(`/api/unified?sessionId=${sid}`);
-        console.log("📦 History fetch status:", res.status);
-        const data = await res.json();
-        console.log("📥 Loaded messages:", data.messages?.length);
+  /* -------------------------------------------------- */
+/* LOAD HISTORY WHEN COMPANION / SESSION CHANGES      */
+/* -------------------------------------------------- */
+useEffect(() => {
+  const sid = activeSessionId;
+  console.log("✅ Switching to companion:", companion, "sessionId:", sid);
 
-        if (Array.isArray(data.messages)) {
-          setMessages(
-            data.messages.map((m: any) => ({
-              id: m.id,
-              role: m.role,
-              content: m.content,
-              ts: m.ts,
-              // CRITICAL: do NOT mutate backend meta; pass through as-is
-              meta: m.meta || {},
-              attachments: m.attachments || [],
-            }))
-          );
-        }
-      } catch (e) {
-        console.error("❌ Error loading history after companion switch", e);
+  if (!sid) {
+    console.warn("⚠️ No sessionId for companion — won’t load history");
+    setMessages([]);
+    return;
+  }
+
+  (async () => {
+    try {
+      const res = await fetch(`/api/unified?sessionId=${sid}`);
+      console.log("📦 History fetch status:", res.status);
+      const data = await res.json();
+      console.log("📥 Loaded messages:", data.messages?.length);
+
+      if (Array.isArray(data.messages)) {
+        setMessages(
+          data.messages.map((m: any) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            ts: m.ts,
+            meta: {
+              ...(m.meta || {}),
+              companion, // make sure we always know who spoke
+              workflow: m.meta?.workflow || null,
+              nextActions: m.meta?.nextActions || [],
+              mode: m.meta?.mode || activeMode,
+            },
+            attachments: m.attachments || [],
+          }))
+        );
       }
-    })();
-  }, [companion, sessionIds]);
+    } catch (e) {
+      console.error("❌ Error loading history after companion switch", e);
+    }
+  })();
+}, [companion, activeSessionId, activeMode]);
 
   /* -------------------------------------------------- */
   /* HELPER: CALL UNIFIED API                           */
@@ -214,16 +226,19 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
 
       // Persist new sessionId if backend returns one
       if (data.sessionId && typeof data.sessionId === "string") {
-        setSessionIds((prev) => ({
-          ...prev,
-          [companion]: data.sessionId!,
-        }));
+  setSessionIds((prev) => {
+    // if unchanged, do nothing → prevents unnecessary history reload
+    if (prev[companion] === data.sessionId) return prev;
 
-        localStorage.setItem(
-          `${SESSION_KEY_PREFIX}_${companion}`,
-          data.sessionId!
-        );
-      }
+    const next = { ...prev, [companion]: data.sessionId as string };
+    // keep localStorage in sync here
+    localStorage.setItem(
+      `${SESSION_KEY_PREFIX}_${companion}`,
+      data.sessionId as string
+    );
+    return next;
+  });
+}
 
       return data;
     },
