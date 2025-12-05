@@ -13,7 +13,7 @@ type ChatWindowProps = {
   onUpload: (file: File) => void;
   sending: boolean;
   companion: "salar" | "lyra";
-  topBarHeight?: number; // reserved space for future workflow bar
+  topBarHeight?: number; // Deprecated but kept for backward safety
 };
 
 export default function ChatWindow({
@@ -22,7 +22,6 @@ export default function ChatWindow({
   onUpload,
   sending,
   companion,
-  topBarHeight = 56, // default height of top UI region
 }: ChatWindowProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
@@ -39,18 +38,7 @@ export default function ChatWindow({
   const handleNextAction = (action: string) => onSend({ action });
 
   return (
-    <div
-      className="
-        relative 
-        w-full 
-        bg-white 
-        flex 
-        flex-col 
-      "
-      style={{
-        height: `calc(100vh - ${topBarHeight}px)`,
-      }}
-    >
+    <div className="relative w-full h-full flex flex-col bg-white overflow-hidden">
       {/* ------------------------------------------------ */}
       {/* MESSAGE LIST */}
       {/* ------------------------------------------------ */}
@@ -65,9 +53,7 @@ export default function ChatWindow({
           space-y-4
           scroll-smooth
         "
-        style={{
-          WebkitOverflowScrolling: "touch",
-        }}
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
         {messages.length === 0 && (
           <div className="text-center text-gray-400 text-sm mt-14">

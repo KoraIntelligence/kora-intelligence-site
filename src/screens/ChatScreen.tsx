@@ -31,25 +31,16 @@ export default function ChatScreen() {
     setShowIdentity,
     tone,
     setTone,
-    topBarHeight,   // 👈 IMPORTANT FOR LAYOUT
+    topBarHeight, // <-- used to size ChatWindow correctly
   } = useUIState();
 
-  const {
-    messages,
-    sending,
-    uploadFile,
-    sendMessage,
-  } = useChatSession();
+  const { messages, sending, uploadFile, sendMessage } = useChatSession();
 
   /* ------------------------------------------------------ */
   /* TONE SELECTOR                                          */
   /* ------------------------------------------------------ */
   const toneSelectorNode = (
-    <ToneSelector
-      companion={companion}
-      value={tone}
-      onChange={setTone}
-    />
+    <ToneSelector companion={companion} value={tone} onChange={setTone} />
   );
 
   /* ------------------------------------------------------ */
@@ -68,44 +59,45 @@ export default function ChatScreen() {
   );
 
   /* ------------------------------------------------------ */
-  /* CHAT AREA (TopBar + ChatWindow)                        */
+  /* TOP BAR (standalone, given to ChatLayout)              */
+  /* ------------------------------------------------------ */
+  const workflowTopBarNode = (
+    <WorkflowTopBar companion={companion} messages={messages as any} />
+  );
+
+  /* ------------------------------------------------------ */
+  /* CHAT WINDOW (already subtracts topBarHeight)           */
   /* ------------------------------------------------------ */
   const chatWindowNode = (
-    <div className="flex flex-col h-full">
-      {/* NEW: Workflow Top Bar */}
-      <WorkflowTopBar companion={companion} messages={messages} />
-
-      {/* Chat Window (height already subtracts topBarHeight) */}
-      <ChatWindow
-        messages={messages}
-        onSend={sendMessage}
-        onUpload={uploadFile}
-        sending={sending}
-        companion={companion}
-        topBarHeight={topBarHeight}
-      />
-    </div>
+    <ChatWindow
+      messages={messages}
+      onSend={sendMessage}
+      onUpload={uploadFile}
+      sending={sending}
+      companion={companion}
+      topBarHeight={topBarHeight}
+    />
   );
 
   /* ------------------------------------------------------ */
   /* IDENTITY OVERLAY                                       */
   /* ------------------------------------------------------ */
-  const identityOverlayNode =
-    showIdentity ? (
-      <IdentityOverlay
-        isOpen={showIdentity}
-        companion={companion}
-        mode={companion === "salar" ? salarMode : lyraMode}
-        onClose={() => setShowIdentity(false)}
-      />
-    ) : null;
+  const identityOverlayNode = showIdentity ? (
+    <IdentityOverlay
+      isOpen={showIdentity}
+      companion={companion}
+      mode={companion === "salar" ? salarMode : lyraMode}
+      onClose={() => setShowIdentity(false)}
+    />
+  ) : null;
 
   /* ------------------------------------------------------ */
-  /* RENDER MAIN CHAT LAYOUT                                */
+  /* FINAL RENDER                                           */
   /* ------------------------------------------------------ */
   return (
     <ChatLayout
       sidebar={sidebarNode}
+      topBar={workflowTopBarNode}    // <-- use this (you were missing it)
       chatWindow={chatWindowNode}
       identityOverlay={identityOverlayNode}
     />
