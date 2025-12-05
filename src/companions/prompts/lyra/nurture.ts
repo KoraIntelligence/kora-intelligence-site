@@ -173,6 +173,6 @@ Even one or two sentences are enough to proceed.
   attachments: {
     draft: [],
     refinement: [],
-    final: ["pdf", "txt"],
+    final: ["pdf", "docx"],
   },
 };

@@ -1,7 +1,6 @@
 // src/companions/orchestrators/lyra.ts
 // =====================================================================
-// LYRA ORCHESTRATOR — Handles all 5 Lyra Modes
-// Modes: creative_chat | messaging | campaign | outreach | nurture
+// LYRA ORCHESTRATOR — Handles all Lyra Modes
 // =====================================================================
 
 import { getWorkflow } from "../workflows";
@@ -15,7 +14,7 @@ import { LYRA_CAMPAIGN_PROMPTS } from "../prompts/lyra/campaign";
 import { LYRA_OUTREACH_PROMPTS } from "../prompts/lyra/outreach";
 import { LYRA_NURTURE_PROMPTS } from "../prompts/lyra/nurture";
 
-// Attachments (PDF / DOCX / XLSX)
+// Attachment builders
 import {
   createPDF,
   createDocx,
@@ -23,7 +22,7 @@ import {
 } from "../../pages/api/session/utils/generateDocs";
 
 // =====================================================================
-//  TYPES
+// TYPES
 // =====================================================================
 
 export type LyraMode =
@@ -42,41 +41,30 @@ export interface LyraOrchestratorInput {
   conversationHistory?: { role: string; content: string; meta?: any | null }[];
 }
 
-// Shape that each Lyra prompt pack follows
 export interface LyraPromptPack {
   mode: LyraMode;
-
-  // Core
   system: string;
   error: string;
-
-  // Generic phases
   clarify?: string;
   draft?: string;
   refine?: string;
   finalise?: string;
 
-  // Freeform / creative chat
   context?: string;
   explore?: string;
 
-  // Campaign-specific
   contentPlan?: string;
   kvDirection?: string;
 
-  // Outreach-specific
   dataIngestion?: string;
   segmentation?: string;
   outreachSequence?: string;
 
-  // Nurture-specific
   narrativeArc?: string;
   emailDrafts?: string;
 
-  // Next action map (UI / flowchart)
   nextActions: Record<string, string[]>;
 
-  // Attachments per stage
   attachments?: {
     draft?: string[];
     refinement?: string[];
@@ -85,7 +73,7 @@ export interface LyraPromptPack {
 }
 
 // =====================================================================
-//  REGISTRY
+// REGISTRY
 // =====================================================================
 
 const PACKS: Record<LyraMode, LyraPromptPack> = {
@@ -97,7 +85,7 @@ const PACKS: Record<LyraMode, LyraPromptPack> = {
 };
 
 // =====================================================================
-//  OPENAI CLIENT
+// OPENAI CLIENT
 // =====================================================================
 
 const openai = new OpenAI({
@@ -105,7 +93,7 @@ const openai = new OpenAI({
 });
 
 // =====================================================================
-//  PROMPT RESOLVER — maps nextAction → correct prompt block
+// PROMPT ROUTER
 // =====================================================================
 
 function resolvePrompt(
@@ -113,13 +101,9 @@ function resolvePrompt(
   mode: LyraMode,
   nextAction?: string
 ): string {
-  // First turn / no explicit nextAction → use system prompt
   if (!nextAction) return pack.system;
 
   switch (nextAction) {
-    // ======================================================
-    //  SHARED / GENERIC PATTERNS
-    // ======================================================
     case "clarify_requirements":
     case "ask_questions":
       return pack.clarify || pack.error;
@@ -127,117 +111,72 @@ function resolvePrompt(
     case "finalise_pack":
       return pack.finalise || pack.error;
 
-    // ======================================================
-    //  MODE 0 — CREATIVE CHAT
-    //  NextActions:
-    //  - refine_idea
-    //  - explore_options
-    //  - summarise
-    //  - switch_mode
-    // ======================================================
+    // ---- Creative Chat ----
     case "refine_idea":
       return pack.refine || pack.error;
-
     case "explore_options":
       return pack.explore || pack.draft || pack.error;
-
     case "summarise":
       return pack.finalise || pack.error;
-
     case "switch_mode":
-      // Just reset to system identity / reset conversation framing
       return pack.system;
 
-    // ======================================================
-    //  MODE 1 — MESSAGING ADVISOR
-    //  NextActions:
-    //  - ask_questions
-    //  - draft_concepts
-    //  - refine_direction
-    //  - finalise_pack
-    // ======================================================
+    // ---- Messaging ----
     case "draft_concepts":
       return pack.draft || pack.error;
-
     case "refine_direction":
       return pack.refine || pack.error;
 
-    // ======================================================
-    //  MODE 2 — CAMPAIGN BUILDER
-    //  NextActions:
-    //  - ask_questions
-    //  - draft_concepts
-    //  - refine_direction
-    //  - content_plan
-    //  - kv_direction
-    //  - finalise_pack
-    // ======================================================
+    // ---- Campaign ----
     case "content_plan":
       return pack.contentPlan || pack.error;
-
     case "kv_direction":
       return pack.kvDirection || pack.error;
 
-    // ======================================================
-    //  MODE 3 — OUTREACH & SEGMENTATION
-    //  NextActions:
-    //  - request_csv
-    //  - segment_data
-    //  - draft_outreach
-    //  - refine_outreach
-    //  - finalise_pack
-    // ======================================================
+    // ---- Outreach ----
     case "request_csv":
       return pack.clarify || pack.error;
-
     case "segment_data":
       return pack.segmentation || pack.error;
-
     case "draft_outreach":
       return pack.outreachSequence || pack.draft || pack.error;
-
     case "refine_outreach":
       return pack.refine || pack.error;
 
-    // ======================================================
-    //  MODE 4 — NURTURE
-    //  NextActions:
-    //  - ask_questions
-    //  - draft_arc
-    //  - draft_emails
-    //  - refine_emails
-    //  - finalise_pack
-    // ======================================================
+    // ---- Nurture ----
     case "draft_arc":
       return pack.narrativeArc || pack.draft || pack.error;
-
     case "draft_emails":
       return pack.emailDrafts || pack.draft || pack.error;
-
     case "refine_emails":
       return pack.refine || pack.error;
 
     default:
-      // Fallback: go back to system prompt
       return pack.system;
   }
 }
 
 // =====================================================================
-//  MAIN ORCHESTRATOR FUNCTION
+// MAIN ORCHESTRATOR
 // =====================================================================
 
 export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
-  const { mode, input, extractedText, tone, nextAction, conversationHistory } = orchestratorInput;
+  const {
+    mode,
+    input,
+    extractedText,
+    tone,
+    nextAction,
+    conversationHistory,
+  } = orchestratorInput;
 
-const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
-  
+  const safeHistory = Array.isArray(conversationHistory)
+    ? conversationHistory
+    : [];
+
   const pack = PACKS[mode];
-  if (!pack) {
-    throw new Error(`Unknown Lyra mode: ${mode}`);
-  }
+  if (!pack) throw new Error(`Unknown Lyra mode: ${mode}`);
 
-  // ----- Identity + tone extraction -----
   const identity: any = loadIdentity("lyra", mode);
 
   const toneText =
@@ -245,44 +184,37 @@ const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [
       ? identity.tone
       : identity.tone?.base) || "warm, clear, brand-conscious";
 
-  // ----- Prompt resolution -----
-  const promptBlock = resolvePrompt(pack, mode, nextAction || undefined);
+  const promptBlock = resolvePrompt(pack, mode, nextAction);
 
-    const historyBlock =
-    safeHistory.length
+  const historyBlock =
+    safeHistory.length > 0
       ? `
-Previous conversation (latest last):
+Previous conversation:
 ${safeHistory
   .slice(-8)
-  .map(
-    (turn) =>
-      `${turn.role.toUpperCase()}: ${turn.content}`
-  )
+  .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
   .join("\n\n")}
 `
       : "";
 
-function formatConversation(history: any[]) {
-  if (!history || history.length === 0) return "";
-  return history
-    .map((turn) => `${turn.role.toUpperCase()}: ${turn.content}`)
-    .join("\n");
-}
-  
-const memoryBlock = conversationHistory?.length
-  ? `\nHere is the conversation so far:\n${formatConversation(safeHistory)}\n`
-  : "";
+  function formatConversation(hist: any[]) {
+    return hist
+      .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
+      .join("\n");
+  }
 
-  // ----- Build final prompt -----
+  const memoryBlock = safeHistory.length
+    ? `\nHere is the conversation so far:\n${formatConversation(safeHistory)}\n`
+    : "";
+
   const fullPrompt = `
 ${promptBlock}
 
-You are operating as **Lyra** in mode: **${mode}**.
+You are LYRA in mode **${mode}**
 Persona: ${identity.persona || "Creative Partner"}
 Base Tone: ${toneText}
 
 ${memoryBlock}
-
 ${historyBlock}
 
 User Input:
@@ -298,7 +230,10 @@ ${extractedText || "N/A"}
 Tone: ${tone}
 `;
 
-  // ----- OpenAI Response -----
+  // -------------------------------------------------------------------
+  // OPENAI
+  // -------------------------------------------------------------------
+
   const completion = await openai.responses.create({
     model: "gpt-4.1",
     input: fullPrompt,
@@ -307,51 +242,33 @@ Tone: ${tone}
   const outputText =
     completion.output_text || "Lyra was unable to generate a response.";
 
-  // =====================================================================
-  //  ATTACHMENTS — MUST COME *AFTER* outputText + pack are defined!
-  // =====================================================================
+  // -------------------------------------------------------------------
+  // ATTACHMENTS (PDF / DOCX / XLSX)
+  // -------------------------------------------------------------------
 
   const attachments: any[] = [];
 
-  if (nextAction && nextAction.startsWith("finalise") && pack.attachments) {
-    const finalAttachments = pack.attachments.final || [];
-
-    for (const type of finalAttachments) {
-      if (type === "pdf") {
-        attachments.push(await createPDF(outputText));
-      }
-      if (type === "docx") {
-        attachments.push(await createDocx(outputText));
-      }
-      if (type === "xlsx") {
-        attachments.push(await createXlsx(outputText));
-      }
+  if (nextAction && pack.attachments?.final) {
+    for (const type of pack.attachments.final) {
+      if (type === "pdf") attachments.push(await createPDF(outputText));
+      if (type === "docx") attachments.push(await createDocx(outputText));
+      if (type === "xlsx") attachments.push(await createXlsx(outputText));
     }
   }
 
-  // ----- Flatten nextActions and build identity meta -----
-  const flatNextActions: string[] = Object.values(
-    pack.nextActions || {}
-  ).flat();
+  // -------------------------------------------------------------------
+  // WORKFLOW METADATA
+  // -------------------------------------------------------------------
 
-  const identityMeta = {
-    persona: identity.persona || "Creative Partner",
-    title: "Brand & Marketing Intelligence Companion",
-    mode,
-    toneBase: toneText,
-  };
-
-  // ----- Attach workflow metadata (if workflow defined) -----
   const workflow = getWorkflow("lyra", mode);
   let workflowMeta: any = undefined;
 
   if (workflow) {
-    const stageIdFromAction =
+    const stageId =
       (nextAction && workflow.nextActionToStage[nextAction]) ||
       workflow.initialStageId;
 
-    const stage = workflow.stages[stageIdFromAction];
-
+    const stage = workflow.stages[stageId];
     if (stage) {
       workflowMeta = {
         stageId: stage.id,
@@ -363,7 +280,8 @@ Tone: ${tone}
     }
   }
 
-  // ----- Return canonical payload -----
+  const flatNextActions = Object.values(pack.nextActions || {}).flat();
+
   return {
     reply: outputText,
     attachments,
@@ -372,10 +290,13 @@ Tone: ${tone}
       mode,
       tone,
       nextActions: flatNextActions,
-      identity: identityMeta,
-      memory: {
-        shortTerm: safeHistory.slice(-6),
-},
+      identity: {
+        persona: identity.persona || "Creative Partner",
+        title: "Brand & Marketing Intelligence Companion",
+        mode,
+        toneBase: toneText,
+      },
+      memory: { shortTerm: safeHistory.slice(-6) },
       workflow: workflowMeta,
     },
   };

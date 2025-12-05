@@ -131,7 +131,7 @@ Please specify:
   // -------------------------------------------------------------------
   // 8. FINALISATION PROMPT
   // -------------------------------------------------------------------
-  finalise: `
+finalise: `
 Here is your finalised pricing breakdown.
 
 I will now generate your Excel pricing sheet with:
@@ -141,6 +141,42 @@ I will now generate your Excel pricing sheet with:
 - Multiple pricing options (if applicable)
 - Contingency and margin rows
 - Clean formatting
+
+IMPORTANT — When producing the final output, you MUST include a structured JSON representation
+of the pricing spreadsheet inside the following tags:
+
+<pricing>
+{
+  "sheets": [
+    {
+      "name": "Summary",
+      "rows": [
+        ["Pricing Summary"],
+        ["Client", "<insert>"],
+        ["Project", "<insert>"],
+        ["Total", "<insert>"]
+      ]
+    },
+    {
+      "name": "Breakdown",
+      "columns": ["Item", "Quantity", "Rate", "Total"],
+      "rows": [
+        ["Discovery", 10, 100, 1000],
+        ["Build", 40, 120, 4800]
+      ]
+    }
+  ]
+}
+</pricing>
+
+RULES:
+- The JSON MUST be valid, no comments, no trailing commas.
+- Sheets MUST be an array.
+- rows MUST be a 2D array of values.
+- columns is optional but recommended.
+- DO NOT explain the JSON. Output it directly.
+
+This structure will be consumed by the XLSX generator.
 `,
 
   // -------------------------------------------------------------------

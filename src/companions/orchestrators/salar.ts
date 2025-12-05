@@ -139,6 +139,37 @@ function resolvePrompt(pack: SalarPromptPack, nextAction?: string): string {
   }
 }
 
+async function extractPricingStructure(output: string) {
+  // Expecting the model to include a JSON block inside <pricing> tags
+  const match = output.match(/<pricing>([\s\S]*?)<\/pricing>/);
+
+  if (!match) {
+    // fallback: dump raw text
+    return {
+      sheets: [
+        {
+          name: "Pricing Output",
+          rows: output.split("\n").map((line) => [line])
+        }
+      ]
+    };
+  }
+
+  try {
+    return JSON.parse(match[1]);
+  } catch {
+    // fallback to text again
+    return {
+      sheets: [
+        {
+          name: "Pricing Output",
+          rows: output.split("\n").map((line) => [line])
+        }
+      ]
+    };
+  }
+}
+
 export async function runSalar(input: SalarOrchestratorInput) {
   const {
     mode,
@@ -235,8 +266,10 @@ Requested Tone: ${tone}
     for (const type of finalAttachments) {
       if (type === "docx") attachments.push(await createDocx(outputText));
       if (type === "pdf") attachments.push(await createPDF(outputText));
-      if (type === "xlsx") attachments.push(await createXlsx(outputText));
-    }
+      if (type === "xlsx") {
+  const structured = await extractPricingStructure(outputText);
+  attachments.push(await createXlsx(structured));
+}}
   }
 
   const workflow = getWorkflow("salar", mode);

@@ -10,6 +10,7 @@
     "@emotion/is-prop-valid": "^1.4.0",
     "@mdx-js/loader": "^3.1.0",
     "@next/mdx": "^15.4.1",
+    "@sparticuz/chromium": "^141.0.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/auth-ui-react": "^0.4.7",
@@ -44,6 +45,7 @@
     "pdf-parse-fixed": "^1.1.1",
     "pdfjs-dist": "^5.4.394",
     "pdfkit": "^0.17.2",
+    "puppeteer-core": "^24.32.0",
     "react": "latest",
     "react-dom": "latest",
     "react-markdown": "^10.1.0",
@@ -51,6 +53,7 @@
     "rehype-pretty-code": "^0.14.1",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
+    "remark-html": "^16.0.1",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
   },

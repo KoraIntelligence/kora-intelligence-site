@@ -165,6 +165,6 @@ Even one sentence is enough to continue.
   attachments: {
     draft: [],
     refinement: [],
-    final: ["pdf", "txt"],
+    final: ["pdf", "docx"],
   },
 };

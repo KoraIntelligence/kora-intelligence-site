@@ -7,14 +7,16 @@ import ChatWindow from "@/components/unifiedchat/ChatWindow";
 import Sidebar from "@/components/unifiedchat/Sidebar";
 import IdentityOverlay from "@/components/unifiedchat/IdentityOverlay";
 import ToneSelector from "@/components/unifiedchat/ToneSelector";
-
+import WorkflowTopBar from "@/components/unifiedchat/WorkflowTopBar";
 
 import { useCompanion } from "@/context/CompanionContext";
 import { useChatSession } from "@/context/ChatSessionContext";
 import { useUIState } from "@/context/UIStateContext";
 
 export default function ChatScreen() {
-  /* CONTEXT HOOKS */
+  /* ------------------------------------------------------ */
+  /* CONTEXT HOOKS                                          */
+  /* ------------------------------------------------------ */
   const {
     companion,
     setCompanion,
@@ -24,7 +26,13 @@ export default function ChatScreen() {
     setLyraMode,
   } = useCompanion();
 
-  const { showIdentity, setShowIdentity } = useUIState();
+  const {
+    showIdentity,
+    setShowIdentity,
+    tone,
+    setTone,
+    topBarHeight,   // 👈 IMPORTANT FOR LAYOUT
+  } = useUIState();
 
   const {
     messages,
@@ -33,9 +41,9 @@ export default function ChatScreen() {
     sendMessage,
   } = useChatSession();
 
-  
-  const { tone, setTone } = useUIState(); // 👈 add this line
-   /* Tone selector lives in UI state */
+  /* ------------------------------------------------------ */
+  /* TONE SELECTOR                                          */
+  /* ------------------------------------------------------ */
   const toneSelectorNode = (
     <ToneSelector
       companion={companion}
@@ -44,7 +52,9 @@ export default function ChatScreen() {
     />
   );
 
-  /* SIDEBAR NODE */
+  /* ------------------------------------------------------ */
+  /* SIDEBAR                                                */
+  /* ------------------------------------------------------ */
   const sidebarNode = (
     <Sidebar
       companion={companion}
@@ -57,18 +67,29 @@ export default function ChatScreen() {
     />
   );
 
-  /* CHAT WINDOW */
+  /* ------------------------------------------------------ */
+  /* CHAT AREA (TopBar + ChatWindow)                        */
+  /* ------------------------------------------------------ */
   const chatWindowNode = (
-    <ChatWindow
-      messages={messages}
-      onSend={sendMessage}
-      onUpload={uploadFile}
-      sending={sending}
-      companion={companion}
-    />
+    <div className="flex flex-col h-full">
+      {/* NEW: Workflow Top Bar */}
+      <WorkflowTopBar companion={companion} messages={messages} />
+
+      {/* Chat Window (height already subtracts topBarHeight) */}
+      <ChatWindow
+        messages={messages}
+        onSend={sendMessage}
+        onUpload={uploadFile}
+        sending={sending}
+        companion={companion}
+        topBarHeight={topBarHeight}
+      />
+    </div>
   );
 
-  /* IDENTITY OVERLAY */
+  /* ------------------------------------------------------ */
+  /* IDENTITY OVERLAY                                       */
+  /* ------------------------------------------------------ */
   const identityOverlayNode =
     showIdentity ? (
       <IdentityOverlay
@@ -79,6 +100,9 @@ export default function ChatScreen() {
       />
     ) : null;
 
+  /* ------------------------------------------------------ */
+  /* RENDER MAIN CHAT LAYOUT                                */
+  /* ------------------------------------------------------ */
   return (
     <ChatLayout
       sidebar={sidebarNode}
