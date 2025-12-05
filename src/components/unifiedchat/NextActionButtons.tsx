@@ -19,6 +19,7 @@ export type NextActionMeta = {
 
 type Props = {
   meta: NextActionMeta;
+  history?: { meta?: { workflow?: WorkflowMeta | null } }[]; // kept for future but unused now
   onSend?: (action: string) => void;
   onRenderVisual?: () => void;
   sending?: boolean;
@@ -48,12 +49,13 @@ const LABEL_MAP: Record<string, string> = {
   clarify_requirements: "Clarify Requirements",
   generate_draft_proposal: "Generate Draft",
   refine_proposal: "Refine Proposal",
-  finalise_proposal: "Finalize Proposal",
+  finalise_proposal: "Finalise Proposal",
   request_contract_upload: "Upload Contract",
   confirm_summary: "Summarise Contract",
   choose_analysis_path: "Choose Analysis Path",
   refine_contract_analysis: "Refine Analysis",
   finalise_contract_pack: "Finalise Pack",
+  clarify_pricing_requirements: "Clarify Requirements",
   request_pricing_template: "Upload Template",
   analyse_pricing_template: "Analyse Template",
   set_pricing_strategy: "Set Pricing Strategy",
@@ -74,42 +76,34 @@ export default function NextActionButtons({
   onRenderVisual,
   sending,
 }: Props) {
-  const actions = Array.isArray(meta?.nextActions)
-    ? meta.nextActions
-    : [];
-
-  if (actions.length === 0) return null;
+  if (!meta?.nextActions || meta.nextActions.length === 0) return null;
 
   const companionName = meta?.companion?.toLowerCase?.() || "salar";
   const isLyra = companionName === "lyra";
 
-  const workflow = meta.workflow ?? null;
-  const nextStageIds = new Set(workflow?.nextStageIds || []);
+  const uniqueActions = Array.from(new Set(meta.nextActions));
 
   return (
     <div className="flex flex-wrap gap-2 mt-2">
-      {actions.map((action) => {
+      {uniqueActions.map((action) => {
         const label = LABEL_MAP[action] || action.replace(/_/g, " ");
-        const isNextStage = nextStageIds.has(action);
 
-        let style = isNextStage
-          ? "bg-green-600 text-white border border-green-700"
-          : isLyra
-          ? "bg-teal-600 text-white border border-teal-700"
-          : "bg-amber-600 text-white border border-amber-700";
+        const style = isLyra
+          ? "bg-teal-600 text-white border border-teal-700 hover:bg-teal-700"
+          : "bg-amber-600 text-white border border-amber-700 hover:bg-amber-700";
 
-        const classes =
-          `px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all ` +
-          style +
-          (sending ? " opacity-50 cursor-not-allowed" : "");
+        const common =
+          `px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${style} ` +
+          (sending ? "opacity-50 cursor-not-allowed" : "");
 
         if (action === "render_visual") {
           return (
             <button
               key={action}
-              className={classes}
+              type="button"
               disabled={sending}
               onClick={() => !sending && onRenderVisual?.()}
+              className={common}
             >
               {label}
             </button>
@@ -119,9 +113,10 @@ export default function NextActionButtons({
         return (
           <button
             key={action}
-            className={classes}
+            type="button"
             disabled={sending}
             onClick={() => !sending && onSend?.(action)}
+            className={common}
           >
             {label}
           </button>
