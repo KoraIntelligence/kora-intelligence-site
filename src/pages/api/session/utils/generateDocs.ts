@@ -400,83 +400,230 @@ function extractFirstTable(markdown: string): string[][] {
   return rows;
 }
 
+/* -------------------------------------------------------
+   🧩 XLSX Generator — Single-Sheet Structured Export
+   - Headings (H1/H2/H3)
+   - Paragraphs
+   - Lists
+   - Tables
+   - Notes stub at the end
+------------------------------------------------------- */
+
+const XLSX_MAX_COLUMNS = 8;
+
+/** Create a neutral column layout suitable for paragraphs and tables. */
+function initWorksheetColumns(ws: import("exceljs").Worksheet) {
+  ws.columns = [
+    { header: "", width: 60 }, // main narrative column
+    { header: "", width: 20 },
+    { header: "", width: 20 },
+    { header: "", width: 20 },
+    { header: "", width: 20 },
+    { header: "", width: 20 },
+    { header: "", width: 20 },
+    { header: "", width: 20 },
+  ];
+}
+
+/** Add a bit of vertical spacing. */
+function addSpacing(ws: import("exceljs").Worksheet, lines = 1) {
+  for (let i = 0; i < lines; i++) {
+    ws.addRow([]);
+  }
+}
+
+/** Add a heading row with level-aware styling. */
+function addHeadingRow(
+  ws: import("exceljs").Worksheet,
+  text: string,
+  level: 1 | 2 | 3
+) {
+  if (!text.trim()) return;
+
+  const row = ws.addRow([text]);
+
+  const size = level === 1 ? 20 : level === 2 ? 16 : 14;
+
+  row.font = {
+    bold: true,
+    size,
+  };
+
+  row.alignment = { vertical: "middle", wrapText: true };
+
+  // Optional subtle bottom border for H1
+  if (level === 1) {
+    row.eachCell((cell) => {
+      cell.border = {
+        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+      };
+    });
+  }
+}
+
+/** Add a paragraph in the first column, wrapped. */
+function addParagraphRow(ws: import("exceljs").Worksheet, text: string) {
+  const clean = text.trim();
+  if (!clean) return;
+
+  const row = ws.addRow([clean]);
+
+  const cell = row.getCell(1);
+  cell.alignment = { wrapText: true, vertical: "top" };
+  cell.font = { size: 12 };
+}
+
+/** Add list items as bullet-style paragraphs. */
+function addList(ws: import("exceljs").Worksheet, node: MdNode) {
+  // node.type === "list"
+  for (const item of node.children || []) {
+    if (!item || item.type !== "listItem") continue;
+
+    const paragraphs = (item.children || []).filter(
+      (c: MdNode) => c.type === "paragraph"
+    );
+
+    for (const p of paragraphs) {
+      const text = mdNodeToPlain(p);
+      if (!text.trim()) continue;
+      addParagraphRow(ws, `• ${text.trim()}`);
+    }
+  }
+}
+
+/** Add a markdown table as a styled Excel table block. */
+function addTable(ws: import("exceljs").Worksheet, node: MdNode) {
+  const rows: string[][] = [];
+
+  for (const rowNode of node.children || []) {
+    const cells: string[] = [];
+    for (const cellNode of rowNode.children || []) {
+      const cellText = mdNodeToPlain(cellNode).trim();
+      cells.push(cellText);
+    }
+
+    if (cells.length === 0) continue;
+    rows.push(cells.slice(0, XLSX_MAX_COLUMNS));
+  }
+
+  if (!rows.length) return;
+
+  const header = rows[0];
+  const body = rows.slice(1);
+
+  // Header row
+  const headerRow = ws.addRow(header);
+  headerRow.font = { bold: true, size: 13 };
+  headerRow.alignment = { wrapText: true, vertical: "middle" };
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF3F4F6" }, // light grey
+    };
+    cell.border = {
+      top: { style: "thin", color: { argb: "FFE5E7EB" } },
+      left: { style: "thin", color: { argb: "FFE5E7EB" } },
+      bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+      right: { style: "thin", color: { argb: "FFE5E7EB" } },
+    };
+  });
+
+  // Body rows
+  body.forEach((cells, idx) => {
+    const row = ws.addRow(cells);
+    const isStriped = idx % 2 === 0;
+
+    row.eachCell((cell) => {
+      cell.alignment = { wrapText: true, vertical: "top" };
+      if (isStriped) {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFFAFAFA" },
+        };
+      }
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFE5E7EB" } },
+        left: { style: "thin", color: { argb: "FFE5E7EB" } },
+        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+        right: { style: "thin", color: { argb: "FFE5E7EB" } },
+      };
+    });
+  });
+}
+
+/* -------------------------------------------------------
+   Main XLSX export — markdown → single sheet
+------------------------------------------------------- */
 export async function createXlsx(markdown: string) {
   const wb = new Workbook();
+  const ws = wb.addWorksheet("Pricing Export");
 
-  const tableData = extractFirstTable(markdown);
+  initWorksheetColumns(ws);
 
-  // ----------------------------------------------------
-  // Sheet 1: Pricing Table (if any table present)
-  // ----------------------------------------------------
-  if (tableData.length) {
-    const ws = wb.addWorksheet("Pricing Table");
+  const ast = parseMarkdown(markdown || "");
 
-    tableData.forEach((row) => ws.addRow(row));
+  // Walk top-level nodes in order
+  for (const node of ast.children || []) {
+    switch (node.type) {
+      case "heading": {
+        const level = (node.depth || 1) as 1 | 2 | 3;
+        const safeLevel: 1 | 2 | 3 =
+          level === 1 || level === 2 || level === 3 ? level : 3;
 
-    // Autosize-ish column widths based on header length
-    const colCount = tableData[0]?.length || 0;
-    for (let i = 1; i <= colCount; i++) {
-      const headerText = tableData[0][i - 1] || "";
-      const baseWidth = Math.max(12, Math.min(40, headerText.length + 5));
-      ws.getColumn(i).width = baseWidth;
-    }
+        addSpacing(ws, 1);
+        addHeadingRow(ws, mdNodeToPlain(node), safeLevel);
+        addSpacing(ws, 0);
+        break;
+      }
 
-    // Style header row
-    const headerRow = ws.getRow(1);
-    headerRow.font = { bold: true };
-    headerRow.eachCell((cell) => {
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFE5E7EB" }, // light gray
-      };
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
+      case "paragraph": {
+        addParagraphRow(ws, mdNodeToPlain(node));
+        break;
+      }
 
-    // Add thin borders for rest of table
-    ws.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
-    });
-  }
+      case "list": {
+        addList(ws, node);
+        break;
+      }
 
-  // ----------------------------------------------------
-  // Sheet 2: Notes (always present)
-  // ----------------------------------------------------
-  const wsNotes = wb.addWorksheet("Notes");
-  wsNotes.columns = [{ header: "Notes", width: 100 }];
+      case "table": {
+        addSpacing(ws, 1);
+        addTable(ws, node);
+        addSpacing(ws, 1);
+        break;
+      }
 
-  const lines = (markdown || "")
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+      case "thematicBreak": {
+        addSpacing(ws, 1);
+        break;
+      }
 
-  if (!lines.length) {
-    wsNotes.addRow(["No additional notes."]);
-  } else {
-    for (const line of lines) {
-      const row = wsNotes.addRow([line]);
-      row.alignment = { wrapText: true, vertical: "top" };
+      default:
+        // ignore other node types for now
+        break;
     }
   }
+
+  // If we somehow produced nothing, add a simple message
+  if (ws.rowCount === 0) {
+    addParagraphRow(ws, "No structured content was detected in this export.");
+  }
+
+  // Notes stub at the end
+  addSpacing(ws, 2);
+  addHeadingRow(ws, "Notes", 3);
+  addParagraphRow(
+    ws,
+    "Use this section to add any additional notes, adjustments, or assumptions."
+  );
 
   const buffer = await wb.xlsx.writeBuffer();
 
   return bufferToDataUrl(
     Buffer.from(buffer),
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    `kora_pricing_${Date.now()}.xlsx`
+    `kora_export_${Date.now()}.xlsx`
   );
 }
