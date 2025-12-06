@@ -556,74 +556,85 @@ function addTable(ws: import("exceljs").Worksheet, node: MdNode) {
 /* -------------------------------------------------------
    Main XLSX export — markdown → single sheet
 ------------------------------------------------------- */
-export async function createXlsx(markdown: string) {
+export async function createXlsx(markdownOrJson: string) {
   const wb = new Workbook();
-  const ws = wb.addWorksheet("Pricing Export");
 
-  initWorksheetColumns(ws);
+  let parsed: any = null;
 
-  const ast = parseMarkdown(markdown || "");
+  // Detect <pricing> JSON payload
+  if (markdownOrJson.trim().startsWith("<pricing")) {
+    try {
+      const jsonText = markdownOrJson
+        .replace("<pricing>", "")
+        .replace("</pricing>", "")
+        .trim();
 
-  // Walk top-level nodes in order
-  for (const node of ast.children || []) {
-    switch (node.type) {
-      case "heading": {
-        const level = (node.depth || 1) as 1 | 2 | 3;
-        const safeLevel: 1 | 2 | 3 =
-          level === 1 || level === 2 || level === 3 ? level : 3;
-
-        addSpacing(ws, 1);
-        addHeadingRow(ws, mdNodeToPlain(node), safeLevel);
-        addSpacing(ws, 0);
-        break;
-      }
-
-      case "paragraph": {
-        addParagraphRow(ws, mdNodeToPlain(node));
-        break;
-      }
-
-      case "list": {
-        addList(ws, node);
-        break;
-      }
-
-      case "table": {
-        addSpacing(ws, 1);
-        addTable(ws, node);
-        addSpacing(ws, 1);
-        break;
-      }
-
-      case "thematicBreak": {
-        addSpacing(ws, 1);
-        break;
-      }
-
-      default:
-        // ignore other node types for now
-        break;
+      parsed = JSON.parse(jsonText);
+    } catch (err) {
+      console.error("Failed to parse pricing JSON:", err);
     }
   }
 
-  // If we somehow produced nothing, add a simple message
-  if (ws.rowCount === 0) {
-    addParagraphRow(ws, "No structured content was detected in this export.");
+  // ------------------------------------------------------------
+  // CASE A → JSON STRUCTURED PRICING (New Salar Output)
+  // ------------------------------------------------------------
+  if (parsed?.sheets) {
+    for (const sheet of parsed.sheets) {
+      const ws = wb.addWorksheet(sheet.name || "Sheet");
+
+      // Configure columns
+      ws.columns = (sheet.columns || []).map((col: string) => ({
+        header: col,
+        width: Math.max(15, col.length + 4),
+      }));
+
+      // Insert rows
+      for (const row of sheet.rows || []) {
+        ws.addRow(row);
+      }
+
+      // Style header row
+      const header = ws.getRow(1);
+      header.font = { bold: true };
+      header.alignment = { vertical: "middle", horizontal: "center" };
+    }
+
+    // Export
+    const buffer = await wb.xlsx.writeBuffer();
+    return bufferToDataUrl(
+      Buffer.from(buffer),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      `kora_pricing_${Date.now()}.xlsx`
+    );
   }
 
-  // Notes stub at the end
-  addSpacing(ws, 2);
-  addHeadingRow(ws, "Notes", 3);
-  addParagraphRow(
-    ws,
-    "Use this section to add any additional notes, adjustments, or assumptions."
-  );
+  // ------------------------------------------------------------
+  // CASE B → FALLBACK: Old Markdown Table Mode
+  // ------------------------------------------------------------
+  const ws = wb.addWorksheet("Pricing Export");
+
+  const lines = (markdownOrJson || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.includes("|"));
+
+  for (const line of lines) {
+    const cells = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter((x) => x.length > 0);
+
+    if (cells.every((c) => /^[-]+$/.test(c))) continue;
+
+    ws.addRow(cells);
+  }
+
+  ws.getRow(1).font = { bold: true };
 
   const buffer = await wb.xlsx.writeBuffer();
-
   return bufferToDataUrl(
     Buffer.from(buffer),
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    `kora_export_${Date.now()}.xlsx`
+    `kora_pricing_${Date.now()}.xlsx`
   );
 }
