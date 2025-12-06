@@ -205,6 +205,6 @@ I need more information to build a pricing model.
   // -------------------------------------------------------------------
   attachments: {
     draft: [],
-    final: ["xlsx"]
+    final: ["docx", "xlsx"]
   }
 };
