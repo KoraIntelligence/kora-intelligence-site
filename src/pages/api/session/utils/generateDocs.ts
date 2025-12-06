@@ -215,9 +215,7 @@ function mdInlineToRuns(nodes: MdNode[] = []): TextRun[] {
 /* -------------------------------------------------------
    🧩 Markdown → DOCX (headings, paragraphs, tables, lists)
 ------------------------------------------------------- */
-function markdownToDocxChildren(
-  markdown: string
-): (Paragraph | Table)[] {
+function markdownToDocxChildren(markdown: string): (Paragraph | Table)[] {
   const tree = parseMarkdown(markdown);
   const children: (Paragraph | Table)[] = [];
 
@@ -257,7 +255,6 @@ function markdownToDocxChildren(
         for (const item of node.children || []) {
           if (!item || item.type !== "listItem") continue;
 
-          // listItem usually contains one or more paragraphs
           const itemParas = (item.children || []).filter(
             (c: MdNode) => c.type === "paragraph"
           );
@@ -372,234 +369,180 @@ export async function createDocx(markdown: string) {
 }
 
 /* -------------------------------------------------------
-   🧩 XLSX Generator — Pricing table + Notes sheet
+   🧩 XLSX Generator — TABLES ONLY
+   - Case A: Salar JSON  (<pricing>{...}</pricing> or raw JSON)
+   - Case B: Markdown tables
+   - Case C: Old pipe-separated tables
 ------------------------------------------------------- */
 
-/**
- * Extract first markdown table as a 2D string array.
- */
-function extractFirstTable(markdown: string): string[][] {
-  const tree = parseMarkdown(markdown);
-  const tableNode =
-    (tree.children || []).find((n: MdNode) => n.type === "table") ||
-    null;
+type PricingSheetJSON = {
+  name?: string;
+  columns?: any[];
+  rows?: any[][];
+};
 
-  if (!tableNode) return [];
+type PricingJSON = {
+  sheets?: PricingSheetJSON[];
+};
+
+/** Coerce arbitrary cell value into something ExcelJS accepts (string/number/null). */
+function toCellValue(value: any): string | number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
+/** Try to parse Salar pricing JSON, with or without <pricing> wrapper. */
+function tryParsePricingJSON(raw: string): PricingJSON | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  let jsonText = trimmed;
+
+  // Handle <pricing> ... </pricing>
+  if (trimmed.startsWith("<pricing")) {
+    const open = trimmed.indexOf(">");
+    const close = trimmed.lastIndexOf("</pricing>");
+    if (open !== -1 && close !== -1 && close > open) {
+      jsonText = trimmed.slice(open + 1, close).trim();
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      Array.isArray((parsed as any).sheets)
+    ) {
+      return parsed as PricingJSON;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract ALL markdown tables as 2D arrays of strings. */
+function extractMarkdownTables(markdown: string): string[][][] {
+  const tree = parseMarkdown(markdown);
+  const tables: string[][][] = [];
+
+  for (const node of tree.children || []) {
+    if (node.type !== "table") continue;
+
+    const rows: string[][] = [];
+    for (const rowNode of node.children || []) {
+      const cells: string[] = [];
+      for (const cellNode of rowNode.children || []) {
+        const text = mdNodeToPlain(cellNode);
+        cells.push((typeof text === "string" ? text : "").trim());
+      }
+      if (cells.length) {
+        rows.push(cells);
+      }
+    }
+
+    if (rows.length) {
+      tables.push(rows);
+    }
+  }
+
+  return tables;
+}
+
+/** Very simple fallback: parse lines that look like pipe tables. */
+function extractPipeTables(markdown: string): string[][] {
+  const lines = (markdown || "")
+    .split(/\r?\n/)
+    .map((l) => (typeof l === "string" ? l.trim() : ""))
+    .filter((l) => l.includes("|"));
 
   const rows: string[][] = [];
 
-  for (const row of tableNode.children || []) {
-    const cells: string[] = [];
-    for (const cell of row.children || []) {
-      const cellText = mdNodeToPlain(cell);
-      cells.push(cellText.trim());
+  for (const line of lines) {
+    const cells = line
+      .split("|")
+      .map((c) => (typeof c === "string" ? c.trim() : ""))
+      .filter((x) => x.length > 0);
+
+    // Skip pure separator rows like | --- | --- |
+    if (cells.length && cells.every((c) => /^-+$/.test(c))) continue;
+
+    if (cells.length) {
+      rows.push(cells);
     }
-    rows.push(cells);
   }
 
   return rows;
 }
 
-/* -------------------------------------------------------
-   🧩 XLSX Generator — Single-Sheet Structured Export
-   - Headings (H1/H2/H3)
-   - Paragraphs
-   - Lists
-   - Tables
-   - Notes stub at the end
-------------------------------------------------------- */
+/** Auto-size columns based on content length (basic, but good enough). */
+function autosizeColumns(ws: any) {
+  if (!ws.columns) return;
 
-const XLSX_MAX_COLUMNS = 8;
-
-/** Create a neutral column layout suitable for paragraphs and tables. */
-function initWorksheetColumns(ws: import("exceljs").Worksheet) {
-  ws.columns = [
-    { header: "", width: 60 }, // main narrative column
-    { header: "", width: 20 },
-    { header: "", width: 20 },
-    { header: "", width: 20 },
-    { header: "", width: 20 },
-    { header: "", width: 20 },
-    { header: "", width: 20 },
-    { header: "", width: 20 },
-  ];
+  ws.columns.forEach((col: any) => {
+    let maxLength = 10;
+    col.eachCell({ includeEmpty: true }, (cell: any) => {
+      const v = cell.value;
+      if (v === null || v === undefined) return;
+      const len = String(v).length;
+      if (len > maxLength) maxLength = len;
+    });
+    col.width = maxLength + 2;
+  });
 }
 
-/** Add a bit of vertical spacing. */
-function addSpacing(ws: import("exceljs").Worksheet, lines = 1) {
-  for (let i = 0; i < lines; i++) {
-    ws.addRow([]);
-  }
-}
-
-/** Add a heading row with level-aware styling. */
-function addHeadingRow(
-  ws: import("exceljs").Worksheet,
-  text: string,
-  level: 1 | 2 | 3
-) {
-  if (!text.trim()) return;
-
-  const row = ws.addRow([text]);
-
-  const size = level === 1 ? 20 : level === 2 ? 16 : 14;
-
-  row.font = {
-    bold: true,
-    size,
+/** Apply simple header styling to row 1. */
+function styleHeaderRow(ws: any) {
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.alignment = {
+    vertical: "middle",
+    horizontal: "center",
+    wrapText: true,
   };
-
-  row.alignment = { vertical: "middle", wrapText: true };
-
-  // Optional subtle bottom border for H1
-  if (level === 1) {
-    row.eachCell((cell) => {
-      cell.border = {
-        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
-      };
-    });
-  }
-}
-
-/** Add a paragraph in the first column, wrapped. */
-function addParagraphRow(ws: import("exceljs").Worksheet, text: string) {
-  const clean = text.trim();
-  if (!clean) return;
-
-  const row = ws.addRow([clean]);
-
-  const cell = row.getCell(1);
-  cell.alignment = { wrapText: true, vertical: "top" };
-  cell.font = { size: 12 };
-}
-
-/** Add list items as bullet-style paragraphs. */
-function addList(ws: import("exceljs").Worksheet, node: MdNode) {
-  // node.type === "list"
-  for (const item of node.children || []) {
-    if (!item || item.type !== "listItem") continue;
-
-    const paragraphs = (item.children || []).filter(
-      (c: MdNode) => c.type === "paragraph"
-    );
-
-    for (const p of paragraphs) {
-      const text = mdNodeToPlain(p);
-      if (!text.trim()) continue;
-      addParagraphRow(ws, `• ${text.trim()}`);
-    }
-  }
-}
-
-/** Add a markdown table as a styled Excel table block. */
-function addTable(ws: import("exceljs").Worksheet, node: MdNode) {
-  const rows: string[][] = [];
-
-  for (const rowNode of node.children || []) {
-    const cells: string[] = [];
-    for (const cellNode of rowNode.children || []) {
-      const cellText = mdNodeToPlain(cellNode).trim();
-      cells.push(cellText);
-    }
-
-    if (cells.length === 0) continue;
-    rows.push(cells.slice(0, XLSX_MAX_COLUMNS));
-  }
-
-  if (!rows.length) return;
-
-  const header = rows[0];
-  const body = rows.slice(1);
-
-  // Header row
-  const headerRow = ws.addRow(header);
-  headerRow.font = { bold: true, size: 13 };
-  headerRow.alignment = { wrapText: true, vertical: "middle" };
-  headerRow.eachCell((cell) => {
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFF3F4F6" }, // light grey
-    };
-    cell.border = {
-      top: { style: "thin", color: { argb: "FFE5E7EB" } },
-      left: { style: "thin", color: { argb: "FFE5E7EB" } },
-      bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
-      right: { style: "thin", color: { argb: "FFE5E7EB" } },
-    };
-  });
-
-  // Body rows
-  body.forEach((cells, idx) => {
-    const row = ws.addRow(cells);
-    const isStriped = idx % 2 === 0;
-
-    row.eachCell((cell) => {
-      cell.alignment = { wrapText: true, vertical: "top" };
-      if (isStriped) {
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFFAFAFA" },
-        };
-      }
-      cell.border = {
-        top: { style: "thin", color: { argb: "FFE5E7EB" } },
-        left: { style: "thin", color: { argb: "FFE5E7EB" } },
-        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
-        right: { style: "thin", color: { argb: "FFE5E7EB" } },
-      };
-    });
-  });
 }
 
 /* -------------------------------------------------------
-   Main XLSX export — markdown → single sheet
+   Main XLSX export — tables only
 ------------------------------------------------------- */
 export async function createXlsx(markdownOrJson: string) {
   const wb = new Workbook();
+  const input = markdownOrJson || "";
 
-  let parsed: any = null;
+  /* ---------------------------------------------
+     CASE A: Salar JSON (preferred)
+  --------------------------------------------- */
+  const pricing = tryParsePricingJSON(input);
 
-  // Detect <pricing> JSON payload
-  if (markdownOrJson.trim().startsWith("<pricing")) {
-    try {
-      const jsonText = markdownOrJson
-        .replace("<pricing>", "")
-        .replace("</pricing>", "")
-        .trim();
+  if (pricing && Array.isArray(pricing.sheets) && pricing.sheets.length > 0) {
+    pricing.sheets.forEach((sheet, index) => {
+      const ws = wb.addWorksheet(sheet.name || `Sheet ${index + 1}`);
 
-      parsed = JSON.parse(jsonText);
-    } catch (err) {
-      console.error("Failed to parse pricing JSON:", err);
-    }
-  }
-
-  // ------------------------------------------------------------
-  // CASE A → JSON STRUCTURED PRICING (New Salar Output)
-  // ------------------------------------------------------------
-  if (parsed?.sheets) {
-    for (const sheet of parsed.sheets) {
-      const ws = wb.addWorksheet(sheet.name || "Sheet");
-
-      // Configure columns
-      ws.columns = (sheet.columns || []).map((col: string) => ({
-        header: col,
-        width: Math.max(15, col.length + 4),
-      }));
-
-      // Insert rows
-      for (const row of sheet.rows || []) {
-        ws.addRow(row);
+      // Header row from "columns" if present
+      if (Array.isArray(sheet.columns) && sheet.columns.length > 0) {
+        const headerValues = sheet.columns.map((c) =>
+          typeof c === "string" ? c : c == null ? "" : String(c)
+        );
+        ws.addRow(headerValues);
       }
 
-      // Style header row
-      const header = ws.getRow(1);
-      header.font = { bold: true };
-      header.alignment = { vertical: "middle", horizontal: "center" };
-    }
+      // Data rows
+      if (Array.isArray(sheet.rows)) {
+        for (const row of sheet.rows) {
+          if (!Array.isArray(row)) continue;
+          const values = row.map(toCellValue);
+          ws.addRow(values);
+        }
+      }
 
-    // Export
+      styleHeaderRow(ws);
+      autosizeColumns(ws);
+    });
+
     const buffer = await wb.xlsx.writeBuffer();
     return bufferToDataUrl(
       Buffer.from(buffer),
@@ -608,28 +551,62 @@ export async function createXlsx(markdownOrJson: string) {
     );
   }
 
-  // ------------------------------------------------------------
-  // CASE B → FALLBACK: Old Markdown Table Mode
-  // ------------------------------------------------------------
-  const ws = wb.addWorksheet("Pricing Export");
+  /* ---------------------------------------------
+     CASE B: Markdown tables
+  --------------------------------------------- */
+  const mdTables = extractMarkdownTables(input);
 
-  const lines = (markdownOrJson || "")
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.includes("|"));
+  if (mdTables.length > 0) {
+    mdTables.forEach((table, tIndex) => {
+      const ws = wb.addWorksheet(
+        tIndex === 0 ? "Pricing Table" : `Table ${tIndex + 1}`
+      );
 
-  for (const line of lines) {
-    const cells = line
-      .split("|")
-      .map((c) => c.trim())
-      .filter((x) => x.length > 0);
+      if (!table.length) return;
 
-    if (cells.every((c) => /^[-]+$/.test(c))) continue;
+      // First row is header, rest is body
+      const [header, ...body] = table;
 
-    ws.addRow(cells);
+      ws.addRow(
+        header.map((h) => (typeof h === "string" ? h : String(h ?? "")))
+      );
+
+      for (const row of body) {
+        ws.addRow(row.map(toCellValue));
+      }
+
+      styleHeaderRow(ws);
+      autosizeColumns(ws);
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    return bufferToDataUrl(
+      Buffer.from(buffer),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      `kora_pricing_${Date.now()}.xlsx`
+    );
   }
 
-  ws.getRow(1).font = { bold: true };
+  /* ---------------------------------------------
+     CASE C: Fallback — pipe-style tables
+  --------------------------------------------- */
+  const pipeRows = extractPipeTables(input);
+
+  const ws = wb.addWorksheet("Pricing Table");
+
+  if (pipeRows.length > 0) {
+    const [header, ...body] = pipeRows;
+    ws.addRow(header);
+    for (const row of body) {
+      ws.addRow(row.map(toCellValue));
+    }
+    styleHeaderRow(ws);
+    autosizeColumns(ws);
+  } else {
+    // No tabular data at all — put a friendly note
+    ws.addRow(["No tabular pricing data was detected in this message."]);
+    autosizeColumns(ws);
+  }
 
   const buffer = await wb.xlsx.writeBuffer();
   return bufferToDataUrl(
