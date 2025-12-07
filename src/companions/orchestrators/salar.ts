@@ -200,6 +200,10 @@ export async function runSalar(input: SalarOrchestratorInput) {
     ? conversationHistory
     : [];
 
+  // 🔹 NEW: Truncate history to last 8 turns (helps with token load)
+  const RECENT_TURNS = 8;
+  const recentHistory = safeHistory.slice(-RECENT_TURNS);
+
   const pack = PACKS[mode];
   if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
 
@@ -237,10 +241,11 @@ ${identity.codex ?? ""}
   const formatConversation = (arr: any[]) =>
     arr.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
 
+  // 🔹 NEW: only use the truncated recentHistory in the memory block
   const memoryBlock =
-    safeHistory.length > 0
+    recentHistory.length > 0
       ? `\nHere is the conversation so far:\n${formatConversation(
-          safeHistory
+          recentHistory
         )}\n`
       : "";
 
@@ -263,6 +268,14 @@ ${extractedText || "N/A"}
 Requested Tone: ${tone}
 `;
 
+  // Small debug hook (optional, keep or remove as you wish)
+  console.log(
+    "🟨 runSalar: mode=%s, nextAction=%s, promptLength=%d",
+    mode,
+    nextAction,
+    fullPrompt.length
+  );
+
   const completion = await openai.responses.create({
     model: "gpt-4.1",
     input: fullPrompt,
@@ -273,6 +286,7 @@ Requested Tone: ${tone}
 
   const attachments: any[] = [];
 
+  // Attachments only for non-chat modes + finalise actions
   if (
     mode !== "commercial_chat" &&
     nextAction?.startsWith("finalise") &&
@@ -280,13 +294,27 @@ Requested Tone: ${tone}
   ) {
     const finalAttachments = pack.attachments.final || [];
     for (const type of finalAttachments) {
-      if (type === "docx") attachments.push(await createDocx(outputText));
-      if (type === "pdf") attachments.push(await createPDF(outputText));
+      if (type === "docx") {
+        attachments.push(await createDocx(outputText));
+      }
+      if (type === "pdf") {
+        attachments.push(await createPDF(outputText));
+      }
       if (type === "xlsx") {
-  const structured = await extractPricingStructure(outputText);
-  const safe = normaliseForXlsx(structured);
-  attachments.push(await createXlsx(structured));
-}}
+        // 🔹 IMPORTANT: use the normalised/flattened structure for XLSX
+        try {
+          const structured = await extractPricingStructure(outputText);
+          const safe = normaliseForXlsx(structured);
+          console.log(
+            "🟨 runSalar: generating XLSX, structuredType=",
+            typeof structured
+          );
+          attachments.push(await createXlsx(safe));
+        } catch (err) {
+          console.error("❌ runSalar XLSX generation error:", err);
+        }
+      }
+    }
   }
 
   const workflow = getWorkflow("salar", mode);
@@ -327,7 +355,7 @@ Requested Tone: ${tone}
         ? pack.nextActions
         : Object.values(pack.nextActions || {}).flat(),
       identity: identityMeta,
-      memory: { shortTerm: safeHistory.slice(-6) },
+      memory: { shortTerm: safeHistory.slice(-6) }, // keep as before
       workflow: workflowMeta,
     },
   };
