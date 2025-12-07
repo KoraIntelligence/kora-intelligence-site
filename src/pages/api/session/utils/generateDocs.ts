@@ -370,14 +370,14 @@ export async function createDocx(markdown: string) {
 
 /* -------------------------------------------------------
    🧩 XLSX Generator — TABLES ONLY
-   - Case A: Salar JSON  (<pricing>{...}</pricing> or raw JSON)
+   - Case A: Salar JSON (<pricing>{...}</pricing>)
    - Case B: Markdown tables
-   - Case C: Old pipe-separated tables
+   - Case C: Pipe-style tables
 ------------------------------------------------------- */
 
 type PricingSheetJSON = {
   name?: string;
-  columns?: any[];
+  columns?: (string | null)[];
   rows?: any[][];
 };
 
@@ -385,47 +385,40 @@ type PricingJSON = {
   sheets?: PricingSheetJSON[];
 };
 
-/** Coerce arbitrary cell value into something ExcelJS accepts (string/number/null). */
-function toCellValue(value: any): string | number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number") return value;
-  if (typeof value === "string") return value;
-  return String(value);
+/** Ensure ExcelJS-compatible cell values */
+function toCellValue(v: any): string | number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string" || typeof v === "number") return v;
+  return String(v);
 }
 
-/** Try to parse Salar pricing JSON, with or without <pricing> wrapper. */
-function tryParsePricingJSON(raw: string): PricingJSON | null {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
+/** Try parsing Salar JSON, with optional <pricing> wrapper */
+function tryParsePricingJSON(input: string): PricingJSON | null {
+  if (!input) return null;
+  let raw = input.trim();
+  if (!raw.length) return null;
 
-  let jsonText = trimmed;
-
-  // Handle <pricing> ... </pricing>
-  if (trimmed.startsWith("<pricing")) {
-    const open = trimmed.indexOf(">");
-    const close = trimmed.lastIndexOf("</pricing>");
+  // strip <pricing> wrapper if present
+  if (raw.startsWith("<pricing")) {
+    const open = raw.indexOf(">");
+    const close = raw.lastIndexOf("</pricing>");
     if (open !== -1 && close !== -1 && close > open) {
-      jsonText = trimmed.slice(open + 1, close).trim();
+      raw = raw.slice(open + 1, close).trim();
     }
   }
 
   try {
-    const parsed = JSON.parse(jsonText);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      Array.isArray((parsed as any).sheets)
-    ) {
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.sheets)) {
       return parsed as PricingJSON;
     }
-    return null;
-  } catch {
+  } catch (_) {
     return null;
   }
+  return null;
 }
 
-/** Extract ALL markdown tables as 2D arrays of strings. */
+/** Extract ALL markdown tables */
 function extractMarkdownTables(markdown: string): string[][][] {
   const tree = parseMarkdown(markdown);
   const tables: string[][][] = [];
@@ -437,23 +430,19 @@ function extractMarkdownTables(markdown: string): string[][][] {
     for (const rowNode of node.children || []) {
       const cells: string[] = [];
       for (const cellNode of rowNode.children || []) {
-        const text = mdNodeToPlain(cellNode);
-        cells.push((typeof text === "string" ? text : "").trim());
+        const txt = mdNodeToPlain(cellNode) || "";
+        cells.push(txt.trim());
       }
-      if (cells.length) {
-        rows.push(cells);
-      }
+      if (cells.length) rows.push(cells);
     }
 
-    if (rows.length) {
-      tables.push(rows);
-    }
+    if (rows.length) tables.push(rows);
   }
 
   return tables;
 }
 
-/** Very simple fallback: parse lines that look like pipe tables. */
+/** Extract pipe-style tables as fallback */
 function extractPipeTables(markdown: string): string[][] {
   const lines = (markdown || "")
     .split(/\r?\n/)
@@ -465,77 +454,66 @@ function extractPipeTables(markdown: string): string[][] {
   for (const line of lines) {
     const cells = line
       .split("|")
-      .map((c) => (typeof c === "string" ? c.trim() : ""))
-      .filter((x) => x.length > 0);
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
 
-    // Skip pure separator rows like | --- | --- |
-    if (cells.length && cells.every((c) => /^-+$/.test(c))) continue;
+    if (!cells.length) continue;
+    if (cells.every((c) => /^-+$/.test(c))) continue; // separator row
 
-    if (cells.length) {
-      rows.push(cells);
-    }
+    rows.push(cells);
   }
 
   return rows;
 }
 
-/** Auto-size columns based on content length (basic, but good enough). */
+/** Auto-size columns */
 function autosizeColumns(ws: any) {
   if (!ws.columns) return;
 
   ws.columns.forEach((col: any) => {
-    let maxLength = 10;
+    let maxLen = 10;
     col.eachCell({ includeEmpty: true }, (cell: any) => {
-      const v = cell.value;
-      if (v === null || v === undefined) return;
-      const len = String(v).length;
-      if (len > maxLength) maxLength = len;
+      if (cell.value != null) {
+        maxLen = Math.max(maxLen, String(cell.value).length);
+      }
     });
-    col.width = maxLength + 2;
+    col.width = maxLen + 2;
   });
 }
 
-/** Apply simple header styling to row 1. */
+/** Bold + centered header */
 function styleHeaderRow(ws: any) {
-  const headerRow = ws.getRow(1);
-  headerRow.font = { bold: true };
-  headerRow.alignment = {
-    vertical: "middle",
-    horizontal: "center",
-    wrapText: true,
-  };
+  const header = ws.getRow(1);
+  header.font = { bold: true };
+  header.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
 }
 
 /* -------------------------------------------------------
-   Main XLSX export — tables only
+   Main XLSX generation
 ------------------------------------------------------- */
+
 export async function createXlsx(markdownOrJson: string) {
   const wb = new Workbook();
   const input = markdownOrJson || "";
 
-  /* ---------------------------------------------
-     CASE A: Salar JSON (preferred)
-  --------------------------------------------- */
+  /* -------------------------
+     CASE A: Salar JSON
+  ------------------------- */
   const pricing = tryParsePricingJSON(input);
 
-  if (pricing && Array.isArray(pricing.sheets) && pricing.sheets.length > 0) {
-    pricing.sheets.forEach((sheet, index) => {
-      const ws = wb.addWorksheet(sheet.name || `Sheet ${index + 1}`);
+  if (pricing?.sheets?.length) {
+    pricing.sheets.forEach((sheet, i) => {
+      const ws = wb.addWorksheet(sheet.name || `Sheet ${i + 1}`);
 
-      // Header row from "columns" if present
-      if (Array.isArray(sheet.columns) && sheet.columns.length > 0) {
-        const headerValues = sheet.columns.map((c) =>
-          typeof c === "string" ? c : c == null ? "" : String(c)
-        );
-        ws.addRow(headerValues);
+      // Columns
+      if (Array.isArray(sheet.columns)) {
+        ws.addRow(sheet.columns.map((c) => (c == null ? "" : String(c))));
       }
 
-      // Data rows
+      // Rows
       if (Array.isArray(sheet.rows)) {
         for (const row of sheet.rows) {
-          if (!Array.isArray(row)) continue;
-          const values = row.map(toCellValue);
-          ws.addRow(values);
+          ws.addRow(row.map(toCellValue));
         }
       }
 
@@ -551,25 +529,17 @@ export async function createXlsx(markdownOrJson: string) {
     );
   }
 
-  /* ---------------------------------------------
+  /* -------------------------
      CASE B: Markdown tables
-  --------------------------------------------- */
+  ------------------------- */
   const mdTables = extractMarkdownTables(input);
 
   if (mdTables.length > 0) {
-    mdTables.forEach((table, tIndex) => {
-      const ws = wb.addWorksheet(
-        tIndex === 0 ? "Pricing Table" : `Table ${tIndex + 1}`
-      );
+    mdTables.forEach((table, i) => {
+      const ws = wb.addWorksheet(i === 0 ? "Table" : `Table ${i + 1}`);
 
-      if (!table.length) return;
-
-      // First row is header, rest is body
       const [header, ...body] = table;
-
-      ws.addRow(
-        header.map((h) => (typeof h === "string" ? h : String(h ?? "")))
-      );
+      ws.addRow(header);
 
       for (const row of body) {
         ws.addRow(row.map(toCellValue));
@@ -587,24 +557,20 @@ export async function createXlsx(markdownOrJson: string) {
     );
   }
 
-  /* ---------------------------------------------
-     CASE C: Fallback — pipe-style tables
-  --------------------------------------------- */
+  /* -------------------------
+     CASE C: Pipe fallback
+  ------------------------- */
   const pipeRows = extractPipeTables(input);
-
   const ws = wb.addWorksheet("Pricing Table");
 
-  if (pipeRows.length > 0) {
+  if (pipeRows.length) {
     const [header, ...body] = pipeRows;
     ws.addRow(header);
-    for (const row of body) {
-      ws.addRow(row.map(toCellValue));
-    }
+    body.forEach((row) => ws.addRow(row.map(toCellValue)));
     styleHeaderRow(ws);
     autosizeColumns(ws);
   } else {
-    // No tabular data at all — put a friendly note
-    ws.addRow(["No tabular pricing data was detected in this message."]);
+    ws.addRow(["No tabular pricing data detected."]);
     autosizeColumns(ws);
   }
 
