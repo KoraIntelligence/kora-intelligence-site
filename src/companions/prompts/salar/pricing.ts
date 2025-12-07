@@ -142,8 +142,29 @@ I will now generate your Excel pricing sheet with:
 - Contingency and margin rows
 - Clean formatting
 
-IMPORTANT — When producing the final output, you MUST include a structured JSON representation
-of the pricing spreadsheet inside the following tags:
+IMPORTANT — Your primary output MUST be **clean Markdown tables**, one table per section.
+Each table will be converted into a separate Excel sheet.
+
+Example (Markdown table format):
+
+### Summary
+| Item      | Value      |
+|-----------|------------|
+| Client    | <client>   |
+| Project   | <project>  |
+| Total     | <total>    |
+
+### Breakdown
+| Item       | Quantity | Rate | Total |
+|------------|----------|------|-------|
+| Discovery  | 10       | 100  | 1000  |
+| Build      | 40       | 120  | 4800  |
+
+
+SECONDARY (optional) — If you wish, you MAY also include a JSON representation of the spreadsheet,
+but it is NOT required for the generator to work.
+
+If you choose to provide JSON, it MUST be inside these tags:
 
 <pricing>
 {
@@ -151,7 +172,7 @@ of the pricing spreadsheet inside the following tags:
     {
       "name": "Summary",
       "rows": [
-        ["Pricing Summary"],
+        ["Item", "Value"],
         ["Client", "<insert>"],
         ["Project", "<insert>"],
         ["Total", "<insert>"]
@@ -169,14 +190,16 @@ of the pricing spreadsheet inside the following tags:
 }
 </pricing>
 
-RULES:
-- The JSON MUST be valid, no comments, no trailing commas.
+RULES for optional JSON:
+- The JSON MUST be valid if included.
 - Sheets MUST be an array.
-- rows MUST be a 2D array of values.
-- columns is optional but recommended.
-- DO NOT explain the JSON. Output it directly.
+- rows MUST be 2D arrays.
+- columns is optional.
+- Do NOT explain the JSON.
 
-This structure will be consumed by the XLSX generator.
+Markdown tables always take priority and are guaranteed to be converted correctly.
+
+Please produce your final structured output now.
 `,
 
   // -------------------------------------------------------------------
@@ -205,6 +228,6 @@ I need more information to build a pricing model.
   // -------------------------------------------------------------------
   attachments: {
     draft: [],
-    final: ["docx", "xlsx"]
+    final: ["pdf", "docx", "xlsx"]
   }
 };
