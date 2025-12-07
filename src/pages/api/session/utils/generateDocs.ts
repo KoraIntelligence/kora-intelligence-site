@@ -496,27 +496,41 @@ export async function createXlsx(markdownOrJson: string) {
   const wb = new Workbook();
   const input = markdownOrJson || "";
 
-  /* -------------------------
-     CASE A: Salar JSON
-  ------------------------- */
-  const pricing = tryParsePricingJSON(input);
+  // First, extract markdown tables
+  const mdTables = extractMarkdownTables(input);
 
+  // CASE B: Prefer markdown if found
+  if (mdTables.length > 0) {
+    mdTables.forEach((table, i) => {
+      const ws = wb.addWorksheet(i === 0 ? "Table" : `Table ${i + 1}`);
+      const [header, ...body] = table;
+      ws.addRow(header.map(toCellValue));
+      body.forEach((row) => ws.addRow(row.map(toCellValue)));
+      styleHeaderRow(ws);
+      autosizeColumns(ws);
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    return bufferToDataUrl(
+      Buffer.from(buffer),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      `kora_pricing_${Date.now()}.xlsx`
+    );
+  }
+
+  // CASE A: Only try JSON if no markdown was found
+  const pricing = tryParsePricingJSON(input);
   if (pricing?.sheets?.length) {
     pricing.sheets.forEach((sheet, i) => {
       const ws = wb.addWorksheet(sheet.name || `Sheet ${i + 1}`);
-
-      // Columns
       if (Array.isArray(sheet.columns)) {
-        ws.addRow(sheet.columns.map((c) => (c == null ? "" : String(c))));
+        ws.addRow(sheet.columns.map(toCellValue));
       }
-
-      // Rows
       if (Array.isArray(sheet.rows)) {
         for (const row of sheet.rows) {
           ws.addRow(row.map(toCellValue));
         }
       }
-
       styleHeaderRow(ws);
       autosizeColumns(ws);
     });
@@ -529,51 +543,19 @@ export async function createXlsx(markdownOrJson: string) {
     );
   }
 
-  /* -------------------------
-     CASE B: Markdown tables
-  ------------------------- */
-  const mdTables = extractMarkdownTables(input);
-
-  if (mdTables.length > 0) {
-    mdTables.forEach((table, i) => {
-      const ws = wb.addWorksheet(i === 0 ? "Table" : `Table ${i + 1}`);
-
-      const [header, ...body] = table;
-      ws.addRow(header);
-
-      for (const row of body) {
-        ws.addRow(row.map(toCellValue));
-      }
-
-      styleHeaderRow(ws);
-      autosizeColumns(ws);
-    });
-
-    const buffer = await wb.xlsx.writeBuffer();
-    return bufferToDataUrl(
-      Buffer.from(buffer),
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      `kora_pricing_${Date.now()}.xlsx`
-    );
-  }
-
-  /* -------------------------
-     CASE C: Pipe fallback
-  ------------------------- */
+  // CASE C: Fallback
   const pipeRows = extractPipeTables(input);
   const ws = wb.addWorksheet("Pricing Table");
 
   if (pipeRows.length) {
     const [header, ...body] = pipeRows;
-    ws.addRow(header);
+    ws.addRow(header.map(toCellValue));
     body.forEach((row) => ws.addRow(row.map(toCellValue)));
-    styleHeaderRow(ws);
-    autosizeColumns(ws);
   } else {
     ws.addRow(["No tabular pricing data detected."]);
-    autosizeColumns(ws);
   }
 
+  autosizeColumns(ws);
   const buffer = await wb.xlsx.writeBuffer();
   return bufferToDataUrl(
     Buffer.from(buffer),
