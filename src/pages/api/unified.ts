@@ -66,6 +66,29 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
   return req.body as UnifiedRequestBody;
 }
 
+function normalizeMessageContent(content: any): string {
+  if (!content) return "";
+
+  // If already string → return directly
+  if (typeof content === "string") return content;
+
+  // If OpenAI returned structured array content
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (!part) return "";
+        if (typeof part === "string") return part;
+        if (typeof part.text === "string") return part.text;
+        if (typeof part.content === "string") return part.content;
+        return JSON.stringify(part);
+      })
+      .join("\n");
+  }
+
+  // Fallback: force to string
+  return String(content);
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -193,10 +216,12 @@ export default async function handler(
       orchestratorResult = await runLyra(lyraInput);
     }
 
-    const reply =
-      orchestratorResult.outputText ||
-      orchestratorResult.reply ||
-      "No response generated.";
+    let replyRaw =
+  orchestratorResult.outputText ||
+  orchestratorResult.reply ||
+  "No response generated.";
+
+const reply = normalizeMessageContent(replyRaw);
 
     const attachments = orchestratorResult.attachments || [];
     const metaFromOrch = orchestratorResult.meta || {};
