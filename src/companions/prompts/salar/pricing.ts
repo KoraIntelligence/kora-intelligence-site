@@ -134,25 +134,21 @@ Please specify:
 finalise: `
 Here is your finalised pricing breakdown.
 
-I will now generate your Excel pricing sheet with:
-- Costs and categories
-- Formulas (if provided or requested)
-- Summary section
-- Multiple pricing options (if applicable)
-- Contingency and margin rows
-- Clean formatting
+Your output **must be a single, continuous markdown document**, containing:
 
-IMPORTANT — Your primary output MUST be **clean Markdown tables**, one table per section.
-Each table will be converted into a separate Excel sheet.
+### REQUIRED OUTPUT FORMAT
+1. Clear section headings (### Heading)
+2. Under each section, include exactly **one markdown table**
+3. No additional formats, no JSON, no code blocks, no commentary
+4. Do NOT include formula explanations unless the user asked
 
-Example (Markdown table format):
-
+### Example Format (you MUST follow this structure)
 ### Summary
 | Item      | Value      |
 |-----------|------------|
-| Client    | <client>   |
-| Project   | <project>  |
-| Total     | <total>    |
+| Client    | ...        |
+| Project   | ...        |
+| Total     | ...        |
 
 ### Breakdown
 | Item       | Quantity | Rate | Total |
@@ -160,46 +156,15 @@ Example (Markdown table format):
 | Discovery  | 10       | 100  | 1000  |
 | Build      | 40       | 120  | 4800  |
 
+### Rules
+- Produce **markdown tables only**
+- No JSON
+- No metadata
+- No analysis
+- No explanation of what you're doing
+- Output MUST be a single plain markdown document
 
-SECONDARY (optional) — If you wish, you MAY also include a JSON representation of the spreadsheet,
-but it is NOT required for the generator to work.
-
-If you choose to provide JSON, it MUST be inside these tags:
-
-<pricing>
-{
-  "sheets": [
-    {
-      "name": "Summary",
-      "rows": [
-        ["Item", "Value"],
-        ["Client", "<insert>"],
-        ["Project", "<insert>"],
-        ["Total", "<insert>"]
-      ]
-    },
-    {
-      "name": "Breakdown",
-      "columns": ["Item", "Quantity", "Rate", "Total"],
-      "rows": [
-        ["Discovery", 10, 100, 1000],
-        ["Build", 40, 120, 4800]
-      ]
-    }
-  ]
-}
-</pricing>
-
-RULES for optional JSON:
-- The JSON MUST be valid if included.
-- Sheets MUST be an array.
-- rows MUST be 2D arrays.
-- columns is optional.
-- Do NOT explain the JSON.
-
-Markdown tables always take priority and are guaranteed to be converted correctly.
-
-Please produce your final structured output now.
+Now produce the final structured pricing breakdown.
 `,
 
   // -------------------------------------------------------------------
