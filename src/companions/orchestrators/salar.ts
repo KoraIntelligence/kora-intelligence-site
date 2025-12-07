@@ -170,6 +170,22 @@ async function extractPricingStructure(output: string) {
   }
 }
 
+function normaliseForXlsx(input: any): string {
+  if (!input) return "";
+
+  // Already JSON? Convert to string safely.
+  if (typeof input === "object") {
+    try {
+      return JSON.stringify(input);
+    } catch {
+      return "";
+    }
+  }
+
+  // If it's a number, boolean, etc → cast to string
+  return String(input);
+}
+
 export async function runSalar(input: SalarOrchestratorInput) {
   const {
     mode,
@@ -268,6 +284,7 @@ Requested Tone: ${tone}
       if (type === "pdf") attachments.push(await createPDF(outputText));
       if (type === "xlsx") {
   const structured = await extractPricingStructure(outputText);
+  const safe = normaliseForXlsx(structured);
   attachments.push(await createXlsx(structured));
 }}
   }
