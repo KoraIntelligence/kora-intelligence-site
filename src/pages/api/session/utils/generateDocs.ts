@@ -244,54 +244,157 @@ function styleHeaderRow(ws: any) {
 }
 
 export async function createXlsx(markdownOrJson: string) {
+  console.log("🟦 XLSX: Starting createXlsx()");
+  console.log("🟦 XLSX: Raw input (first 500 chars):", String(markdownOrJson).slice(0, 500));
+
   const wb = new Workbook();
   const input = markdownOrJson || "";
 
+  // ---------------------------
+  // Extract Markdown Tables
+  // ---------------------------
   const mdTables = extractMarkdownTables(input);
+  console.log("🟦 XLSX: Markdown tables detected:", mdTables.length);
+  if (mdTables.length > 0) {
+    mdTables.forEach((t, idx) => console.log(`🟦 XLSX: Table[${idx}] rows:`, t.length, t));
+  }
+
+  // ---------------------------
+  // Try JSON
+  // ---------------------------
   const pricing = tryParsePricingJSON(input);
+  console.log("🟦 XLSX: Parsed JSON pricing:", pricing);
 
-  const jsonIsSafe = Array.isArray(pricing?.sheets) &&
-    pricing.sheets.every(sheet =>
-      Array.isArray(sheet.rows) && (!sheet.columns || Array.isArray(sheet.columns))
-    );
+  const jsonIsSafe =
+    Array.isArray(pricing?.sheets) &&
+    pricing.sheets.every((sheet, si) => {
+      const validRows = Array.isArray(sheet.rows);
+      const validCols = !sheet.columns || Array.isArray(sheet.columns);
+      console.log(
+        `🟦 XLSX: Checking sheet ${si}: rows OK? ${validRows}, cols OK? ${validCols}`
+      );
+      return validRows && validCols;
+    });
 
+  console.log("🟦 XLSX: jsonIsSafe:", jsonIsSafe);
+
+  // -----------------------------------------------------
+  // CASE B — Markdown takes priority or JSON unsafe
+  // -----------------------------------------------------
   if (mdTables.length > 0 || !jsonIsSafe) {
+    console.log("🟩 XLSX: USING MARKDOWN TABLES PATH");
+
     mdTables.forEach((table, i) => {
+      console.log(`🟦 XLSX: Writing Markdown table ${i}`);
+
       const ws = wb.addWorksheet(i === 0 ? "Table" : `Table ${i + 1}`);
       const [header, ...body] = table;
-      ws.addRow(header.map(toCellValue));
-      body.forEach((row) => ws.addRow(row.map(toCellValue)));
+
+      console.log("🟦 XLSX: Header:", header);
+
+      ws.addRow(header.map((cell) => {
+        console.log("   ➤ header cell:", cell, " typeof=", typeof cell);
+        return toCellValue(cell);
+      }));
+
+      body.forEach((row, ri) => {
+        console.log(`🟦 XLSX: Body row[${ri}]:`, row);
+        ws.addRow(row.map((cell) => {
+          console.log("   ➤ body cell:", cell, " typeof=", typeof cell);
+          return toCellValue(cell);
+        }));
+      });
+
       styleHeaderRow(ws);
       autosizeColumns(ws);
     });
+
     const buffer = await wb.xlsx.writeBuffer();
-    return bufferToDataUrl(Buffer.from(buffer), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `kora_pricing_${Date.now()}.xlsx`);
+    console.log("🟩 XLSX: Markdown XLSX generation complete");
+    return bufferToDataUrl(
+      Buffer.from(buffer),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      `kora_pricing_${Date.now()}.xlsx`
+    );
   }
 
+  // -----------------------------------------------------
+  // CASE A — JSON
+  // -----------------------------------------------------
   if (pricing?.sheets?.length) {
+    console.log("🟩 XLSX: USING JSON SHEETS PATH");
+
     pricing.sheets.forEach((sheet, i) => {
+      console.log(`🟦 XLSX: Writing JSON sheet ${i} (${sheet.name})`);
       const ws = wb.addWorksheet(sheet.name || `Sheet ${i + 1}`);
-      if (Array.isArray(sheet.columns)) ws.addRow(sheet.columns.map(toCellValue));
-      if (Array.isArray(sheet.rows)) {
-        for (const row of sheet.rows) ws.addRow(row.map(toCellValue));
+
+      if (Array.isArray(sheet.columns)) {
+        console.log("🟦 XLSX: JSON columns:", sheet.columns);
+        ws.addRow(sheet.columns.map((cell) => {
+          console.log("   ➤ col cell:", cell, " typeof=", typeof cell);
+          return toCellValue(cell);
+        }));
       }
+
+      if (Array.isArray(sheet.rows)) {
+        sheet.rows.forEach((row, ri) => {
+          console.log(`🟦 XLSX: JSON row[${ri}]:`, row);
+          ws.addRow(row.map((cell) => {
+            console.log("   ➤ row cell:", cell, " typeof=", typeof cell);
+            return toCellValue(cell);
+          }));
+        });
+      }
+
       styleHeaderRow(ws);
       autosizeColumns(ws);
     });
+
     const buffer = await wb.xlsx.writeBuffer();
-    return bufferToDataUrl(Buffer.from(buffer), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `kora_pricing_${Date.now()}.xlsx`);
+    console.log("🟩 XLSX: JSON XLSX generation complete");
+    return bufferToDataUrl(
+      Buffer.from(buffer),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      `kora_pricing_${Date.now()}.xlsx`
+    );
   }
 
+  // -----------------------------------------------------
+  // CASE C — Pipe-style tables
+  // -----------------------------------------------------
+  console.log("🟨 XLSX: Falling back to PIPE TABLE extraction");
   const pipeRows = extractPipeTables(input);
+  console.log("🟨 XLSX: Pipe rows:", pipeRows);
+
   const ws = wb.addWorksheet("Pricing Table");
+
   if (pipeRows.length) {
     const [header, ...body] = pipeRows;
-    ws.addRow(header.map(toCellValue));
-    body.forEach((row) => ws.addRow(row.map(toCellValue)));
+
+    console.log("🟨 XLSX: Pipe header:", header);
+    ws.addRow(header.map((cell) => {
+      console.log("   ➤ pipe header cell:", cell);
+      return toCellValue(cell);
+    }));
+
+    body.forEach((row, ri) => {
+      console.log(`🟨 XLSX: Pipe body row[${ri}]:`, row);
+      ws.addRow(row.map((cell) => {
+        console.log("   ➤ pipe row cell:", cell);
+        return toCellValue(cell);
+      }));
+    });
   } else {
     ws.addRow(["No tabular pricing data detected."]);
   }
+
   autosizeColumns(ws);
   const buffer = await wb.xlsx.writeBuffer();
-  return bufferToDataUrl(Buffer.from(buffer), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `kora_pricing_${Date.now()}.xlsx`);
+  console.log("🟨 XLSX: PIPE XLSX generation complete");
+
+  return bufferToDataUrl(
+    Buffer.from(buffer),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    `kora_pricing_${Date.now()}.xlsx`
+  );
 }
