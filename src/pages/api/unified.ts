@@ -47,8 +47,8 @@ interface UnifiedRequestBody {
 }
 
 interface OrchestratorResult {
-  reply?: string;
-  outputText?: string;
+  reply?: any;            // <-- may be array/object, so keep as any
+  outputText?: any;       // <-- may be array/object, so keep as any
   attachments?: any[];
   meta?: Record<string, any>;
 }
@@ -59,42 +59,55 @@ export interface ConversationTurn {
   meta?: any;
 }
 
-function parseBody(req: NextApiRequest): UnifiedRequestBody {
-  if (typeof req.body === "string") {
-    return JSON.parse(req.body);
-  }
-  return req.body as UnifiedRequestBody;
-}
+// =============================================
+// 💡 Deep Normalizer — recursive, safe serializer
+// =============================================
+function normalizeMessageContentDeep(input: any): string {
+  if (input == null) return "";
 
-function normalizeMessageContent(content: any): string {
-  if (!content) return "";
+  // Primitive → OK
+  if (typeof input === "string") return input;
+  if (typeof input === "number") return String(input);
+  if (typeof input === "boolean") return input ? "true" : "false";
 
-  // If already string → return directly
-  if (typeof content === "string") return content;
-
-  // If OpenAI returned structured array content
-  if (Array.isArray(content)) {
-    return content
+  // If an array → flatten recursively
+  if (Array.isArray(input)) {
+    return input
       .map((part) => {
         if (!part) return "";
         if (typeof part === "string") return part;
         if (typeof part.text === "string") return part.text;
         if (typeof part.content === "string") return part.content;
-        return JSON.stringify(part);
+        return normalizeMessageContentDeep(part);
       })
       .join("\n");
   }
 
-  // Fallback: force to string
-  return String(content);
+  // Object → convert to readable JSON
+  try {
+    return JSON.stringify(input, null, 2);
+  } catch (_) {
+    return String(input);
+  }
+}
+
+// =============================================
+// Handler
+// =============================================
+function parseBody(req: NextApiRequest): UnifiedRequestBody {
+  if (typeof req.body === "string") return JSON.parse(req.body);
+  return req.body as UnifiedRequestBody;
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log("🟦 unified.ts: Incoming request:", req.method);
+
   if (req.method === "GET") {
     const sessionId = req.query.sessionId;
+    console.log("🟦 GET history for session:", sessionId);
 
     if (!sessionId || typeof sessionId !== "string") {
       return res.status(400).json({ error: "Missing or invalid sessionId" });
@@ -102,13 +115,15 @@ export default async function handler(
 
     const rows = await getMessages(sessionId);
 
+    console.log("🟦 Loaded history rows:", rows.length);
+
     return res.status(200).json({
       messages: rows.map((row: any) => ({
         id: row.id,
         role: row.role,
         content: row.content,
         ts: new Date(row.created_at).getTime(),
-        meta: row.meta || undefined, // ✅ CORRECTED: now returns root meta
+        meta: row.meta || undefined,
         attachments: row.attachments || [],
       })),
     });
@@ -116,10 +131,11 @@ export default async function handler(
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-  }
+    }
 
   try {
     const body = parseBody(req);
+    console.log("🟦 Parsed body:", body);
 
     let {
       companion = "salar",
@@ -132,23 +148,21 @@ export default async function handler(
       sessionId: incomingSessionId,
     } = body;
 
+    console.log("🟦 Companion:", companion, "Mode:", mode);
+
     if (!mode) {
       return res.status(400).json({ error: "Missing mode in request." });
     }
 
-    if (!userId) {
-      userId = "guest-" + (req.headers["x-guest"] || "anon");
-    }
+    if (!userId) userId = "guest-" + (req.headers["x-guest"] || "anon");
 
     await getOrCreateUserProfile(userId);
 
     let extractedText = "";
     if (filePayload) {
       try {
-        extractedText = await parseUploadedFile(
-          filePayload,
-          filePayload.type
-        );
+        extractedText = await parseUploadedFile(filePayload, filePayload.type);
+        console.log("🟦 Extracted file text length:", extractedText.length);
       } catch (err) {
         console.error("❌ File parse error:", err);
         return res.status(400).json({ error: "File parsing failed." });
@@ -159,18 +173,24 @@ export default async function handler(
     if (!sessionId) {
       const newSession = await createSession(userId, companion, "general");
       sessionId = newSession.id;
+      console.log("🟦 New session:", sessionId);
     }
 
     const rawHistory = await getMessages(sessionId as string);
+    console.log("🟦 Loaded conversation history:", rawHistory.length);
+
     const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
       role: m.role,
       content: m.content,
-      meta: m.meta || null, // ✅ restored memory
+      meta: m.meta || null,
     }));
 
     const trimmed = input?.trim() || "";
     if (trimmed || nextAction) {
       const userContent = trimmed || `[Triggered Action: ${nextAction}]`;
+
+      console.log("🟧 Saving user message:", userContent);
+
       await saveMessage(sessionId as string, "user", userContent, {
         meta: {
           nextAction: nextAction || undefined,
@@ -181,6 +201,8 @@ export default async function handler(
     }
 
     const rawIdentity = loadIdentity(companion, mode);
+    console.log("🟦 Loaded identity");
+
     const toneBase =
       typeof rawIdentity?.tone === "string"
         ? rawIdentity.tone
@@ -189,42 +211,49 @@ export default async function handler(
     let orchestratorResult: OrchestratorResult;
 
     if (companion === "salar") {
-      const salarInput: SalarOrchestratorInput & {
-        conversationHistory: ConversationTurn[];
-      } = {
+      console.log("🟨 Running Salar orchestrator…");
+      orchestratorResult = await runSalar({
         mode: mode as SalarMode,
         input: trimmed,
         extractedText,
         tone,
         nextAction: nextAction || undefined,
         conversationHistory,
-      };
-
-      orchestratorResult = await runSalar(salarInput);
+      });
     } else {
-      const lyraInput: LyraOrchestratorInput & {
-        conversationHistory: ConversationTurn[];
-      } = {
+      console.log("🟨 Running Lyra orchestrator…");
+      orchestratorResult = await runLyra({
         mode: mode as LyraMode,
         input: trimmed,
         extractedText,
         tone,
         nextAction: nextAction || undefined,
         conversationHistory,
-      };
-
-      orchestratorResult = await runLyra(lyraInput);
+      });
     }
 
+    console.log("🟦 Orchestrator Raw Output:", orchestratorResult);
+
+    // ===========================================================
+    // Normalize ALL possible text sources deeply
+    // ===========================================================
     let replyRaw =
-  orchestratorResult.outputText ||
-  orchestratorResult.reply ||
-  "No response generated.";
+      orchestratorResult.outputText ||
+      orchestratorResult.reply ||
+      "No response generated.";
 
-const reply = normalizeMessageContent(replyRaw);
+    console.log("🟦 replyRaw (pre-normalization):", replyRaw);
 
-    const attachments = orchestratorResult.attachments || [];
-    const metaFromOrch = orchestratorResult.meta || {};
+    const reply = normalizeMessageContentDeep(replyRaw);
+
+    console.log("🟩 reply (post-normalization):", reply);
+
+    // Normalize attachments/meta so nothing structured leaks downstream
+    let attachments = orchestratorResult.attachments || [];
+    attachments = JSON.parse(JSON.stringify(attachments));
+
+    let metaFromOrch = orchestratorResult.meta || {};
+    metaFromOrch = JSON.parse(JSON.stringify(metaFromOrch));
 
     const meta = {
       ...metaFromOrch,
@@ -241,6 +270,11 @@ const reply = normalizeMessageContent(replyRaw);
       },
     };
 
+    // ===========================================================
+    // Save message as CLEAN STRING (critical for XLSX stability)
+    // ===========================================================
+    console.log("🟧 Saving assistant message…");
+
     await saveMessage(sessionId as string, "assistant", reply, {
       attachments,
       meta,
@@ -252,6 +286,8 @@ const reply = normalizeMessageContent(replyRaw);
       tone || "calm",
       "post-response update"
     );
+
+    console.log("🟩 Returning response to frontend");
 
     return res.status(200).json({
       reply,
