@@ -134,8 +134,6 @@ Please specify:
 finalise: `
 Here is your finalised pricing breakdown.
 
-Your output **must be a single, continuous markdown document**, containing:
-
 STRUCTURAL FORMATTING RULES FOR TABLES
 
 Whenever you produce tabular data of any kind, you MUST output it using strict GitHub-Flavoured Markdown table syntax.
