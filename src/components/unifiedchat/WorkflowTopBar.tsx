@@ -1,5 +1,4 @@
 // src/components/unifiedchat/WorkflowTopBar.tsx
-
 import React, { useEffect, useMemo, useRef } from "react";
 import type { Message as BaseMessage } from "@/types/chat";
 import {
@@ -20,7 +19,9 @@ type WorkflowMeta = {
 };
 
 type MessageWithMeta = BaseMessage & {
-  meta?: { workflow?: WorkflowMeta | null };
+  meta?: {
+    workflow?: WorkflowMeta | null;
+  };
 };
 
 type WorkflowTopBarProps = {
@@ -29,7 +30,7 @@ type WorkflowTopBarProps = {
 };
 
 /* -----------------------------------------------------------
-   Build ordered stage list from workflow definition
+   Build ordered stage list — ORIGINAL WORKING VERSION
 ----------------------------------------------------------- */
 function buildLinearStages(workflow: GenericWorkflow): GenericWorkflowStage[] {
   const ordered: GenericWorkflowStage[] = [];
@@ -49,6 +50,7 @@ function buildLinearStages(workflow: GenericWorkflow): GenericWorkflowStage[] {
         : undefined;
 
     if (!next) break;
+
     cursor = next;
   }
 
@@ -65,7 +67,6 @@ export default function WorkflowTopBar({
 
   const mode = companion === "salar" ? salarMode : lyraMode;
 
-  /* Extract workflow messages */
   const workflowMessages = useMemo(
     () =>
       messages.filter(
@@ -74,40 +75,35 @@ export default function WorkflowTopBar({
     [messages]
   );
 
-  if (workflowMessages.length === 0) return null;
-
+  const noWorkflow = workflowMessages.length === 0;
   const latest = workflowMessages[workflowMessages.length - 1];
   const currentStageId = latest?.meta?.workflow?.stageId;
 
   const workflow = mode ? getWorkflow(companion, mode) : null;
-  if (!workflow || !currentStageId) return null;
+  const stages =
+    workflow && currentStageId ? buildLinearStages(workflow) : [];
 
-  const stages = buildLinearStages(workflow);
   const currentIndex = stages.findIndex((s) => s.id === currentStageId);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
   const activeStage = stages[safeIndex];
 
-  /* Track height for correct chat layout */
   useEffect(() => {
-    if (!barRef.current) {
-      setTopBarHeight(0);
-      return;
-    }
+    if (!barRef.current) return setTopBarHeight(0);
     setTopBarHeight(barRef.current.getBoundingClientRect().height);
   }, [workflowMessages.length, safeIndex, stages.length, setTopBarHeight]);
 
-  /* --------------------------------------------------------
-     Soft Dark Mode Palette + Accents
---------------------------------------------------------- */
+  if (noWorkflow || !workflow || !currentStageId) return null;
+
+  /* ---------------------- UI THEME ---------------------- */
   const isLyra = companion === "lyra";
 
   const bgClass = isLyra
-    ? "bg-teal-50 dark:bg-[#072f2f]"
-    : "bg-amber-50 dark:bg-[#2f2307]";
+    ? "bg-teal-50 dark:bg-teal-900/20"
+    : "bg-amber-50 dark:bg-amber-900/20";
 
   const borderClass = isLyra
-    ? "border-teal-200 dark:border-teal-800"
-    : "border-amber-200 dark:border-amber-800";
+    ? "border-teal-200 dark:border-teal-900/40"
+    : "border-amber-200 dark:border-amber-900/40";
 
   const accentText = isLyra
     ? "text-teal-700 dark:text-teal-300"
@@ -117,35 +113,21 @@ export default function WorkflowTopBar({
     ? "bg-teal-500 border-teal-500 dark:bg-teal-400 dark:border-teal-300"
     : "bg-amber-500 border-amber-500 dark:bg-amber-400 dark:border-amber-300";
 
-  /* --------------------------------------------------------
-     Render
---------------------------------------------------------- */
   return (
     <div
       ref={barRef}
-      className={`
-        w-full border-b ${borderClass} ${bgClass}
+      className={`w-full border-b ${borderClass} ${bgClass}
         px-4 md:px-6 py-3 flex flex-col md:flex-row
         md:items-center md:justify-between gap-3
-        sticky top-0 z-20
-        backdrop-blur-md bg-opacity-90 dark:bg-opacity-60
-        transition-colors
-      `}
+        sticky top-0 z-20 backdrop-blur-sm`}
     >
-      {/* LEFT SIDE */}
+      {/* Left section */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-1">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
           <span className={`w-2 h-2 rounded-full ${accentDot}`} />
           <span>Workflow Stage</span>
-
           {activeStage?.isTerminal && (
-            <span
-              className="
-                ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold
-                bg-green-100 text-green-700
-                dark:bg-green-900/40 dark:text-green-300
-              "
-            >
+            <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-semibold">
               Final Stage
             </span>
           )}
@@ -162,39 +144,31 @@ export default function WorkflowTopBar({
         )}
       </div>
 
-      {/* RIGHT SIDE — Stage Dots */}
+      {/* Right stage indicator */}
       <div className="flex items-center gap-2 md:ml-4">
         {stages.map((stage, idx) => {
           const isPast = idx < safeIndex;
           const isCurrent = idx === safeIndex;
 
-          let circle = `
-            w-2.5 h-2.5 rounded-full
-            border border-gray-300 bg-white
-            dark:border-gray-600 dark:bg-[#333]
-          `;
+          let circleClass =
+            "w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700";
 
-          if (isPast) {
-            circle = `w-2.5 h-2.5 rounded-full border ${accentDot}`;
-          } else if (isCurrent) {
-            circle = `
-              w-3 h-3 rounded-full border-2 ${accentDot}
-              ring-2 ring-offset-1
-              ring-gray-200 dark:ring-gray-700 dark:ring-offset-[#0d0d0d]
-            `;
-          }
+          if (isPast) circleClass = `w-2.5 h-2.5 rounded-full border ${accentDot}`;
+          if (isCurrent)
+            circleClass = `w-3 h-3 rounded-full border-2 ${accentDot}
+            ring-2 ring-offset-1 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900`;
 
           return (
             <React.Fragment key={stage.id}>
               <div className="flex flex-col items-center gap-1">
-                <div className={circle} />
-                <span className="hidden md:block text-[10px] text-gray-600 dark:text-gray-400 max-w-[80px] truncate text-center">
+                <div className={circleClass} />
+                <span className="hidden md:block text-[10px] text-gray-500 dark:text-gray-400 max-w-[80px] truncate text-center">
                   {stage.label}
                 </span>
               </div>
 
               {idx < stages.length - 1 && (
-                <div className="w-6 h-px bg-gray-300 dark:bg-gray-700 hidden md:block" />
+                <div className="w-6 h-px bg-gray-300 dark:bg-gray-600 hidden md:block" />
               )}
             </React.Fragment>
           );
