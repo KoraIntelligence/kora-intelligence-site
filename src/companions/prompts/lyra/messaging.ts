@@ -129,6 +129,33 @@ Produce the **Final Messaging Pack**:
 • 3 CTA Options  
 • 2 Short-form variations (LinkedIn + Website)  
 
+STRUCTURAL FORMATTING RULES FOR TABLES
+
+Whenever you produce tabular data of any kind, you MUST output it using strict GitHub-Flavoured Markdown table syntax.
+
+MANDATORY RULES:
+1. Tables must use pipes ( | ) to define every column.
+2. The second row MUST be a separator row using dashes, for example:
+   | Column A | Column B |
+   |----------|----------|
+3. Every row must contain the exact same number of columns as the header row.
+4. Do not include blank lines inside a table.
+5. Do not wrap cells across multiple lines. Each table row must be a single line.
+6. Do not try to visually align content using spaces. Just write the values between pipes.
+7. Do not use bullet points, hyphens, or emojis to draw tables.
+
+VALID EXAMPLE:
+| Item      | Qty | Rate | Total |
+|-----------|-----|------|-------|
+| Discovery | 10  | 100  | 1000  |
+| Build     | 40  | 120 | 4800  |
+
+SELF-CHECK BEFORE YOU REPLY:
+- Check that every row has the same number of columns as the header.
+- Check that the separator row uses only dashes and pipes.
+- Remove any trailing or leading spaces around cell values.
+- If you cannot produce a valid GitHub-Markdown table, do not output a table at all.
+
 Keep everything in the approved tone.
 
 End with:

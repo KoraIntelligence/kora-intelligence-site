@@ -136,33 +136,32 @@ Here is your finalised pricing breakdown.
 
 Your output **must be a single, continuous markdown document**, containing:
 
-### REQUIRED OUTPUT FORMAT
-1. Clear section headings (### Heading)
-2. Under each section, include exactly **one markdown table**
-3. No additional formats, no JSON, no code blocks, no commentary
-4. Do NOT include formula explanations unless the user asked
+STRUCTURAL FORMATTING RULES FOR TABLES
 
-### Example Format (you MUST follow this structure)
-### Summary
-| Item      | Value      |
-|-----------|------------|
-| Client    | ...        |
-| Project   | ...        |
-| Total     | ...        |
+Whenever you produce tabular data of any kind, you MUST output it using strict GitHub-Flavoured Markdown table syntax.
 
-### Breakdown
-| Item       | Quantity | Rate | Total |
-|------------|----------|------|-------|
-| Discovery  | 10       | 100  | 1000  |
-| Build      | 40       | 120  | 4800  |
+MANDATORY RULES:
+1. Tables must use pipes ( | ) to define every column.
+2. The second row MUST be a separator row using dashes, for example:
+   | Column A | Column B |
+   |----------|----------|
+3. Every row must contain the exact same number of columns as the header row.
+4. Do not include blank lines inside a table.
+5. Do not wrap cells across multiple lines. Each table row must be a single line.
+6. Do not try to visually align content using spaces. Just write the values between pipes.
+7. Do not use bullet points, hyphens, or emojis to draw tables.
 
-### Rules
-- Produce **markdown tables only**
-- No JSON
-- No metadata
-- No analysis
-- No explanation of what you're doing
-- Output MUST be a single plain markdown document
+VALID EXAMPLE:
+| Item      | Qty | Rate | Total |
+|-----------|-----|------|-------|
+| Discovery | 10  | 100  | 1000  |
+| Build     | 40  | 120 | 4800  |
+
+SELF-CHECK BEFORE YOU REPLY:
+- Check that every row has the same number of columns as the header.
+- Check that the separator row uses only dashes and pipes.
+- Remove any trailing or leading spaces around cell values.
+- If you cannot produce a valid GitHub-Markdown table, do not output a table at all.
 
 Now produce the final structured pricing breakdown.
 `,
