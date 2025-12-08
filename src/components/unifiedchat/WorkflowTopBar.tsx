@@ -20,9 +20,7 @@ type WorkflowMeta = {
 };
 
 type MessageWithMeta = BaseMessage & {
-  meta?: {
-    workflow?: WorkflowMeta | null;
-  };
+  meta?: { workflow?: WorkflowMeta | null };
 };
 
 type WorkflowTopBarProps = {
@@ -40,7 +38,6 @@ function buildLinearStages(workflow: GenericWorkflow): GenericWorkflowStage[] {
 
   while (cursor && !visited.has(cursor)) {
     const stage: GenericWorkflowStage | undefined = workflow.stages[cursor];
-
     if (!stage) break;
 
     ordered.push(stage);
@@ -52,7 +49,6 @@ function buildLinearStages(workflow: GenericWorkflow): GenericWorkflowStage[] {
         : undefined;
 
     if (!next) break;
-
     cursor = next;
   }
 
@@ -67,10 +63,9 @@ export default function WorkflowTopBar({
   const { setTopBarHeight } = useUIState();
   const { salarMode, lyraMode } = useCompanion();
 
-  // Determine mode
   const mode = companion === "salar" ? salarMode : lyraMode;
 
-  // Extract workflow-aware messages
+  /* Extract workflow messages */
   const workflowMessages = useMemo(
     () =>
       messages.filter(
@@ -79,56 +74,40 @@ export default function WorkflowTopBar({
     [messages]
   );
 
-  // Case 1: No workflow available
-  const noWorkflow = workflowMessages.length === 0;
+  if (workflowMessages.length === 0) return null;
 
-  // Case 2: Identify current stage
   const latest = workflowMessages[workflowMessages.length - 1];
   const currentStageId = latest?.meta?.workflow?.stageId;
 
-  // Retrieve workflow definition
   const workflow = mode ? getWorkflow(companion, mode) : null;
+  if (!workflow || !currentStageId) return null;
 
-  // Build ordered stages if workflow present
-  const stages =
-    workflow && currentStageId ? buildLinearStages(workflow) : [];
-
+  const stages = buildLinearStages(workflow);
   const currentIndex = stages.findIndex((s) => s.id === currentStageId);
-  const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
-  const activeStage = stages[safeCurrentIndex];
+  const safeIndex = currentIndex === -1 ? 0 : currentIndex;
+  const activeStage = stages[safeIndex];
 
-  /* --------------------------------------------------------
-     EFFECT: Update top bar height after render
---------------------------------------------------------- */
+  /* Track height for correct chat layout */
   useEffect(() => {
     if (!barRef.current) {
-      // If no workflow → bar hidden → height = 0
       setTopBarHeight(0);
       return;
     }
-
     setTopBarHeight(barRef.current.getBoundingClientRect().height);
-  }, [workflowMessages.length, safeCurrentIndex, stages.length, setTopBarHeight]);
+  }, [workflowMessages.length, safeIndex, stages.length, setTopBarHeight]);
 
   /* --------------------------------------------------------
-     If no workflow → render nothing
---------------------------------------------------------- */
-  if (noWorkflow || !workflow || !currentStageId) {
-    return null;
-  }
-
-  /* --------------------------------------------------------
-     Visual styling
+     Soft Dark Mode Palette + Accents
 --------------------------------------------------------- */
   const isLyra = companion === "lyra";
 
   const bgClass = isLyra
-    ? "bg-teal-50 dark:bg-teal-900/20"
-    : "bg-amber-50 dark:bg-amber-900/20";
+    ? "bg-teal-50 dark:bg-[#072f2f]"
+    : "bg-amber-50 dark:bg-[#2f2307]";
 
   const borderClass = isLyra
-    ? "border-teal-200 dark:border-teal-900/40"
-    : "border-amber-200 dark:border-amber-900/40";
+    ? "border-teal-200 dark:border-teal-800"
+    : "border-amber-200 dark:border-amber-800";
 
   const accentText = isLyra
     ? "text-teal-700 dark:text-teal-300"
@@ -139,23 +118,34 @@ export default function WorkflowTopBar({
     : "bg-amber-500 border-amber-500 dark:bg-amber-400 dark:border-amber-300";
 
   /* --------------------------------------------------------
-     Render bar
+     Render
 --------------------------------------------------------- */
   return (
     <div
       ref={barRef}
-      className={`w-full border-b ${borderClass} ${bgClass}
-                  px-4 md:px-6 py-3 flex flex-col md:flex-row
-                  md:items-center md:justify-between gap-3
-                  sticky top-0 z-20 backdrop-blur-sm`}
+      className={`
+        w-full border-b ${borderClass} ${bgClass}
+        px-4 md:px-6 py-3 flex flex-col md:flex-row
+        md:items-center md:justify-between gap-3
+        sticky top-0 z-20
+        backdrop-blur-md bg-opacity-90 dark:bg-opacity-60
+        transition-colors
+      `}
     >
       {/* LEFT SIDE */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-1">
           <span className={`w-2 h-2 rounded-full ${accentDot}`} />
           <span>Workflow Stage</span>
+
           {activeStage?.isTerminal && (
-            <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-semibold">
+            <span
+              className="
+                ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold
+                bg-green-100 text-green-700
+                dark:bg-green-900/40 dark:text-green-300
+              "
+            >
               Final Stage
             </span>
           )}
@@ -166,38 +156,45 @@ export default function WorkflowTopBar({
         </div>
 
         {activeStage?.description && (
-          <div className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 line-clamp-2 whitespace-pre-line">
+          <div className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line line-clamp-2">
             {activeStage.description}
           </div>
         )}
       </div>
 
-      {/* RIGHT SIDE */}
+      {/* RIGHT SIDE — Stage Dots */}
       <div className="flex items-center gap-2 md:ml-4">
         {stages.map((stage, idx) => {
-          const isPast = idx < safeCurrentIndex;
-          const isCurrent = idx === safeCurrentIndex;
+          const isPast = idx < safeIndex;
+          const isCurrent = idx === safeIndex;
 
-          let circleClass =
-            "w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700";
+          let circle = `
+            w-2.5 h-2.5 rounded-full
+            border border-gray-300 bg-white
+            dark:border-gray-600 dark:bg-[#333]
+          `;
 
           if (isPast) {
-            circleClass = `w-2.5 h-2.5 rounded-full border ${accentDot}`;
+            circle = `w-2.5 h-2.5 rounded-full border ${accentDot}`;
           } else if (isCurrent) {
-            circleClass = `w-3 h-3 rounded-full border-2 ${accentDot}
-                            ring-2 ring-offset-1 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900`;
+            circle = `
+              w-3 h-3 rounded-full border-2 ${accentDot}
+              ring-2 ring-offset-1
+              ring-gray-200 dark:ring-gray-700 dark:ring-offset-[#0d0d0d]
+            `;
           }
 
           return (
             <React.Fragment key={stage.id}>
               <div className="flex flex-col items-center gap-1">
-                <div className={circleClass} />
-                <span className="hidden md:block text-[10px] text-gray-500 dark:text-gray-400 max-w-[80px] truncate text-center">
+                <div className={circle} />
+                <span className="hidden md:block text-[10px] text-gray-600 dark:text-gray-400 max-w-[80px] truncate text-center">
                   {stage.label}
                 </span>
               </div>
+
               {idx < stages.length - 1 && (
-                <div className="w-6 h-px bg-gray-300 dark:bg-gray-600 hidden md:block" />
+                <div className="w-6 h-px bg-gray-300 dark:bg-gray-700 hidden md:block" />
               )}
             </React.Fragment>
           );

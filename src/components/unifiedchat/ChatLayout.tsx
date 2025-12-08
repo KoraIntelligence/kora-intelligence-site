@@ -19,11 +19,26 @@ export default function ChatLayout({
   const { mobileSidebarOpen, setMobileSidebarOpen } = useUIState();
 
   return (
-    <div className="w-full h-screen flex bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-gray-100 overflow-hidden relative">
+    <div
+      className="
+        w-full h-screen flex 
+        bg-white dark:bg-[#0d0d0d] 
+        text-gray-900 dark:text-gray-100 
+        overflow-hidden relative
+      "
+    >
       {/* -------------------------------------------------- */}
       {/* DESKTOP SIDEBAR */}
       {/* -------------------------------------------------- */}
-      <aside className="hidden md:block w-64 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#111111] overflow-y-auto">
+      <aside
+        className="
+          hidden md:block 
+          w-64 
+          border-r border-gray-200 dark:border-neutral-800
+          bg-gray-50 dark:bg-neutral-900 
+          overflow-y-auto
+        "
+      >
         {sidebar}
       </aside>
 
@@ -33,8 +48,8 @@ export default function ChatLayout({
       <div
         className={`
           fixed inset-y-0 left-0 w-64 
-          bg-gray-50 dark:bg-[#111111]
-          border-r border-gray-200 dark:border-gray-800 
+          bg-gray-50 dark:bg-neutral-900
+          border-r border-gray-200 dark:border-neutral-800
           z-40
           transform transition-transform duration-300 md:hidden
           ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -44,7 +59,7 @@ export default function ChatLayout({
 
         {/* Close button */}
         <button
-          className="absolute top-4 right-4 text-gray-500 dark:text-gray-300"
+          className="absolute top-4 right-4 text-gray-600 dark:text-gray-300"
           onClick={() => setMobileSidebarOpen(false)}
         >
           ✕
@@ -62,16 +77,29 @@ export default function ChatLayout({
       {/* -------------------------------------------------- */}
       {/* MAIN CHAT AREA */}
       {/* -------------------------------------------------- */}
-      <main className="flex-1 flex flex-col overflow-hidden relative bg-white dark:bg-[#0d0d0d]">
-        {/* -------- Top Bar (WorkflowTopBar) -------- */}
+      <main
+        className="
+          flex-1 flex flex-col 
+          overflow-hidden relative
+          bg-white dark:bg-[#0d0d0d]
+        "
+      >
+        {/* ---- Top Bar (WorkflowTopBar) ---- */}
         {topBar && (
-          <div className="shrink-0 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0d0d0d] z-10">
+          <div
+            className="
+              shrink-0 
+              border-b border-gray-200 dark:border-neutral-800
+              bg-white dark:bg-[#111111]
+              z-10
+            "
+          >
             {topBar}
           </div>
         )}
 
-        {/* -------- Chat Window -------- */}
-        <div className="flex-1 overflow-hidden">
+        {/* ---- Chat Window ---- */}
+        <div className="flex-1 overflow-hidden bg-white dark:bg-[#0d0d0d]">
           {chatWindow}
         </div>
       </main>
@@ -80,7 +108,13 @@ export default function ChatLayout({
       {/* IDENTITY OVERLAY */}
       {/* -------------------------------------------------- */}
       {identityOverlay && (
-        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div
+          className="
+            absolute inset-0 z-50 
+            bg-black/50 
+            flex items-center justify-center
+          "
+        >
           {identityOverlay}
         </div>
       )}

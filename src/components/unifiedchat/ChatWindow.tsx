@@ -13,7 +13,7 @@ type ChatWindowProps = {
   onUpload: (file: File) => void;
   sending: boolean;
   companion: "salar" | "lyra";
-  topBarHeight?: number; // Deprecated but kept for backward safety
+  topBarHeight?: number;
 };
 
 export default function ChatWindow({
@@ -38,23 +38,28 @@ export default function ChatWindow({
   const handleNextAction = (action: string) => onSend({ action });
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-gray-100 overflow-hidden">
+    <div
+      className="
+        relative w-full h-full flex flex-col 
+        bg-white dark:bg-[#0d0d0d]
+        text-gray-900 dark:text-gray-100
+        overflow-hidden
+      "
+    >
       {/* ------------------------------------------------ */}
       {/* MESSAGE LIST */}
       {/* ------------------------------------------------ */}
       <div
         ref={listRef}
         className="
-          flex-1
-          overflow-y-auto
-          px-4
-          md:px-6
-          py-6
-          space-y-4
-          scroll-smooth
+          flex-1 overflow-y-auto scroll-smooth
+          px-4 md:px-6 py-6 space-y-4
           bg-white dark:bg-[#0d0d0d]
+          overscroll-contain
         "
-        style={{ WebkitOverflowScrolling: "touch" }}
+        style={{
+          WebkitOverflowScrolling: "touch",
+        }}
       >
         {messages.length === 0 && (
           <div className="text-center text-gray-400 dark:text-gray-500 text-sm mt-14">
@@ -100,14 +105,14 @@ export default function ChatWindow({
       {/* ------------------------------------------------ */}
       <div
         className="
-          border-t border-gray-200 dark:border-gray-800
+          border-t border-gray-200 dark:border-neutral-800
           bg-white dark:bg-[#111111]
           shadow-sm
           p-3
           relative
         "
         style={{
-          paddingBottom: "env(safe-area-inset-bottom)", // iOS keyboard safety
+          paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
         <ChatInput

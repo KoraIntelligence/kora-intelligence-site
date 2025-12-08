@@ -42,7 +42,6 @@ export default function MessageBubble({
 
   const rawMeta: ExtendedMeta = ((message as any).meta || {}) as ExtendedMeta;
 
-  // Companion + mode fallbacks
   const { companion: activeCompanion, salarMode, lyraMode } = useCompanion();
   const metaCompanion = rawMeta.companion?.toLowerCase?.();
   const companion = (metaCompanion || activeCompanion || "salar").toLowerCase();
@@ -55,31 +54,47 @@ export default function MessageBubble({
   const meta = rawMeta;
   const workflow = meta.workflow || undefined;
 
-  // ---- Bubble styling ----
+  /* -------------------------------------------------------
+     BUBBLE STYLING — SOFT DARK MODE PATCH
+  ------------------------------------------------------- */
   const bubbleBase =
-    "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm transition-colors duration-150";
+    "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm transition-colors duration-150 shadow-sm";
+
+  // USER MESSAGE BUBBLE — Light & Soft Dark
   const bubbleUser =
-    "bg-gray-100 text-gray-900 dark:bg-[#1b1b1b] dark:text-gray-100";
+    "bg-gray-100 text-gray-900 " +
+    "dark:bg-[#1a1a1a] dark:text-gray-100 dark:border dark:border-neutral-800";
+
+  // SYSTEM MESSAGE BUBBLE — unchanged, light text only
   const bubbleSystem =
     "text-gray-500 dark:text-gray-400 text-xs italic bg-transparent shadow-none";
+
+  // ASSISTANT MESSAGE BUBBLE — themed by companion
   const bubbleAssistant =
-    "bg-white border shadow-sm dark:bg-[#141414] dark:border-[#2a2a2a] dark:text-gray-200";
+    "bg-white border border-gray-200 " +
+    "dark:bg-[#141414] dark:border-[#2a2a2a] dark:text-gray-200";
+
+  // Salar vs Lyra Accent Rings (dark-mode friendly)
+  const accentRing = isLyra
+    ? "ring-1 ring-teal-500/40 border-teal-500 dark:border-teal-400"
+    : "ring-1 ring-amber-500/40 border-amber-500 dark:border-amber-400";
 
   const roleStyle = isSystem
     ? bubbleSystem
     : isUser
     ? bubbleUser
-    : `${bubbleAssistant} ${
-        isLyra
-          ? "border-teal-500 dark:border-teal-400 dark:ring-1 dark:ring-teal-500/40"
-          : "border-amber-500 dark:border-amber-400 dark:ring-1 dark:ring-amber-500/40"
-      }`;
+    : `${bubbleAssistant} ${accentRing}`;
 
+  /* Workflow visibility */
   const showWorkflow = !isUser && !isSystem && !!workflow;
 
+  /* -------------------------------------------------------
+     RENDER
+  ------------------------------------------------------- */
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div className={`${bubbleBase} ${roleStyle}`}>
+        
         {/* Header: Companion + Mode */}
         {!isUser && !isSystem && (
           <div className="flex justify-between items-center mb-1">
@@ -101,7 +116,7 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Workflow Stage (label + description) */}
+        {/* Workflow Stage */}
         {showWorkflow && workflow?.stageLabel && (
           <div className="mb-2">
             <div
@@ -112,6 +127,7 @@ export default function MessageBubble({
               }`}
             >
               {workflow.stageLabel}
+
               {workflow.isTerminal && (
                 <span className="ml-1 text-green-600 dark:text-green-400">
                   (Final Stage)
@@ -127,7 +143,7 @@ export default function MessageBubble({
           </div>
         )}
 
-        {/* Message content */}
+        {/* Message Content */}
         {isSystem ? (
           <span>{message.content}</span>
         ) : (
