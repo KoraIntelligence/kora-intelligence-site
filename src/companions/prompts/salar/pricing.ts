@@ -161,6 +161,9 @@ SELF-CHECK BEFORE YOU REPLY:
 - Remove any trailing or leading spaces around cell values.
 - If you cannot produce a valid GitHub-Markdown table, do not output a table at all.
 
+FAILURE TO FOLLOW THIS FORMAT WILL BREAK DOCUMENT EXPORT.
+NEVER output “pretty” or “ASCII” tables — only valid GFM tables.
+
 Now produce the final structured pricing breakdown.
 `,
 

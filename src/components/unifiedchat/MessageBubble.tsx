@@ -56,18 +56,23 @@ export default function MessageBubble({
   const workflow = meta.workflow || undefined;
 
   // ---- Bubble styling ----
-  const bubbleBase = "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm";
-  const bubbleUser = "bg-gray-100 text-gray-900";
+  const bubbleBase =
+    "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm transition-colors duration-150";
+  const bubbleUser =
+    "bg-gray-100 text-gray-900 dark:bg-[#1b1b1b] dark:text-gray-100";
   const bubbleSystem =
-    "text-gray-500 text-xs italic bg-transparent shadow-none";
-  const bubbleAssistant = "bg-white border shadow-sm";
+    "text-gray-500 dark:text-gray-400 text-xs italic bg-transparent shadow-none";
+  const bubbleAssistant =
+    "bg-white border shadow-sm dark:bg-[#141414] dark:border-[#2a2a2a] dark:text-gray-200";
 
   const roleStyle = isSystem
     ? bubbleSystem
     : isUser
     ? bubbleUser
     : `${bubbleAssistant} ${
-        isLyra ? "border-teal-500" : "border-amber-500"
+        isLyra
+          ? "border-teal-500 dark:border-teal-400 dark:ring-1 dark:ring-teal-500/40"
+          : "border-amber-500 dark:border-amber-400 dark:ring-1 dark:ring-amber-500/40"
       }`;
 
   const showWorkflow = !isUser && !isSystem && !!workflow;
@@ -80,14 +85,16 @@ export default function MessageBubble({
           <div className="flex justify-between items-center mb-1">
             <span
               className={`text-[11px] font-semibold ${
-                isLyra ? "text-teal-600" : "text-amber-600"
+                isLyra
+                  ? "text-teal-600 dark:text-teal-300"
+                  : "text-amber-600 dark:text-amber-300"
               }`}
             >
               {companion[0].toUpperCase() + companion.slice(1)}
             </span>
 
             {displayMode && (
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 {displayMode}
               </span>
             )}
@@ -99,17 +106,21 @@ export default function MessageBubble({
           <div className="mb-2">
             <div
               className={`text-[12px] font-semibold ${
-                isLyra ? "text-teal-700" : "text-amber-700"
+                isLyra
+                  ? "text-teal-700 dark:text-teal-300"
+                  : "text-amber-700 dark:text-amber-300"
               }`}
             >
               {workflow.stageLabel}
               {workflow.isTerminal && (
-                <span className="ml-1 text-green-600">(Final Stage)</span>
+                <span className="ml-1 text-green-600 dark:text-green-400">
+                  (Final Stage)
+                </span>
               )}
             </div>
 
             {workflow.stageDescription && (
-              <div className="text-[11px] text-gray-500 whitespace-pre-line mt-1">
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-pre-line mt-1">
                 {workflow.stageDescription}
               </div>
             )}
@@ -120,7 +131,7 @@ export default function MessageBubble({
         {isSystem ? (
           <span>{message.content}</span>
         ) : (
-          <div className="prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none dark:prose-invert">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
             </ReactMarkdown>
@@ -146,7 +157,7 @@ export default function MessageBubble({
         )}
 
         {/* Timestamp */}
-        <div className="mt-1 text-[10px] text-gray-400 text-right">
+        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500 text-right">
           {new Date(message.ts).toLocaleTimeString()}
         </div>
       </div>

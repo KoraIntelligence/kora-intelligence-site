@@ -38,7 +38,7 @@ export default function ChatWindow({
   const handleNextAction = (action: string) => onSend({ action });
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-white overflow-hidden">
+    <div className="relative w-full h-full flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-gray-100 overflow-hidden">
       {/* ------------------------------------------------ */}
       {/* MESSAGE LIST */}
       {/* ------------------------------------------------ */}
@@ -52,13 +52,14 @@ export default function ChatWindow({
           py-6
           space-y-4
           scroll-smooth
+          bg-white dark:bg-[#0d0d0d]
         "
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 text-sm mt-14">
+          <div className="text-center text-gray-400 dark:text-gray-500 text-sm mt-14">
             Start a conversation with{" "}
-            <span className="font-semibold text-gray-700 capitalize">
+            <span className="font-semibold text-gray-700 dark:text-gray-200 capitalize">
               {companion}
             </span>
             .
@@ -75,10 +76,10 @@ export default function ChatWindow({
         ))}
 
         {sending && (
-          <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse pl-1 pt-2">
-            <span className="w-2 h-2 rounded-full bg-gray-400" />
-            <span className="w-2 h-2 rounded-full bg-gray-400" />
-            <span className="w-2 h-2 rounded-full bg-gray-400" />
+          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs animate-pulse pl-1 pt-2">
+            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
+            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
+            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
             <span>{companion === "salar" ? "Salar" : "Lyra"} is thinking…</span>
           </div>
         )}
@@ -99,10 +100,10 @@ export default function ChatWindow({
       {/* ------------------------------------------------ */}
       <div
         className="
-          border-t 
-          bg-white 
-          shadow-sm 
-          p-3 
+          border-t border-gray-200 dark:border-gray-800
+          bg-white dark:bg-[#111111]
+          shadow-sm
+          p-3
           relative
         "
         style={{
