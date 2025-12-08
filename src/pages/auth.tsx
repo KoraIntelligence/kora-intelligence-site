@@ -1,5 +1,5 @@
 import Head from "next/head";
-import AuthPanel from "@/components/AuthPanel";
+import AuthPanel from "@/components/AuthScreen";
 
 export default function AuthPage() {
   return (
