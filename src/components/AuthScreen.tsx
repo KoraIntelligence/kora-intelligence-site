@@ -1,7 +1,9 @@
+// src/components/AuthScreen.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+// ✅ Use pages-router hook (matches _app.tsx + pages/*)
+import { useRouter } from "next/router";
 import {
   useSupabaseClient,
   useUser,
@@ -16,63 +18,78 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  /* ------------------------------------------------------ */
-  /* AUTO-REDIRECT IF LOGGED IN OR GUEST                    */
-  /* ------------------------------------------------------ */
+  /* ------------------------------------------------------
+     AUTO-REDIRECT IF LOGGED IN OR GUEST
+  ------------------------------------------------------- */
   useEffect(() => {
+    // Guard for SSR / first render
+    if (typeof window === "undefined") return;
+
     const isGuest = localStorage.getItem("guest_mode") === "true";
-    if (user || isGuest) router.push("/mvp");
+    if (user || isGuest) {
+      router.push("/mvp");
+    }
   }, [user, router]);
 
-  /* ------------------------------------------------------ */
-  /* MAGIC LINK LOGIN                                       */
-  /* ------------------------------------------------------ */
+  /* ------------------------------------------------------
+     MAGIC LINK LOGIN
+  ------------------------------------------------------- */
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
     setLoading(true);
 
     try {
+      const redirectTo = `${window.location.origin}/mvp`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/mvp`,
+          emailRedirectTo: redirectTo,
         },
       });
 
       if (error) throw error;
       setMessage("✅ Magic link sent! Check your inbox.");
     } catch (err: any) {
+      console.error("Magic link error:", err?.message || err);
       setMessage("❌ Error sending magic link. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ------------------------------------------------------ */
-  /* GOOGLE LOGIN                                            */
-  /* ------------------------------------------------------ */
+  /* ------------------------------------------------------
+     GOOGLE LOGIN
+  ------------------------------------------------------- */
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setMessage(null);
+
     try {
+      const redirectTo = `${window.location.origin}/mvp`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/mvp`,
+          redirectTo,
         },
       });
+
       if (error) throw error;
+      // Supabase will redirect; we don't do anything else here.
     } catch (err: any) {
+      console.error("Google sign-in error:", err?.message || err);
       setMessage("⚠️ Google sign-in failed. Please try again.");
       setLoading(false);
     }
   };
 
-  /* ------------------------------------------------------ */
-  /* GUEST LOGIN                                             */
-  /* ------------------------------------------------------ */
+  /* ------------------------------------------------------
+     GUEST LOGIN
+  ------------------------------------------------------- */
   const handleGuestLogin = () => {
+    if (typeof window === "undefined") return;
     localStorage.setItem("guest_mode", "true");
     router.push("/mvp");
   };
@@ -80,7 +97,6 @@ export default function AuthScreen() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 bg-gray-50 dark:bg-[#0d0d0d] transition-colors">
       <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-md p-8 max-w-md w-full space-y-6 border border-gray-200 dark:border-gray-800">
-
         <h1 className="text-2xl font-semibold text-center text-amber-700 dark:text-amber-300">
           Welcome to Kora Intelligence
         </h1>
@@ -93,9 +109,9 @@ export default function AuthScreen() {
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-neutral-900 text-gray-700 dark:text-gray-200 rounded-lg py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition"
+          className="w-full flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-neutral-900 text-gray-700 dark:text-gray-200 rounded-lg py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition disabled:opacity-60"
         >
-          <img src="/icons/google.svg" className="w-5 h-5" />
+          <img src="/icons/google.svg" className="w-5 h-5" alt="Google" />
           Continue with Google
         </button>
 
