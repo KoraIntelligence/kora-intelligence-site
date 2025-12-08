@@ -288,6 +288,45 @@ function mdInlineToRuns(nodes: MdNode[] = []): TextRun[] {
 }
 
 /* -------------------------------------------------------
+   🧩 Helper — DOCX table cell → Paragraph[]
+   (strict repair: handle text-only, paragraph-only, or mixed)
+------------------------------------------------------- */
+function cellNodeToParagraphs(cellNode: MdNode): Paragraph[] {
+  if (!cellNode) return [new Paragraph("")];
+
+  const children: MdNode[] = Array.isArray(cellNode.children)
+    ? cellNode.children
+    : [];
+
+  // Case 1: explicit paragraphs inside the cell
+  const paragraphChildren = children.filter((c) => c.type === "paragraph");
+  if (paragraphChildren.length) {
+    return paragraphChildren.map(
+      (p) =>
+        new Paragraph({
+          children: mdInlineToRuns(p.children || []),
+        })
+    );
+  }
+
+  // Case 2: raw inline nodes (text, strong, emphasis, inlineCode, etc.)
+  if (children.length) {
+    return [
+      new Paragraph({
+        children: mdInlineToRuns(children),
+      }),
+    ];
+  }
+
+  // Case 3: cellNode itself has value (plain text)
+  if (typeof cellNode.value === "string") {
+    return [new Paragraph(cellNode.value)];
+  }
+
+  return [new Paragraph("")];
+}
+
+/* -------------------------------------------------------
    🧩 Markdown → DOCX (headings, paragraphs, tables, lists)
    Premium but safe – no exotic styling, just hierarchy.
 ------------------------------------------------------- */
@@ -354,16 +393,7 @@ function markdownToDocxChildren(markdown: string): (Paragraph | Table)[] {
           (row: MdNode, rowIndex: number) => {
             const cells: TableCell[] = (row.children || []).map(
               (cellNode: MdNode) => {
-                const paras =
-                  (cellNode.children || [])
-                    .filter((c: MdNode) => c.type === "paragraph")
-                    .map(
-                      (p: MdNode) =>
-                        new Paragraph({
-                          children: mdInlineToRuns(p.children || []),
-                        })
-                    ) || [];
-
+                const paras = cellNodeToParagraphs(cellNode);
                 return new TableCell({
                   children: paras.length ? paras : [new Paragraph("")],
                 });
@@ -496,6 +526,34 @@ function tryParsePricingJSON(input: string): PricingJSON | null {
   return null;
 }
 
+/* -------------------------------------------------------
+   Strict repair: normalize table rows to header length
+   - Short rows padded with ""
+   - Long rows trimmed
+------------------------------------------------------- */
+function normalizeTableRows(rows: string[][]): string[][] {
+  if (!rows.length) return rows;
+
+  const header = rows[0] || [];
+  const targetLen = header.length;
+
+  if (targetLen === 0) return rows;
+
+  return rows.map((row) => {
+    const copy = [...row];
+    if (copy.length < targetLen) {
+      // Pad short rows
+      while (copy.length < targetLen) {
+        copy.push("");
+      }
+    } else if (copy.length > targetLen) {
+      // Trim long rows
+      copy.length = targetLen;
+    }
+    return copy;
+  });
+}
+
 /** Extract ALL markdown tables (for simple fallback use) */
 function extractMarkdownTables(markdown: string): string[][][] {
   const tree = parseMarkdown(markdown);
@@ -514,7 +572,12 @@ function extractMarkdownTables(markdown: string): string[][][] {
       if (cells.length) rows.push(cells);
     }
 
-    if (rows.length) tables.push(rows);
+    if (rows.length) {
+      const normalized = normalizeTableRows(rows);
+      if (normalized.length) {
+        tables.push(normalized);
+      }
+    }
   }
 
   return tables;
@@ -548,10 +611,13 @@ function extractMarkdownTablesWithHeadings(markdown: string): {
       }
 
       if (rows.length) {
-        result.push({
-          name: currentHeading || null,
-          rows,
-        });
+        const normalized = normalizeTableRows(rows);
+        if (normalized.length) {
+          result.push({
+            name: currentHeading || null,
+            rows: normalized,
+          });
+        }
       }
     }
   }
@@ -580,7 +646,7 @@ function extractPipeTables(markdown: string): string[][] {
     rows.push(cells);
   }
 
-  return rows;
+  return normalizeTableRows(rows);
 }
 
 /** Auto-size columns */
@@ -644,7 +710,7 @@ function applyPremiumTableStyle(ws: any) {
 }
 
 /* -------------------------------------------------------
-   Main XLSX generation (Premium)
+   Main XLSX generation (Premium + strict repair)
 ------------------------------------------------------- */
 export async function createXlsx(markdownOrJson: string) {
   console.log("🟦 XLSX: Starting createXlsx()");
@@ -712,11 +778,15 @@ export async function createXlsx(markdownOrJson: string) {
       const ws = wb.addWorksheet(sheet.name || `Sheet ${i + 1}`);
 
       if (Array.isArray(sheet.columns)) {
-        ws.addRow(sheet.columns.map(toCellValue));
+        const normalizedHeader = normalizeTableRows([sheet.columns as string[]])[0];
+        ws.addRow(normalizedHeader.map(toCellValue));
       }
 
       if (Array.isArray(sheet.rows)) {
-        for (const row of sheet.rows) {
+        const normalizedRows = normalizeTableRows(
+          sheet.rows.map((r) => r.map((c) => (c == null ? "" : String(c))))
+        );
+        for (const row of normalizedRows) {
           ws.addRow(row.map(toCellValue));
         }
       }
