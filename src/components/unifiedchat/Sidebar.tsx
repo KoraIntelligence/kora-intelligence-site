@@ -1,8 +1,8 @@
 // src/components/unifiedchat/Sidebar.tsx
-
 import React from "react";
 import { SalarMode } from "@/companions/orchestrators/salar";
 import { LyraMode } from "@/companions/orchestrators/lyra";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 
 interface SidebarProps {
   companion: "salar" | "lyra";
@@ -16,10 +16,6 @@ interface SidebarProps {
 
   toneSelector?: React.ReactNode;
 }
-
-/* ----------------------- */
-/* LABEL MAPS              */
-/* ----------------------- */
 
 const SALAR_MODE_LABELS: Record<SalarMode, string> = {
   commercial_chat: "Commercial Chat",
@@ -37,10 +33,6 @@ const LYRA_MODE_LABELS: Record<LyraMode, string> = {
   customer_nurture: "Customer Nurture",
 };
 
-/* ----------------------- */
-/* COMPONENT               */
-/* ----------------------- */
-
 export default function Sidebar({
   companion,
   setCompanion,
@@ -50,10 +42,12 @@ export default function Sidebar({
   setLyraMode,
   toneSelector,
 }: SidebarProps) {
+  const supabase = useSupabaseClient();
+  const user = useUser();
+
   const isLyra = companion === "lyra";
   const modeLabels = isLyra ? LYRA_MODE_LABELS : SALAR_MODE_LABELS;
 
-  /* Accent colours now match soft-dark system */
   const accent = isLyra
     ? {
         bg: "bg-teal-600 dark:bg-teal-500",
@@ -68,25 +62,34 @@ export default function Sidebar({
         text: "text-amber-700 dark:text-amber-300",
       };
 
-  /* ----------------------- */
-  /* BUTTON STYLES           */
-  /* ----------------------- */
-
   const activeBtn = `
-    ${accent.bg}
-    text-white
-    border ${accent.border}
-    shadow-sm
-    dark:text-white
-    transition-colors
+    ${accent.bg} text-white border ${accent.border} shadow-sm
+    dark:text-white transition-colors
   `;
 
   const inactiveBtn = `
     bg-white text-gray-700 border border-gray-200 hover:bg-gray-100
-    dark:bg-[#1b1b1b] dark:text-gray-200 dark:border-[#333333] 
-    dark:hover:bg-[#262626]
-    transition-colors
+    dark:bg-[#1b1b1b] dark:text-gray-200 dark:border-[#333333]
+    dark:hover:bg-[#262626] transition-colors
   `;
+
+  // --------------------------
+  // LOGOUT HANDLER
+  // --------------------------
+  const handleLogout = async () => {
+    const isGuest = localStorage.getItem("guest_mode") === "true";
+
+    if (isGuest) {
+      localStorage.removeItem("guest_mode");
+    } else {
+      await supabase.auth.signOut({ scope: "global" });
+    }
+
+    localStorage.clear();
+    sessionStorage.clear();
+
+    window.location.href = "/auth"; // full reload ensures clean session
+  };
 
   return (
     <div
@@ -102,8 +105,6 @@ export default function Sidebar({
       <div className="flex gap-2 w-full">
         {(["salar", "lyra"] as const).map((c) => {
           const isActive = c === companion;
-          const label = c === "salar" ? "Salar" : "Lyra";
-
           return (
             <button
               key={c}
@@ -113,7 +114,7 @@ export default function Sidebar({
               `}
               onClick={() => setCompanion(c)}
             >
-              {label}
+              {c === "salar" ? "Salar" : "Lyra"}
             </button>
           );
         })}
@@ -157,6 +158,22 @@ export default function Sidebar({
       )}
 
       <div className="flex-1" />
+
+      {/* -------------------------- */}
+      {/* LOGOUT SECTION             */}
+      {/* -------------------------- */}
+      <div className="pt-4 border-t border-gray-200 dark:border-[#333333]">
+        <button
+          onClick={handleLogout}
+          className="
+            w-full py-2 rounded-xl text-center mt-2
+            bg-red-600 hover:bg-red-700 text-white
+            transition-colors
+          "
+        >
+          Logout
+        </button>
+      </div>
     </div>
   );
 }
