@@ -22,14 +22,16 @@ export default function AuthScreen() {
      AUTO-REDIRECT IF LOGGED IN OR GUEST
   ------------------------------------------------------- */
   useEffect(() => {
-    // Guard for SSR / first render
-    if (typeof window === "undefined") return;
+  const isGuest = localStorage.getItem("guest_mode") === "true";
 
-    const isGuest = localStorage.getItem("guest_mode") === "true";
-    if (user || isGuest) {
-      router.push("/mvp");
-    }
-  }, [user, router]);
+  if (user || isGuest) {
+    const t = setTimeout(() => {
+      router.replace("/mvp"); // prevents flicker + abort errors
+    }, 250);
+
+    return () => clearTimeout(t);
+  }
+}, [user, router]);
 
   /* ------------------------------------------------------
      MAGIC LINK LOGIN
@@ -40,7 +42,7 @@ export default function AuthScreen() {
     setLoading(true);
 
     try {
-      const redirectTo = `${window.location.origin}/mvp`;
+      const redirectTo = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -63,27 +65,24 @@ export default function AuthScreen() {
      GOOGLE LOGIN
   ------------------------------------------------------- */
   const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setMessage(null);
+  setLoading(true);
+  setMessage(null);
 
-    try {
-      const redirectTo = `${window.location.origin}/mvp`;
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-        },
-      });
-
-      if (error) throw error;
-      // Supabase will redirect; we don't do anything else here.
-    } catch (err: any) {
-      console.error("Google sign-in error:", err?.message || err);
-      setMessage("⚠️ Google sign-in failed. Please try again.");
-      setLoading(false);
-    }
-  };
+    if (error) throw error;
+  } catch (err: any) {
+    console.error("Google login error:", err.message);
+    setMessage("⚠️ Google sign-in failed. Please try again.");
+    setLoading(false);
+  }
+};
 
   /* ------------------------------------------------------
      GUEST LOGIN
