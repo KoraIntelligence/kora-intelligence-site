@@ -8,7 +8,6 @@ export const config = {
   },
 };
 
-
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
@@ -28,7 +27,6 @@ import { parseUploadedFile } from "@/pages/api/session/utils/parseFiles";
 import { loadIdentity } from "@/companions/identity/loader";
 
 import {
-  getOrCreateUserProfile,
   createSession,
   getMessages,
   saveMessage,
@@ -61,7 +59,8 @@ export interface ConversationTurn {
   meta?: any;
 }
 
-// Deep normalizer
+/* ---------------- Deep normaliser ---------------- */
+
 function normalizeMessageContentDeep(input: any): string {
   if (input == null) return "";
 
@@ -93,13 +92,15 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
   return req.body as UnifiedRequestBody;
 }
 
+/* ---------------- Handler ---------------- */
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   console.log("🟦 unified.ts: Incoming request:", req.method);
 
-  // ---------------- GET: history ----------------
+  /* ---------- GET: history ---------- */
   if (req.method === "GET") {
     const sessionId = req.query.sessionId;
     console.log("🟦 GET history for session:", sessionId);
@@ -131,14 +132,14 @@ export default async function handler(
     const body = parseBody(req);
     console.log("🟦 Parsed body:", body);
 
-        let {
+    let {
       companion = "salar",
       mode,
       tone = "calm",
       input = "",
       nextAction = null,
       filePayload,
-      userId,
+      userId: incomingUserId,
       sessionId: incomingSessionId,
     } = body;
 
@@ -150,13 +151,17 @@ export default async function handler(
 
     const isGuest = req.headers["x-guest"] === "true";
 
-    // Derive canonical userId:
-    // - guests: null  → sessions.user_id will be NULL
-    // - auth users: Supabase auth user id
-    if (!userId) {
-      if (isGuest) {
-        userId = null;
-      } else {
+    /* ---------- USER ID HANDLING ---------- */
+    // We distinguish between:
+    // - guests → userId = null (sessions.user_id will be NULL)
+    // - authenticated users → use Supabase auth user's uuid
+    let userId: string | null = incomingUserId ?? null;
+
+    if (isGuest) {
+      userId = null; // guests never touch user_profiles / tone
+    } else {
+      // Authenticated path: derive userId from Supabase if not provided
+      if (!userId) {
         const supabase = createServerSupabaseClient({ req, res });
         const {
           data: { user },
@@ -164,6 +169,7 @@ export default async function handler(
         } = await supabase.auth.getUser();
 
         if (authError || !user) {
+          console.error("❌ Auth error in unified.ts:", authError);
           return res.status(401).json({ error: "Not authenticated" });
         }
 
@@ -171,48 +177,11 @@ export default async function handler(
       }
     }
 
-    // ---------------- USER ID / PROFILE HANDLING ----------------
-    // We now distinguish between guests and real Supabase users.
-    const isGuestHeader =
-      req.headers["x-guest"] === "true" ||
-      (typeof userId === "string" && userId.startsWith("guest-"));
-
-    if (!userId) {
-      // No userId from the client → synthesize a guest id
-      userId = isGuestHeader
-        ? `guest-${req.headers["x-forwarded-for"] || "anon"}`
-        : "anonymous";
-    }
-
-    // ⚠️ IMPORTANT:
-    // For authenticated Supabase users we **do not** touch user_profiles here.
-    // Profiles are created/updated only in /api/user/ensureProfile (ProfileSync).
-    //
-    // For *guests* we keep the old behaviour, but we ignore duplicate-key errors
-    // so we don't explode if the profile already exists.
-    if (isGuestHeader) {
-      try {
-        await getOrCreateUserProfile(userId as string);
-      } catch (err: any) {
-        if (err?.code === "23505") {
-          console.warn(
-            "user_profiles row already exists for guest userId:",
-            userId
-          );
-        } else {
-          console.error("getOrCreateUserProfile (guest) failed:", err);
-        }
-      }
-    }
-
-    // ---------------- FILE HANDLING ----------------
+    /* ---------- FILE HANDLING ---------- */
     let extractedText = "";
     if (filePayload) {
       try {
-        extractedText = await parseUploadedFile(
-          filePayload,
-          filePayload.type
-        );
+        extractedText = await parseUploadedFile(filePayload, filePayload.type);
         console.log("🟦 Extracted file text length:", extractedText.length);
       } catch (err) {
         console.error("❌ File parse error:", err);
@@ -220,11 +189,12 @@ export default async function handler(
       }
     }
 
-    // ---------------- SESSION HANDLING ----------------
+    /* ---------- SESSION HANDLING ---------- */
     let sessionId = incomingSessionId || null;
+
     if (!sessionId) {
       const newSession = await createSession(
-        userId as string,
+        userId,       // guests → null, auth → uuid
         companion,
         "general"
       );
@@ -235,15 +205,13 @@ export default async function handler(
     const rawHistory = await getMessages(sessionId as string);
     console.log("🟦 Loaded conversation history:", rawHistory.length);
 
-    const conversationHistory: ConversationTurn[] = rawHistory.map(
-      (m: any) => ({
-        role: m.role,
-        content: m.content,
-        meta: m.meta || null,
-      })
-    );
+    const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
+      role: m.role,
+      content: m.content,
+      meta: m.meta || null,
+    }));
 
-    // ---------------- SAVE USER MESSAGE ----------------
+    /* ---------- SAVE USER MESSAGE ---------- */
     const trimmed = input?.trim() || "";
     if (trimmed || nextAction) {
       const userContent = trimmed || `[Triggered Action: ${nextAction}]`;
@@ -259,7 +227,7 @@ export default async function handler(
       });
     }
 
-    // ---------------- LOAD IDENTITY / RUN ORCHESTRATOR ----------------
+    /* ---------- LOAD IDENTITY / RUN ORCHESTRATOR ---------- */
     const rawIdentity = loadIdentity(companion, mode);
     console.log("🟦 Loaded identity");
 
@@ -294,7 +262,7 @@ export default async function handler(
 
     console.log("🟦 Orchestrator Raw Output:", orchestratorResult);
 
-    // ---------------- NORMALISE ASSISTANT OUTPUT ----------------
+    /* ---------- NORMALISE ASSISTANT OUTPUT ---------- */
     let replyRaw =
       orchestratorResult.outputText ||
       orchestratorResult.reply ||
@@ -334,6 +302,7 @@ export default async function handler(
       meta,
     });
 
+    // Only store tone for authenticated users (userId != null)
     if (userId) {
       await saveTone(
         userId,
