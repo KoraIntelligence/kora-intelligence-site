@@ -7,38 +7,47 @@ import { supabaseAdmin } from "./supabaseAdmin";
 
 export async function getOrCreateUserProfile(userId: string, email?: string) {
   try {
+    // 🔧 FIX: Look up user by email first (Supabase auth always guarantees email)
+    if (email) {
+      const { data: byEmail } = await supabaseAdmin
+        .from("user_profiles")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (byEmail) {
+        return byEmail;
+      }
+    }
+
+    // 🔧 FIX: Fall back to lookup by id
     const { data: existing, error: fetchError } = await supabaseAdmin
       .from("user_profiles")
       .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError && fetchError.code !== "PGRST116") {
-      console.error("❌ Error fetching user profile:", fetchError.message);
-      throw fetchError;
+    if (existing) return existing;
+
+    // 🔧 FIX: Create profile with correct id + email
+    const { error: insertError } = await supabaseAdmin
+      .from("user_profiles")
+      .insert([
+        {
+          id: userId,
+          email,
+          name: email?.split("@")[0] || "Anonymous",
+          current_tone: "calm",
+        },
+      ]);
+
+    if (insertError) {
+      console.error("❌ Failed to create user profile:", insertError.message);
+      throw insertError;
     }
 
-    if (!existing) {
-      const { error: insertError } = await supabaseAdmin
-        .from("user_profiles")
-        .insert([
-          {
-            id: userId,
-            email,
-            name: email?.split("@")[0] || "Anonymous",
-            current_tone: "calm",
-          },
-        ]);
-
-      if (insertError) {
-        console.error("❌ Failed to create user profile:", insertError.message);
-        throw insertError;
-      }
-
-      console.log(`✅ Created new profile for user ${email || userId}`);
-    }
-
-    return existing || { id: userId, email };
+    console.log(`✅ Created new profile for ${email || userId}`);
+    return { id: userId, email };
   } catch (err) {
     console.error("❌ getOrCreateUserProfile failed:", err);
     throw err;
@@ -50,7 +59,7 @@ export async function getOrCreateUserProfile(userId: string, email?: string) {
 --------------------------------------------------------------------------- */
 
 export async function createSession(
-  userId: string,
+  userId: string | null,
   companionSlug: string,
   intent: string = "general"
 ) {
@@ -59,7 +68,8 @@ export async function createSession(
       .from("sessions")
       .insert([
         {
-          user_id: userId,
+          // For guests userId will be null; FK allows NULL so that's safe.
+          user_id: userId ?? null,
           companion_slug: companionSlug,
           context: { intent },
           last_updated: new Date().toISOString(),
@@ -70,27 +80,12 @@ export async function createSession(
 
     if (error) throw error;
 
-    console.log(`🧭 Created new session for user ${userId}`);
+    console.log(`🧭 Created new session for user ${userId ?? "guest"}`);
     return data;
   } catch (err) {
     console.error("❌ Failed to create session:", err);
     throw err;
   }
-}
-
-export async function updateSessionContext(
-  sessionId: string,
-  newContext: Record<string, any>
-) {
-  const { error } = await supabaseAdmin
-    .from("sessions")
-    .update({
-      context: newContext,
-      last_updated: new Date().toISOString(),
-    })
-    .eq("id", sessionId);
-
-  if (error) console.error("⚠️ Failed to update session context:", error.message);
 }
 
 /* ---------------------------------------------------------------------------
@@ -99,9 +94,8 @@ export async function updateSessionContext(
 
 type MessageRole = "user" | "assistant" | "system";
 
-// We allow meta to be stored inside attachments._meta for now
 type SaveMessageOptions =
-  | Record<string, any> // backwards compatibility: attachments only
+  | Record<string, any>
   | {
       attachments?: Record<string, any>;
       meta?: Record<string, any>;
@@ -115,21 +109,16 @@ export async function saveMessage(
 ) {
   try {
     if (!sessionId) throw new Error("Missing session ID in saveMessage");
-    if (!role) throw new Error("Missing role in saveMessage");
 
-    let attachments: Record<string, any> | undefined = undefined;
-    let meta: Record<string, any> | undefined = undefined;
+    let attachments = undefined;
+    let meta = undefined;
 
-    // Backwards-compatible handling:
-    // - If the 4th argument is a plain object with no "meta"/"attachments" keys, treat it as attachments.
-    // - If it looks like { attachments, meta }, use both.
     if (attachmentsOrOptions) {
       const maybe = attachmentsOrOptions as any;
 
       if (
         typeof maybe === "object" &&
-        (Object.prototype.hasOwnProperty.call(maybe, "attachments") ||
-          Object.prototype.hasOwnProperty.call(maybe, "meta"))
+        (maybe.attachments !== undefined || maybe.meta !== undefined)
       ) {
         attachments = maybe.attachments || {};
         meta = maybe.meta || undefined;
@@ -138,15 +127,13 @@ export async function saveMessage(
       }
     }
 
+    // 🔧 FIX: Store meta OUTSIDE attachments to match frontend expectations
     const payload = {
       session_id: sessionId,
       role,
       content: content || "",
-      // Store meta inside attachments._meta to avoid DB migrations for now
-      attachments: {
-        ...(attachments || {}),
-        ...(meta ? { _meta: meta } : {}),
-      },
+      attachments: attachments || {},
+      meta: meta || null,
       created_at: new Date().toISOString(),
     };
 
@@ -177,7 +164,6 @@ export async function getMessages(sessionId: string) {
     return [];
   }
 
-  // Later, when we wire the API → frontend, we can unwrap attachments._meta here if we want.
   return data || [];
 }
 
@@ -202,58 +188,33 @@ export async function saveTone(
       created_at: new Date().toISOString(),
     };
 
-    const { error } = await supabaseAdmin.from("tone_history").insert([tonePayload]);
+    const { error } = await supabaseAdmin
+      .from("tone_history")
+      .insert([tonePayload]);
 
     if (error) {
       console.error("❌ Failed to save tone:", error.message);
       return { ok: false, error };
     }
 
-    console.log(`🎵 Tone "${tone}" saved for user ${userId}`);
-
-    // Also update user_profiles.current_tone
+    // 🔧 FIX: Update by userId OR email fallback
     const { error: updateError } = await supabaseAdmin
       .from("user_profiles")
       .update({ current_tone: tone })
       .eq("id", userId);
 
-    if (updateError)
-      console.error("⚠️ Failed to update user_profiles tone:", updateError.message);
+    if (updateError) {
+      console.warn("⚠️ user_profiles update by id failed. Trying by email…");
+
+      await supabaseAdmin
+        .from("user_profiles")
+        .update({ current_tone: tone })
+        .eq("email", userId); // fallback
+    }
 
     return { ok: true };
   } catch (err) {
     console.error("⚠️ saveTone threw error:", err);
     return { ok: false, error: err };
-  }
-}
-
-export async function getLastTone(userId: string, companionSlug: string) {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("tone_history")
-      .select("tone")
-      .eq("user_id", userId)
-      .eq("companion_slug", companionSlug)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error && error.code !== "PGRST116") {
-      console.error("⚠️ Error getting tone history:", error.message);
-      return null;
-    }
-
-    if (data?.tone) return data.tone;
-
-    const { data: profile } = await supabaseAdmin
-      .from("user_profiles")
-      .select("current_tone")
-      .eq("id", userId)
-      .single();
-
-    return profile?.current_tone || "calm";
-  } catch (err) {
-    console.error("❌ getLastTone failed:", err);
-    return "calm";
   }
 }

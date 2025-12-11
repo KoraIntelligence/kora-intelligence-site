@@ -6,9 +6,9 @@
    - Redirects to /auth if user is neither logged-in nor guest
 --------------------------------------------------------- */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useUser } from "@supabase/auth-helpers-react";
+import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react";
 
 import ChatScreen from "@/screens/ChatScreen";
 
@@ -28,20 +28,41 @@ function WrappedChat() {
 
 export default function MVP() {
   const user = useUser();
+  const supabase = useSupabaseClient();
   const router = useRouter();
 
-  // Auth / guest gate
-  useEffect(() => {
-    // Only access localStorage in the browser
-    const guest =
-      typeof window !== "undefined" &&
-      window.localStorage.getItem("guest_mode") === "true";
+  const [ready, setReady] = useState(false);
 
-    // If not logged in and not a guest → go to /auth
-    if (!user && !guest) {
-      router.replace("/auth");
+  useEffect(() => {
+    async function init() {
+      const guest =
+        typeof window !== "undefined" &&
+        window.localStorage.getItem("guest_mode") === "true";
+
+      // If neither authenticated nor guest → redirect to /auth
+      if (!user && !guest) {
+        return router.replace("/auth");
+      }
+
+      // Authenticated users MUST have profile ensured
+      if (user && !guest) {
+        await fetch("/api/user/ensureProfile", { method: "POST" });
+      }
+
+      setReady(true);
     }
-  }, [user, router]);
+
+    init();
+  }, [user]);
+
+  // Prevent rendering chat before profile/session is ready
+  if (!ready) {
+    return (
+      <div style={{ padding: 40 }}>
+        <p>Loading your session…</p>
+      </div>
+    );
+  }
 
   return (
     <CompanionProvider>

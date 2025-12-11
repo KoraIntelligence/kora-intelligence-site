@@ -8,7 +8,9 @@ export const config = {
   },
 };
 
+
 import type { NextApiRequest, NextApiResponse } from "next";
+import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
 import {
   runSalar,
@@ -129,7 +131,7 @@ export default async function handler(
     const body = parseBody(req);
     console.log("🟦 Parsed body:", body);
 
-    let {
+        let {
       companion = "salar",
       mode,
       tone = "calm",
@@ -144,6 +146,29 @@ export default async function handler(
 
     if (!mode) {
       return res.status(400).json({ error: "Missing mode in request." });
+    }
+
+    const isGuest = req.headers["x-guest"] === "true";
+
+    // Derive canonical userId:
+    // - guests: null  → sessions.user_id will be NULL
+    // - auth users: Supabase auth user id
+    if (!userId) {
+      if (isGuest) {
+        userId = null;
+      } else {
+        const supabase = createServerSupabaseClient({ req, res });
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          return res.status(401).json({ error: "Not authenticated" });
+        }
+
+        userId = user.id;
+      }
     }
 
     // ---------------- USER ID / PROFILE HANDLING ----------------
@@ -309,12 +334,14 @@ export default async function handler(
       meta,
     });
 
-    await saveTone(
-      userId as string,
-      companion,
-      tone || "calm",
-      "post-response update"
-    );
+    if (userId) {
+      await saveTone(
+        userId,
+        companion,
+        tone || "calm",
+        "post-response update"
+      );
+    }
 
     console.log("🟩 Returning response to frontend");
 

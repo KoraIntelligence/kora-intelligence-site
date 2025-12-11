@@ -1,3 +1,4 @@
+// src/pages/api/user/ensureProfile.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -11,16 +12,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     /* CASE 1 — GUEST SESSION                   */
     /* ---------------------------------------- */
     if (isGuest) {
-      const { data: existingGuest } = await supabaseAdmin
+      // We keep a single shared guest profile (by email).
+      const guestEmail = "guest@kora.local";
+
+      const { data: existingGuest, error: guestError } = await supabaseAdmin
         .from("user_profiles")
-        .select("*")
-        .eq("email", "guest@kora.local")
+        .select("id")
+        .eq("email", guestEmail)
         .maybeSingle();
+
+      if (guestError && guestError.code !== "PGRST116") {
+        throw guestError;
+      }
 
       if (!existingGuest) {
         await supabaseAdmin.from("user_profiles").insert([
           {
-            email: "guest@kora.local",
+            email: guestEmail,
             name: "Guest User",
             current_tone: "calm",
           },
@@ -31,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     /* ---------------------------------------- */
-    /* CASE 2 — AUTH USER                       */
+    /* CASE 2 — AUTHENTICATED USER              */
     /* ---------------------------------------- */
     const {
       data: { user },
@@ -42,20 +50,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ ok: false, error: "Not authenticated" });
     }
 
-    const email = user.email || "unknown";
+    const userId = user.id;
+    const email = user.email ?? null;
 
-    // Check if user already exists
-    const { data: existing } = await supabaseAdmin
+    // Look up by *id* so it lines up with foreign key in sessions.user_id
+    const { data: existing, error: fetchError } = await supabaseAdmin
       .from("user_profiles")
-      .select("*")
-      .eq("email", email)
+      .select("id")
+      .eq("id", userId)
       .maybeSingle();
+
+    if (fetchError && fetchError.code !== "PGRST116") {
+      throw fetchError;
+    }
 
     if (!existing) {
       await supabaseAdmin.from("user_profiles").insert([
         {
+          id: userId,
           email,
-          name: email.split("@")[0], // simple default
+          name: email ? email.split("@")[0] : "Anonymous",
           current_tone: "calm",
         },
       ]);
@@ -64,6 +78,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ ok: true, mode: "auth" });
   } catch (err: any) {
     console.error("ensureProfile error:", err);
-    return res.status(500).json({ ok: false, error: err?.message || "Internal error" });
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || "Internal error" });
   }
 }

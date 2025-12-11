@@ -7,14 +7,19 @@ export default function OAuthCallback() {
 
   useEffect(() => {
     async function verify() {
-      // Ensure Supabase has set the session cookie
-      await fetch("/api/user/ensureProfile", { method: "POST" });
+      try {
+        // This installs Supabase session cookie
+        await fetch("/api/user/ensureProfile", { method: "POST" });
 
-      router.replace("/mvp");
+        router.replace("/mvp");
+      } catch (err) {
+        console.error("callback error:", err);
+        router.replace("/auth?error=callback");
+      }
     }
 
     verify();
-  }, []);
+  }, [router]);
 
   return <p style={{ padding: 40 }}>Finishing sign-in…</p>;
 }
