@@ -47,8 +47,8 @@ interface UnifiedRequestBody {
 }
 
 interface OrchestratorResult {
-  reply?: any;            // <-- may be array/object, so keep as any
-  outputText?: any;       // <-- may be array/object, so keep as any
+  reply?: any;
+  outputText?: any;
   attachments?: any[];
   meta?: Record<string, any>;
 }
@@ -59,18 +59,14 @@ export interface ConversationTurn {
   meta?: any;
 }
 
-// =============================================
-// 💡 Deep Normalizer — recursive, safe serializer
-// =============================================
+// Deep normalizer
 function normalizeMessageContentDeep(input: any): string {
   if (input == null) return "";
 
-  // Primitive → OK
   if (typeof input === "string") return input;
   if (typeof input === "number") return String(input);
   if (typeof input === "boolean") return input ? "true" : "false";
 
-  // If an array → flatten recursively
   if (Array.isArray(input)) {
     return input
       .map((part) => {
@@ -83,17 +79,13 @@ function normalizeMessageContentDeep(input: any): string {
       .join("\n");
   }
 
-  // Object → convert to readable JSON
   try {
     return JSON.stringify(input, null, 2);
-  } catch (_) {
+  } catch {
     return String(input);
   }
 }
 
-// =============================================
-// Handler
-// =============================================
 function parseBody(req: NextApiRequest): UnifiedRequestBody {
   if (typeof req.body === "string") return JSON.parse(req.body);
   return req.body as UnifiedRequestBody;
@@ -105,6 +97,7 @@ export default async function handler(
 ) {
   console.log("🟦 unified.ts: Incoming request:", req.method);
 
+  // ---------------- GET: history ----------------
   if (req.method === "GET") {
     const sessionId = req.query.sessionId;
     console.log("🟦 GET history for session:", sessionId);
@@ -114,7 +107,6 @@ export default async function handler(
     }
 
     const rows = await getMessages(sessionId);
-
     console.log("🟦 Loaded history rows:", rows.length);
 
     return res.status(200).json({
@@ -131,7 +123,7 @@ export default async function handler(
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-    }
+  }
 
   try {
     const body = parseBody(req);
@@ -154,14 +146,48 @@ export default async function handler(
       return res.status(400).json({ error: "Missing mode in request." });
     }
 
-    if (!userId) userId = "guest-" + (req.headers["x-guest"] || "anon");
+    // ---------------- USER ID / PROFILE HANDLING ----------------
+    // We now distinguish between guests and real Supabase users.
+    const isGuestHeader =
+      req.headers["x-guest"] === "true" ||
+      (typeof userId === "string" && userId.startsWith("guest-"));
 
-    await getOrCreateUserProfile(userId);
+    if (!userId) {
+      // No userId from the client → synthesize a guest id
+      userId = isGuestHeader
+        ? `guest-${req.headers["x-forwarded-for"] || "anon"}`
+        : "anonymous";
+    }
 
+    // ⚠️ IMPORTANT:
+    // For authenticated Supabase users we **do not** touch user_profiles here.
+    // Profiles are created/updated only in /api/user/ensureProfile (ProfileSync).
+    //
+    // For *guests* we keep the old behaviour, but we ignore duplicate-key errors
+    // so we don't explode if the profile already exists.
+    if (isGuestHeader) {
+      try {
+        await getOrCreateUserProfile(userId as string);
+      } catch (err: any) {
+        if (err?.code === "23505") {
+          console.warn(
+            "user_profiles row already exists for guest userId:",
+            userId
+          );
+        } else {
+          console.error("getOrCreateUserProfile (guest) failed:", err);
+        }
+      }
+    }
+
+    // ---------------- FILE HANDLING ----------------
     let extractedText = "";
     if (filePayload) {
       try {
-        extractedText = await parseUploadedFile(filePayload, filePayload.type);
+        extractedText = await parseUploadedFile(
+          filePayload,
+          filePayload.type
+        );
         console.log("🟦 Extracted file text length:", extractedText.length);
       } catch (err) {
         console.error("❌ File parse error:", err);
@@ -169,9 +195,14 @@ export default async function handler(
       }
     }
 
+    // ---------------- SESSION HANDLING ----------------
     let sessionId = incomingSessionId || null;
     if (!sessionId) {
-      const newSession = await createSession(userId, companion, "general");
+      const newSession = await createSession(
+        userId as string,
+        companion,
+        "general"
+      );
       sessionId = newSession.id;
       console.log("🟦 New session:", sessionId);
     }
@@ -179,12 +210,15 @@ export default async function handler(
     const rawHistory = await getMessages(sessionId as string);
     console.log("🟦 Loaded conversation history:", rawHistory.length);
 
-    const conversationHistory: ConversationTurn[] = rawHistory.map((m: any) => ({
-      role: m.role,
-      content: m.content,
-      meta: m.meta || null,
-    }));
+    const conversationHistory: ConversationTurn[] = rawHistory.map(
+      (m: any) => ({
+        role: m.role,
+        content: m.content,
+        meta: m.meta || null,
+      })
+    );
 
+    // ---------------- SAVE USER MESSAGE ----------------
     const trimmed = input?.trim() || "";
     if (trimmed || nextAction) {
       const userContent = trimmed || `[Triggered Action: ${nextAction}]`;
@@ -200,6 +234,7 @@ export default async function handler(
       });
     }
 
+    // ---------------- LOAD IDENTITY / RUN ORCHESTRATOR ----------------
     const rawIdentity = loadIdentity(companion, mode);
     console.log("🟦 Loaded identity");
 
@@ -219,7 +254,7 @@ export default async function handler(
         tone,
         nextAction: nextAction || undefined,
         conversationHistory,
-      });
+      } as SalarOrchestratorInput);
     } else {
       console.log("🟨 Running Lyra orchestrator…");
       orchestratorResult = await runLyra({
@@ -229,14 +264,12 @@ export default async function handler(
         tone,
         nextAction: nextAction || undefined,
         conversationHistory,
-      });
+      } as LyraOrchestratorInput);
     }
 
     console.log("🟦 Orchestrator Raw Output:", orchestratorResult);
 
-    // ===========================================================
-    // Normalize ALL possible text sources deeply
-    // ===========================================================
+    // ---------------- NORMALISE ASSISTANT OUTPUT ----------------
     let replyRaw =
       orchestratorResult.outputText ||
       orchestratorResult.reply ||
@@ -248,7 +281,6 @@ export default async function handler(
 
     console.log("🟩 reply (post-normalization):", reply);
 
-    // Normalize attachments/meta so nothing structured leaks downstream
     let attachments = orchestratorResult.attachments || [];
     attachments = JSON.parse(JSON.stringify(attachments));
 
@@ -270,9 +302,6 @@ export default async function handler(
       },
     };
 
-    // ===========================================================
-    // Save message as CLEAN STRING (critical for XLSX stability)
-    // ===========================================================
     console.log("🟧 Saving assistant message…");
 
     await saveMessage(sessionId as string, "assistant", reply, {
