@@ -1,67 +1,66 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router"; // ← back to pages-router hook
 import {
   useSupabaseClient,
   useUser,
-  useSession,
 } from "@supabase/auth-helpers-react";
 
 export default function AuthScreen() {
   const supabase = useSupabaseClient();
   const user = useUser();
-  const session = useSession();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // ----------------------------
-  // FIXED REDIRECT LOGIC
-  // ----------------------------
+  /* ------------------------------------------------------ */
+  /* AUTO-REDIRECT IF LOGGED IN OR GUEST                    */
+  /* ------------------------------------------------------ */
   useEffect(() => {
-    // Only redirect AFTER supabase has finished loading
-    if (session === undefined) return;
+    if (typeof window === "undefined") return;
 
     const isGuest = localStorage.getItem("guest_mode") === "true";
-
-    if (session?.user || isGuest) {
+    if (user || isGuest) {
       router.push("/mvp");
     }
-  }, [session]);
+  }, [user, router]);
 
-  // ----------------------------
-  // MAGIC LINK LOGIN
-  // ----------------------------
+  const redirectTarget = typeof window !== "undefined"
+    ? `${window.location.origin}/mvp`
+    : undefined;
+
+  /* ------------------------------------------------------ */
+  /* MAGIC LINK LOGIN                                       */
+  /* ------------------------------------------------------ */
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setMessage(null);
+    setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: redirectTarget
+          ? { emailRedirectTo: redirectTarget }
+          : undefined,
       });
 
       if (error) throw error;
-
       setMessage("✅ Magic link sent! Check your inbox.");
     } catch (err: any) {
-      console.error(err);
+      console.error("Magic link error:", err?.message || err);
       setMessage("❌ Error sending magic link. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ----------------------------
-  // GOOGLE SIGN-IN
-  // ----------------------------
+  /* ------------------------------------------------------ */
+  /* GOOGLE LOGIN                                           */
+  /* ------------------------------------------------------ */
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setMessage(null);
@@ -69,23 +68,26 @@ export default function AuthScreen() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: redirectTarget
+          ? { redirectTo: redirectTarget }
+          : undefined,
       });
 
       if (error) throw error;
+      // After redirect, auth-helpers will pick up the session,
+      // and the useEffect above will push("/mvp").
     } catch (err: any) {
-      console.error("Google login error:", err);
-      setMessage("⚠️ Google sign-in failed.");
+      console.error("Google login error:", err?.message || err);
+      setMessage("⚠️ Google sign-in failed. Please try again.");
       setLoading(false);
     }
   };
 
-  // ----------------------------
-  // GUEST LOGIN
-  // ----------------------------
+  /* ------------------------------------------------------ */
+  /* GUEST LOGIN                                            */
+  /* ------------------------------------------------------ */
   const handleGuestLogin = () => {
+    if (typeof window === "undefined") return;
     localStorage.setItem("guest_mode", "true");
     router.push("/mvp");
   };
@@ -93,7 +95,6 @@ export default function AuthScreen() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 bg-gray-50 dark:bg-[#0d0d0d] transition-colors">
       <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-md p-8 max-w-md w-full space-y-6 border border-gray-200 dark:border-gray-800">
-
         <h1 className="text-2xl font-semibold text-center text-amber-700 dark:text-amber-300">
           Welcome to Kora Intelligence
         </h1>
@@ -102,7 +103,7 @@ export default function AuthScreen() {
           Sign in below to start your session with your Companion.
         </p>
 
-        {/* GOOGLE LOGIN */}
+        {/* ---------------- GOOGLE SIGN IN ---------------- */}
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
@@ -117,7 +118,7 @@ export default function AuthScreen() {
           <span className="mx-2">or</span>
         </div>
 
-        {/* MAGIC LINK */}
+        {/* ---------------- MAGIC LINK FORM ---------------- */}
         <form onSubmit={handleMagicLink} className="space-y-4">
           <input
             type="email"
@@ -136,7 +137,7 @@ export default function AuthScreen() {
           </button>
         </form>
 
-        {/* GUEST LOGIN */}
+        {/* ---------------- GUEST LOGIN ---------------- */}
         <div className="text-center">
           <button
             onClick={handleGuestLogin}
@@ -147,6 +148,7 @@ export default function AuthScreen() {
           </button>
         </div>
 
+        {/* ---------------- STATUS MESSAGE ---------------- */}
         {message && (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
             {message}
