@@ -1,54 +1,54 @@
 // src/pages/auth/callback.tsx
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 export default function OAuthCallback() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createPagesBrowserClient();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const finalizeAuth = async () => {
+    async function finishAuth() {
       try {
-        // 1. Wait for Supabase session to be available
+        // 🔑 This is the missing step:
+        // Wait for Supabase to finish exchanging the OAuth / magic-link code
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (sessionError || !session?.user) {
-          console.error("No Supabase session in callback", sessionError);
-          router.replace("/auth?error=no_session");
-          return;
+        if (sessionError) {
+          throw sessionError;
         }
 
-        // 2. Ensure user_profiles row exists (REQUIRED for FK safety)
+        if (!session?.user) {
+          throw new Error("No Supabase session after callback");
+        }
+
+        // Ensure user_profiles row exists
         const res = await fetch("/api/user/ensureProfile", {
           method: "POST",
-          credentials: "same-origin",
         });
 
         if (!res.ok) {
           const text = await res.text();
-          console.error("ensureProfile failed:", res.status, text);
-          router.replace("/auth?error=profile_sync_failed");
-          return;
+          throw new Error(`ensureProfile failed: ${text}`);
         }
 
-        // 3. Safe to enter app
         if (!cancelled) {
           router.replace("/mvp");
         }
-      } catch (err) {
-        console.error("OAuth callback fatal error:", err);
-        router.replace("/auth?error=callback_exception");
+      } catch (err: any) {
+        console.error("OAuth callback failed:", err);
+        setError(err.message || "Authentication failed");
       }
-    };
+    }
 
-    finalizeAuth();
+    finishAuth();
 
     return () => {
       cancelled = true;
@@ -56,8 +56,13 @@ export default function OAuthCallback() {
   }, [router, supabase]);
 
   return (
-    <p style={{ padding: 40 }}>
-      Finishing sign-in…
-    </p>
+    <div style={{ padding: 40 }}>
+      <p>Finishing sign-in…</p>
+      {error && (
+        <p style={{ color: "red", marginTop: 16 }}>
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
