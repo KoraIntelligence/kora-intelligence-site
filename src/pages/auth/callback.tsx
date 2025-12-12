@@ -6,19 +6,17 @@ export default function OAuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    async function verify() {
+    (async () => {
       try {
-        // This installs Supabase session cookie
+        // Ensure the user_profiles row exists for the logged-in Supabase user
         await fetch("/api/user/ensureProfile", { method: "POST" });
-
+      } catch (e) {
+        console.error("ensureProfile failed", e);
+      } finally {
+        // Always shove them into the chat shell
         router.replace("/mvp");
-      } catch (err) {
-        console.error("callback error:", err);
-        router.replace("/auth?error=callback");
       }
-    }
-
-    verify();
+    })();
   }, [router]);
 
   return <p style={{ padding: 40 }}>Finishing sign-in…</p>;

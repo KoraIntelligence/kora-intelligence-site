@@ -32,56 +32,47 @@ export default function AuthScreen() {
     ? `${window.location.origin}/mvp`
     : undefined;
 
-  /* ------------------------------------------------------ */
-  /* MAGIC LINK LOGIN                                       */
-  /* ------------------------------------------------------ */
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage(null);
-    setLoading(true);
+// Magic link
+const handleMagicLink = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setMessage(null);
+  setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: redirectTarget
-          ? { emailRedirectTo: redirectTarget }
-          : undefined,
-      });
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) throw error;
+    setMessage("✅ Magic link sent! Check your inbox.");
+  } catch (err: any) {
+    console.error("Magic link error:", err.message || err);
+    setMessage("❌ Error sending magic link. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-      if (error) throw error;
-      setMessage("✅ Magic link sent! Check your inbox.");
-    } catch (err: any) {
-      console.error("Magic link error:", err?.message || err);
-      setMessage("❌ Error sending magic link. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ------------------------------------------------------ */
-  /* GOOGLE LOGIN                                           */
-  /* ------------------------------------------------------ */
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: redirectTarget
-          ? { redirectTo: redirectTarget }
-          : undefined,
-      });
-
-      if (error) throw error;
-      // After redirect, auth-helpers will pick up the session,
-      // and the useEffect above will push("/mvp").
-    } catch (err: any) {
-      console.error("Google login error:", err?.message || err);
-      setMessage("⚠️ Google sign-in failed. Please try again.");
-      setLoading(false);
-    }
-  };
+// Google login
+const handleGoogleSignIn = async () => {
+  setLoading(true);
+  setMessage(null);
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) throw error;
+  } catch (err: any) {
+    console.error("Google login error:", err.message || err);
+    setMessage("⚠️ Google sign-in failed. Please try again.");
+    setLoading(false);
+  }
+};
 
   /* ------------------------------------------------------ */
   /* GUEST LOGIN                                            */
