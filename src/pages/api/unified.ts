@@ -9,7 +9,7 @@ export const config = {
 };
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 
 import {
   runSalar,
@@ -151,31 +151,28 @@ export default async function handler(
 
     const isGuest = req.headers["x-guest"] === "true";
 
-    /* ---------- USER ID HANDLING ---------- */
-    // We distinguish between:
-    // - guests → userId = null (sessions.user_id will be NULL)
-    // - authenticated users → use Supabase auth user's uuid
-    let userId: string | null = incomingUserId ?? null;
+/* ---------- USER ID HANDLING ---------- */
+// Guests: keep existing behavior (your guest flow is working)
+// Auth users: NEVER trust userId from request body; ALWAYS derive from cookies
+let userId: string | null = null;
 
-    if (isGuest) {
-      userId = null; // guests never touch user_profiles / tone
-    } else {
-      // Authenticated path: derive userId from Supabase if not provided
-      if (!userId) {
-        const supabase = createServerSupabaseClient({ req, res });
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+if (!isGuest) {
+  const supabase = createPagesServerClient({ req, res });
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-        if (authError || !user) {
-          console.error("❌ Auth error in unified.ts:", authError);
-          return res.status(401).json({ error: "Not authenticated" });
-        }
+  if (authError || !user) {
+    console.error("❌ Auth error in unified.ts:", authError);
+    return res.status(401).json({ error: "Not authenticated" });
+  }
 
-        userId = user.id;
-      }
-    }
+  userId = user.id;
+} else {
+  // Keep guest behavior exactly as-is for now
+  userId = incomingUserId ?? null;
+}
 
     /* ---------- FILE HANDLING ---------- */
     let extractedText = "";
