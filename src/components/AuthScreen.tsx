@@ -23,7 +23,7 @@ export default function AuthScreen() {
     if (typeof window === "undefined") return;
 
     const isGuest = localStorage.getItem("guest_mode") === "true";
-    if (user || isGuest) {
+    if (isGuest) {
       router.push("/mvp");
     }
   }, [user, router]);

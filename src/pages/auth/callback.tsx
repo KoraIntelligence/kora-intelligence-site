@@ -1,68 +1,55 @@
 // src/pages/auth/callback.tsx
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { useUser } from "@supabase/auth-helpers-react";
 
 export default function OAuthCallback() {
   const router = useRouter();
-  const supabase = createPagesBrowserClient();
-  const [error, setError] = useState<string | null>(null);
+  const user = useUser();
+  const [status, setStatus] = useState<string>("Finishing sign-in…");
 
   useEffect(() => {
     let cancelled = false;
 
-    async function finishAuth() {
+    async function run() {
+      // Wait up to ~10s for Supabase to hydrate the session cookie -> useUser() becomes truthy.
+      const start = Date.now();
+      while (!cancelled && !user && Date.now() - start < 10_000) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+
+      if (cancelled) return;
+
+      if (!user) {
+        // Session never appeared -> send back to auth instead of pushing to /mvp in a broken state.
+        setStatus("Sign-in did not complete. Returning to login…");
+        router.replace("/auth?error=session_missing");
+        return;
+      }
+
       try {
-        // 🔑 This is the missing step:
-        // Wait for Supabase to finish exchanging the OAuth / magic-link code
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+        setStatus("Syncing profile…");
+        const r = await fetch("/api/user/ensureProfile", { method: "POST" });
 
-        if (sessionError) {
-          throw sessionError;
+        if (!r.ok) {
+          const text = await r.text().catch(() => "");
+          throw new Error(`ensureProfile failed: ${r.status} ${text}`);
         }
 
-        if (!session?.user) {
-          throw new Error("No Supabase session after callback");
-        }
-
-        // Ensure user_profiles row exists
-        const res = await fetch("/api/user/ensureProfile", {
-          method: "POST",
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`ensureProfile failed: ${text}`);
-        }
-
-        if (!cancelled) {
-          router.replace("/mvp");
-        }
-      } catch (err: any) {
-        console.error("OAuth callback failed:", err);
-        setError(err.message || "Authentication failed");
+        setStatus("Redirecting…");
+        router.replace("/mvp");
+      } catch (e) {
+        console.error(e);
+        setStatus("Profile sync failed. Returning to login…");
+        router.replace("/auth?error=profile_sync_failed");
       }
     }
 
-    finishAuth();
-
+    run();
     return () => {
       cancelled = true;
     };
-  }, [router, supabase]);
+  }, [user, router]);
 
-  return (
-    <div style={{ padding: 40 }}>
-      <p>Finishing sign-in…</p>
-      {error && (
-        <p style={{ color: "red", marginTop: 16 }}>
-          {error}
-        </p>
-      )}
-    </div>
-  );
+  return <p style={{ padding: 40 }}>{status}</p>;
 }
