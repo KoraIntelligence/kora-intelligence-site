@@ -1,7 +1,7 @@
 // src/pages/api/user/ensureProfile.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export default async function handler(
@@ -9,13 +9,15 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
-    const supabase = createServerSupabaseClient({ req, res });
+    // ✅ Correct, cookie-aware server client
+    const supabase = createPagesServerClient({ req, res });
+
     const isGuest = req.headers["x-guest"] === "true";
 
     /* ======================================================
        GUEST MODE
        - Shared guest profile
-       - Must exist so sessions.user_id FK does NOT explode
+       - Required for sessions.user_id FK
     ====================================================== */
     if (isGuest) {
       const guestEmail = "guest@kora.local";
@@ -31,13 +33,11 @@ export default async function handler(
       }
 
       if (!existingGuest) {
-        await supabaseAdmin.from("user_profiles").insert([
-          {
-            email: guestEmail,
-            name: "Guest User",
-            current_tone: "calm",
-          },
-        ]);
+        await supabaseAdmin.from("user_profiles").insert({
+          email: guestEmail,
+          name: "Guest User",
+          current_tone: "calm",
+        });
       }
 
       return res.status(200).json({ ok: true, mode: "guest" });
@@ -46,7 +46,7 @@ export default async function handler(
     /* ======================================================
        AUTHENTICATED USER
        - user_profiles.id MUST equal auth.users.id
-       - This is REQUIRED for sessions FK
+       - Derived ONLY from cookies
     ====================================================== */
     const {
       data: { user },
@@ -63,6 +63,7 @@ export default async function handler(
     const userId = user.id;
     const email = user.email ?? null;
 
+    // Check if profile already exists
     const { data: existingProfile, error: fetchError } =
       await supabaseAdmin
         .from("user_profiles")
@@ -74,24 +75,24 @@ export default async function handler(
       throw fetchError;
     }
 
+    // Insert if missing
     if (!existingProfile) {
-      await supabaseAdmin.from("user_profiles").insert([
-        {
-          id: userId, // 🔑 critical: FK target for sessions.user_id
-          email,
-          name: email ? email.split("@")[0] : "Anonymous",
-          current_tone: "calm",
-        },
-      ]);
-    } else if (email && existingProfile.email !== email) {
-      // Keep email in sync (Google can change casing etc.)
+      await supabaseAdmin.from("user_profiles").insert({
+        id: userId, // 🔑 FK target for sessions.user_id
+        email,
+        name: email ? email.split("@")[0] : "Anonymous",
+        current_tone: "calm",
+      });
+    }
+    // Keep email in sync if needed
+    else if (email && existingProfile.email !== email) {
       await supabaseAdmin
         .from("user_profiles")
         .update({ email })
         .eq("id", userId);
     }
 
-    return res.status(200).json({ ok: true, mode: "auth" });
+    return res.status(200).json({ ok: true, mode: "auth", userId });
   } catch (err: any) {
     console.error("❌ ensureProfile error:", err);
     return res.status(500).json({
