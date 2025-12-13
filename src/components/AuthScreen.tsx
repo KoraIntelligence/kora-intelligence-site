@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router"; // ← back to pages-router hook
+import { useRouter } from "next/router";
 import {
   useSupabaseClient,
   useUser,
@@ -15,9 +15,10 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [profileEnsured, setProfileEnsured] = useState(false);
 
   /* ------------------------------------------------------ */
-  /* AUTO-REDIRECT IF LOGGED IN OR GUEST                    */
+  /* AUTO-REDIRECT — GUEST ONLY (unchanged behaviour)       */
   /* ------------------------------------------------------ */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -26,56 +27,78 @@ export default function AuthScreen() {
     if (isGuest) {
       router.push("/mvp");
     }
-  }, [user, router]);
-
-  const redirectTarget = typeof window !== "undefined"
-    ? `${window.location.origin}/mvp`
-    : undefined;
-
-// Magic link
-const handleMagicLink = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setMessage(null);
-  setLoading(true);
-
-  try {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-    setMessage("✅ Magic link sent! Check your inbox.");
-  } catch (err: any) {
-    console.error("Magic link error:", err.message || err);
-    setMessage("❌ Error sending magic link. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Google login
-const handleGoogleSignIn = async () => {
-  setLoading(true);
-  setMessage(null);
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-  } catch (err: any) {
-    console.error("Google login error:", err.message || err);
-    setMessage("⚠️ Google sign-in failed. Please try again.");
-    setLoading(false);
-  }
-};
+  }, [router]);
 
   /* ------------------------------------------------------ */
-  /* GUEST LOGIN                                            */
+  /* AUTH FLOW — WAIT FOR PROFILE BEFORE REDIRECT           */
+  /* ------------------------------------------------------ */
+  useEffect(() => {
+    if (!user || profileEnsured) return;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/user/ensureProfile", {
+          method: "POST",
+        });
+
+        if (!res.ok) {
+          throw new Error("ensureProfile failed");
+        }
+
+        setProfileEnsured(true);
+        router.push("/mvp");
+      } catch (err) {
+        console.error("❌ ensureProfile error:", err);
+        setMessage("❌ Failed to finish sign-in. Please retry.");
+      }
+    })();
+  }, [user, profileEnsured, router]);
+
+  /* ------------------------------------------------------ */
+  /* MAGIC LINK                                             */
+  /* ------------------------------------------------------ */
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+      });
+      if (error) throw error;
+
+      setMessage("✅ Magic link sent! Check your inbox.");
+    } catch (err: any) {
+      console.error("Magic link error:", err);
+      setMessage("❌ Error sending magic link. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ------------------------------------------------------ */
+  /* GOOGLE OAUTH                                           */
+  /* ------------------------------------------------------ */
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+      });
+      if (error) throw error;
+      // redirect handled by Supabase → user effect handles the rest
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      setMessage("⚠️ Google sign-in failed. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  /* ------------------------------------------------------ */
+  /* GUEST LOGIN (unchanged)                                */
   /* ------------------------------------------------------ */
   const handleGuestLogin = () => {
     if (typeof window === "undefined") return;
@@ -94,7 +117,7 @@ const handleGoogleSignIn = async () => {
           Sign in below to start your session with your Companion.
         </p>
 
-        {/* ---------------- GOOGLE SIGN IN ---------------- */}
+        {/* GOOGLE SIGN IN */}
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
@@ -104,12 +127,11 @@ const handleGoogleSignIn = async () => {
           Continue with Google
         </button>
 
-        {/* Divider */}
         <div className="flex items-center justify-center text-gray-400 text-sm">
           <span className="mx-2">or</span>
         </div>
 
-        {/* ---------------- MAGIC LINK FORM ---------------- */}
+        {/* MAGIC LINK */}
         <form onSubmit={handleMagicLink} className="space-y-4">
           <input
             type="email"
@@ -128,7 +150,7 @@ const handleGoogleSignIn = async () => {
           </button>
         </form>
 
-        {/* ---------------- GUEST LOGIN ---------------- */}
+        {/* GUEST LOGIN */}
         <div className="text-center">
           <button
             onClick={handleGuestLogin}
@@ -139,7 +161,7 @@ const handleGoogleSignIn = async () => {
           </button>
         </div>
 
-        {/* ---------------- STATUS MESSAGE ---------------- */}
+        {/* STATUS */}
         {message && (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">
             {message}
