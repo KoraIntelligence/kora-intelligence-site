@@ -90,12 +90,17 @@ export default function AuthScreen() {
 
         {/* GOOGLE */}
         <button
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          className="w-full border rounded-lg py-2"
-        >
-          Continue with Google
-        </button>
+  onClick={handleGoogleSignIn}
+  disabled={loading}
+  className="w-full flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-neutral-900 text-gray-700 dark:text-gray-200 rounded-lg py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition"
+>
+  <img
+    src="/icons/google.svg"
+    alt="Google"
+    className="w-5 h-5"
+  />
+  Continue with Google
+</button>
 
         <div className="text-center text-gray-400 text-sm">or</div>
 
