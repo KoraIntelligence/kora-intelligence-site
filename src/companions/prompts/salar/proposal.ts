@@ -123,11 +123,9 @@ Say "Continue refining" or "Finalise proposal" when ready.
   // 6. FINALISATION PROMPT
   // -------------------------------------------------------------
   finalise: `
-Here is your final proposal, cleaned, structured, and ready for export.
 
-I will now generate:
-• Proposal_Final.docx
-• Proposal_Final.pdf
+When User hits next action "finalise_proposal":
+Here is your final proposal, cleaned, structured, and ready for export.
 
 STRUCTURAL FORMATTING RULES FOR TABLES
 

@@ -114,7 +114,7 @@ Close with:
   finalise: `
 Here is a clear, concise summary of the key commercial insights from the conversation.
 
-I will include:
+And include:
 • The core issue or decision  
 • Main risks  
 • Main opportunities  
