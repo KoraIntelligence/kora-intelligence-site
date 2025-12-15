@@ -7,7 +7,7 @@ export const config = {
     },
   },
 };
-
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 
@@ -57,6 +57,20 @@ export interface ConversationTurn {
   role: "user" | "assistant" | "system";
   content: string;
   meta?: any;
+}
+
+async function getGuestUserId(): Promise<string> {
+  const { data, error } = await supabaseAdmin
+    .from("user_profiles")
+    .select("id")
+    .eq("email", "guest@kora.local")
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error("Guest user profile not found");
+  }
+
+  return data.id;
 }
 
 /* ---------------- Deep normaliser ---------------- */
@@ -149,6 +163,10 @@ export default async function handler(
       return res.status(400).json({ error: "Missing mode in request." });
     }
 
+    
+
+
+
     const isGuest = req.headers["x-guest"] === "true";
 
 /* ---------- USER ID HANDLING ---------- */
@@ -156,7 +174,11 @@ export default async function handler(
 // Auth users: NEVER trust userId from request body; ALWAYS derive from cookies
 let userId: string | null = null;
 
-if (!isGuest) {
+if (isGuest) {
+  // 🔒 Guests ALWAYS use the shared guest profile UUID
+  userId = await getGuestUserId();
+} else {
+  // 🔒 Auth users ALWAYS derive from cookies
   const supabase = createPagesServerClient({ req, res });
   const {
     data: { user },
@@ -169,9 +191,6 @@ if (!isGuest) {
   }
 
   userId = user.id;
-} else {
-  // Keep guest behavior exactly as-is for now
-  userId = incomingUserId ?? null;
 }
 
     /* ---------- FILE HANDLING ---------- */
