@@ -310,15 +310,13 @@ const sendMessage = useCallback(
     ]);
 
     try {
-      let filePayload: any = null;
-
-      if (file) {
-        filePayload = {
-          name: file.name,
-          type: file.type || fallbackMimeType(file),
-          contentBase64: await fileToContentBase64(file),
-        };
-      }
+      const filePayload = file
+        ? {
+            name: file.name,
+            type: file.type || fallbackMimeType(file),
+            contentBase64: await fileToContentBase64(file),
+          }
+        : undefined;
 
       const data = await callUnified({
         input: trimmed || null,
