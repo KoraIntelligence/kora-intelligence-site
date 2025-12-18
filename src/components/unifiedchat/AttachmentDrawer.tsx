@@ -1,3 +1,5 @@
+// src/components/unifiedchat/AttachmentDrawer.tsx
+
 import React from "react";
 import { X, UploadCloud } from "lucide-react";
 
@@ -11,7 +13,7 @@ type Props = {
   attachments: AttachmentItem[];
   companion: "salar" | "lyra";
   onClose: () => void;
-  onUpload: (file: File) => void;
+  onAdd: (file: File) => void;
   onRemove: (id: string) => void;
 };
 
@@ -20,7 +22,7 @@ export default function AttachmentDrawer({
   attachments,
   companion,
   onClose,
-  onUpload,
+  onAdd,
   onRemove,
 }: Props) {
   const palette =
@@ -41,7 +43,7 @@ export default function AttachmentDrawer({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className={`font-semibold ${palette}`}>
-            Upload Files for {companion === "lyra" ? "Lyra" : "Salar"}
+            Attach files for {companion === "lyra" ? "Lyra" : "Salar"}
           </h2>
           <button
             onClick={onClose}
@@ -51,19 +53,23 @@ export default function AttachmentDrawer({
           </button>
         </div>
 
-        {/* Upload Button */}
+        {/* Add File */}
         <label
           className={`w-full cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed ${palette} rounded-xl py-5 hover:bg-gray-50`}
         >
           <UploadCloud className={palette} />
-          <span className="text-sm">Click to upload (PDF, DOCX, XLSX, CSV)</span>
+          <span className="text-sm">
+            Add files (PDF, DOCX, XLSX, CSV)
+          </span>
           <input
             type="file"
             className="hidden"
             accept=".pdf,.docx,.xlsx,.csv"
             onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                onUpload(e.target.files[0]);
+              const file = e.target.files?.[0];
+              if (file) {
+                onAdd(file);   // ✅ stage only
+                e.target.value = "";
               }
             }}
           />
@@ -77,8 +83,10 @@ export default function AttachmentDrawer({
                 key={att.id}
                 className="flex items-center justify-between border p-2 rounded-xl"
               >
-                <div>
-                  <p className="text-sm font-medium">{att.file.name}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {att.file.name}
+                  </p>
                   <p className="text-xs text-gray-400">
                     {(att.file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
@@ -95,10 +103,10 @@ export default function AttachmentDrawer({
           </div>
         )}
 
-        {/* Upload Note */}
+        {/* Guidance */}
         <p className="text-[11px] text-gray-400 mt-3">
-          Large files (20–50MB) may take a moment to upload.  
-          CSV files are used for Lyra’s outreach segmentation.  
+          Files will be sent when you press <strong>Send</strong> in the chat.  
+          CSV files support Lyra’s outreach workflows.
         </p>
 
         {/* Close */}

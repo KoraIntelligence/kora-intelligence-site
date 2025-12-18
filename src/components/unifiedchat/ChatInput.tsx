@@ -5,22 +5,14 @@ import { Paperclip, SendHorizontal, Loader2, X } from "lucide-react";
 
 type ChatInputProps = {
   onSend: (payload: { text?: string; file?: File }) => void;
-  onUpload?: (file: File) => void; // optional: for pre-processing if needed
   sending: boolean;
   disabled?: boolean;
 };
 
-export default function ChatInput({
-  onSend,
-  onUpload,
-  disabled,
-  sending,
-}: ChatInputProps) {
+export default function ChatInput({ onSend, disabled, sending }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  /* ---------------- File Handling ---------------- */
 
   const handleFilePick = () => {
     if (disabled || sending) return;
@@ -31,25 +23,16 @@ export default function ChatInput({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Store file locally instead of auto-sending
+    // ✅ Attach locally only — do NOT start upload yet
     setPendingFile(file);
-
-    // Optional hook if parent wants to pre-process (e.g. validate)
-    onUpload?.(file);
 
     e.target.value = "";
   };
 
-  const removePendingFile = () => {
-    setPendingFile(null);
-  };
-
-  /* ---------------- Send Handling ---------------- */
+  const removePendingFile = () => setPendingFile(null);
 
   const canSend =
-    !disabled &&
-    !sending &&
-    (value.trim().length > 0 || pendingFile !== null);
+    !disabled && !sending && (value.trim().length > 0 || pendingFile !== null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +66,6 @@ export default function ChatInput({
         transition-colors duration-150
       "
     >
-      {/* Hidden file input */}
       <input
         type="file"
         ref={fileRef}
@@ -92,7 +74,6 @@ export default function ChatInput({
         onChange={handleFileChange}
       />
 
-      {/* Upload Button */}
       <button
         type="button"
         onClick={handleFilePick}
@@ -109,7 +90,6 @@ export default function ChatInput({
         <Paperclip className="w-5 h-5" />
       </button>
 
-      {/* Input + Attachment Preview */}
       <div className="flex-1 flex flex-col gap-2">
         {pendingFile && (
           <div
@@ -155,9 +135,9 @@ export default function ChatInput({
             transition disabled:opacity-60
           "
         />
+
       </div>
 
-      {/* Send Button */}
       <button
         type="submit"
         disabled={!canSend}
