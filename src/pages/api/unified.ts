@@ -228,7 +228,9 @@ if (isGuest) {
     }));
 
     /* ---------- SAVE USER MESSAGE ---------- */
-    const trimmed = input?.trim() || "";
+    const trimmed =
+  input?.trim() ||
+  (extractedText ? "User uploaded a document for analysis." : "");
     if (trimmed || nextAction) {
       const userContent = trimmed || `[Triggered Action: ${nextAction}]`;
 
