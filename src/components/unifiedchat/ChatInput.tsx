@@ -20,7 +20,7 @@ export default function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (sending || disabled) return;
+    if (disabled) return;
 
     if (!value.trim() && !file) return;
 
@@ -129,8 +129,8 @@ export default function ChatInput({
 
         {/* Send button */}
         <button
-          type="submit"
-          disabled={disabled || sending}
+  type="submit"
+  disabled={disabled || (!value.trim() && !file)}
           className="
             p-3 rounded-xl
             bg-amber-600 hover:bg-amber-700
