@@ -26,8 +26,17 @@ type ChatSessionContextValue = {
   uploading: boolean;
   sessionIds: Record<Companion, string | null>;
   activeSessionId: string | null;
-  sendMessage: (payload: { text?: string; action?: string }) => Promise<void>;
+
+  // ✅ now supports file
+  sendMessage: (payload: {
+    text?: string;
+    action?: string;
+    file?: File;
+  }) => Promise<void>;
+
+  // kept for backwards compatibility (can be retired later)
   uploadFile: (file: File) => Promise<void>;
+
   clearMessagesForCompanion: (companion: Companion) => void;
 };
 
@@ -43,6 +52,33 @@ interface ProviderProps {
   children: React.ReactNode;
   tone: string; // current tone from UI
   isGuest: boolean; // guest flag from localStorage
+}
+
+function fallbackMimeType(file: File) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pdf")) return "application/pdf";
+  if (name.endsWith(".docx"))
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (name.endsWith(".xlsx"))
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (name.endsWith(".csv")) return "text/csv";
+  return "application/octet-stream";
+}
+
+async function fileToContentBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(
+      null,
+      Array.from(bytes.subarray(i, i + chunkSize))
+    );
+  }
+
+  return btoa(binary);
 }
 
 export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) {
@@ -98,97 +134,97 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
   }, []);
 
   /* -------------------------------------------------- */
-/* LAZY SESSION INITIALISATION FOR ACTIVE COMPANION   */
-/* -------------------------------------------------- */
-useEffect(() => {
-  if (!userId) return;
-  if (sessionIds[companion]) return; // already have one
+  /* LAZY SESSION INITIALISATION FOR ACTIVE COMPANION   */
+  /* -------------------------------------------------- */
+  useEffect(() => {
+    if (!userId) return;
+    if (sessionIds[companion]) return;
 
-  (async () => {
-    try {
-      const res = await fetch("/api/unified", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(isGuest ? { "x-guest": "true" } : {}),
-        },
-        body: JSON.stringify({
-          companion,
-          mode: activeMode,
-          tone,
-          userId,
-          sessionId: null,
-          input: null,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.sessionId) {
-        setSessionIds((prev) => {
-          if (prev[companion] === data.sessionId) return prev;
-
-          const next = { ...prev, [companion]: data.sessionId as string };
-          localStorage.setItem(
-            `${SESSION_KEY_PREFIX}_${companion}`,
-            data.sessionId as string
-          );
-          return next;
+    (async () => {
+      try {
+        const res = await fetch("/api/unified", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(isGuest ? { "x-guest": "true" } : {}),
+          },
+          body: JSON.stringify({
+            companion,
+            mode: activeMode,
+            tone,
+            userId,
+            sessionId: null,
+            input: null,
+          }),
         });
 
-        console.log("🆕 Created session for companion:", companion, data.sessionId);
-      } else {
-        console.warn("⚠️ Failed to create session:", data.error);
+        const data = await res.json();
+
+        if (res.ok && data.sessionId) {
+          setSessionIds((prev) => {
+            if (prev[companion] === data.sessionId) return prev;
+
+            const next = { ...prev, [companion]: data.sessionId as string };
+            localStorage.setItem(
+              `${SESSION_KEY_PREFIX}_${companion}`,
+              data.sessionId as string
+            );
+            return next;
+          });
+
+          console.log("🆕 Created session for companion:", companion, data.sessionId);
+        } else {
+          console.warn("⚠️ Failed to create session:", data.error);
+        }
+      } catch (e) {
+        console.error("⚠️ Failed to initialize session:", e);
       }
-    } catch (e) {
-      console.error("⚠️ Failed to initialize session:", e);
-    }
-  })(); // ✅ proper closing of the async IIFE
-}, [userId, companion, sessionIds, activeMode, tone, isGuest]);
+    })();
+  }, [userId, companion, sessionIds, activeMode, tone, isGuest]);
 
   /* -------------------------------------------------- */
-/* LOAD HISTORY WHEN COMPANION / SESSION CHANGES      */
-/* -------------------------------------------------- */
-useEffect(() => {
-  const sid = activeSessionId;
-  console.log("✅ Switching to companion:", companion, "sessionId:", sid);
+  /* LOAD HISTORY WHEN COMPANION / SESSION CHANGES      */
+  /* -------------------------------------------------- */
+  useEffect(() => {
+    const sid = activeSessionId;
+    console.log("✅ Switching to companion:", companion, "sessionId:", sid);
 
-  if (!sid) {
-    console.warn("⚠️ No sessionId for companion — won’t load history");
-    setMessages([]);
-    return;
-  }
-
-  (async () => {
-    try {
-      const res = await fetch(`/api/unified?sessionId=${sid}`);
-      console.log("📦 History fetch status:", res.status);
-      const data = await res.json();
-      console.log("📥 Loaded messages:", data.messages?.length);
-
-      if (Array.isArray(data.messages)) {
-        setMessages(
-          data.messages.map((m: any) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            ts: m.ts,
-            meta: {
-              ...(m.meta || {}),
-              companion, // make sure we always know who spoke
-              workflow: m.meta?.workflow || null,
-              nextActions: m.meta?.nextActions || [],
-              mode: m.meta?.mode || activeMode,
-            },
-            attachments: m.attachments || [],
-          }))
-        );
-      }
-    } catch (e) {
-      console.error("❌ Error loading history after companion switch", e);
+    if (!sid) {
+      console.warn("⚠️ No sessionId for companion — won’t load history");
+      setMessages([]);
+      return;
     }
-  })();
-}, [companion, activeSessionId, activeMode]);
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/unified?sessionId=${sid}`);
+        console.log("📦 History fetch status:", res.status);
+        const data = await res.json();
+        console.log("📥 Loaded messages:", data.messages?.length);
+
+        if (Array.isArray(data.messages)) {
+          setMessages(
+            data.messages.map((m: any) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              ts: m.ts,
+              meta: {
+                ...(m.meta || {}),
+                companion,
+                workflow: m.meta?.workflow || null,
+                nextActions: m.meta?.nextActions || [],
+                mode: m.meta?.mode || activeMode,
+              },
+              attachments: m.attachments || [],
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("❌ Error loading history after companion switch", e);
+      }
+    })();
+  }, [companion, activeSessionId, activeMode]);
 
   /* -------------------------------------------------- */
   /* HELPER: CALL UNIFIED API                           */
@@ -204,7 +240,6 @@ useEffect(() => {
         ...(isGuest ? { "x-guest": "true" } : {}),
       };
 
-      // IMPORTANT: mirror original MVP → pass messages as-is
       const payload = {
         companion,
         mode: activeMode,
@@ -224,21 +259,18 @@ useEffect(() => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unified API request failed");
 
-      // Persist new sessionId if backend returns one
       if (data.sessionId && typeof data.sessionId === "string") {
-  setSessionIds((prev) => {
-    // if unchanged, do nothing → prevents unnecessary history reload
-    if (prev[companion] === data.sessionId) return prev;
+        setSessionIds((prev) => {
+          if (prev[companion] === data.sessionId) return prev;
 
-    const next = { ...prev, [companion]: data.sessionId as string };
-    // keep localStorage in sync here
-    localStorage.setItem(
-      `${SESSION_KEY_PREFIX}_${companion}`,
-      data.sessionId as string
-    );
-    return next;
-  });
-}
+          const next = { ...prev, [companion]: data.sessionId as string };
+          localStorage.setItem(
+            `${SESSION_KEY_PREFIX}_${companion}`,
+            data.sessionId as string
+          );
+          return next;
+        });
+      }
 
       return data;
     },
@@ -246,25 +278,31 @@ useEffect(() => {
   );
 
   /* -------------------------------------------------- */
-  /* SEND MESSAGE                                       */
+  /* SEND MESSAGE (NOW SUPPORTS FILE ATTACHMENT)         */
   /* -------------------------------------------------- */
   const sendMessage = useCallback(
-    async (payload: { text?: string; action?: string }) => {
-      const { text, action } = payload;
+    async (payload: { text?: string; action?: string; file?: File }) => {
+      const { text, action, file } = payload;
       const trimmed = text?.trim();
 
-      if (!trimmed && !action) return;
+      // ✅ allow: text OR action OR file-only
+      if (!trimmed && !action && !file) return;
 
       setSending(true);
+
+      const timestamp = Date.now();
+      const contentForUserBubble =
+        action ? `[Triggered Action: ${action}]` : trimmed || (file ? "[Uploaded file]" : "");
 
       const userMsg: Message = {
         id: uid(),
         role: "user",
-        content: action ? `[Triggered Action: ${action}]` : trimmed!,
-        ts: Date.now(),
+        content: contentForUserBubble,
+        ts: timestamp,
+        // optional: mark locally that a file was attached (for UI later)
+        meta: file ? { hasFile: true, filename: file.name } : undefined,
       };
 
-      // User + temporary system placeholder
       setMessages((m) => [
         ...m,
         userMsg,
@@ -277,9 +315,21 @@ useEffect(() => {
       ]);
 
       try {
+        let filePayload: any = null;
+
+        if (file) {
+          const contentBase64 = await fileToContentBase64(file);
+          filePayload = {
+            name: file.name,
+            type: file.type || fallbackMimeType(file),
+            contentBase64,
+          };
+        }
+
         const data = await callUnified({
-          input: trimmed || null,
+          input: trimmed || (file ? "[Uploaded file]" : null),
           nextAction: action || null,
+          ...(filePayload ? { filePayload } : {}),
         });
 
         const assistantMeta = data.meta || {};
@@ -289,12 +339,10 @@ useEffect(() => {
           role: "assistant",
           content: data.reply,
           attachments: data.attachments || [],
-          // CRITICAL: keep backend meta intact
           meta: assistantMeta,
           ts: Date.now(),
         };
 
-        // Remove only the temporary "…" system message
         setMessages((m) => {
           const cleaned = m.filter(
             (msg) => !(msg.role === "system" && msg.content === "…")
@@ -321,7 +369,7 @@ useEffect(() => {
   );
 
   /* -------------------------------------------------- */
-  /* FILE UPLOAD                                        */
+  /* FILE UPLOAD (LEGACY / OPTIONAL)                    */
   /* -------------------------------------------------- */
   const uploadFile = useCallback(
     async (file: File) => {
@@ -340,16 +388,13 @@ useEffect(() => {
       ]);
 
       try {
-        const arrayBuf = await file.arrayBuffer();
-        const base64 = btoa(
-          String.fromCharCode(...Array.from(new Uint8Array(arrayBuf)))
-        );
+        const contentBase64 = await fileToContentBase64(file);
 
         const data = await callUnified({
           filePayload: {
             name: file.name,
-            type: file.type,
-            contentBase64: base64,
+            type: file.type || fallbackMimeType(file),
+            contentBase64,
           },
           input: null,
           nextAction: null,
@@ -386,9 +431,6 @@ useEffect(() => {
     [callUnified, uploading]
   );
 
-  /* -------------------------------------------------- */
-  /* CLEAR MESSAGES FOR A COMPANION (optional utility)  */
-  /* -------------------------------------------------- */
   const clearMessagesForCompanion = (c: Companion) => {
     if (c === companion) {
       setMessages([]);
