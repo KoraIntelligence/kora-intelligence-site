@@ -122,7 +122,6 @@ export default function ChatWindow({
       file,
     });
   }}
-  onUpload={onUpload}
   sending={sending}
   disabled={sending}
 />
