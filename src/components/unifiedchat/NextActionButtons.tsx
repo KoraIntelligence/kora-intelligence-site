@@ -25,6 +25,12 @@ type Props = {
   sending?: boolean;
 };
 
+const UPLOAD_RELATED_ACTIONS = new Set([
+  "request_csv",
+  "request_contract_upload",
+  "request_pricing_template",
+]);
+
 const LABEL_MAP: Record<string, string> = {
   refine_idea: "Refine Idea",
   explore_options: "Explore Options",
@@ -81,7 +87,9 @@ export default function NextActionButtons({
   const companionName = meta?.companion?.toLowerCase?.() || "salar";
   const isLyra = companionName === "lyra";
 
-  const uniqueActions = Array.from(new Set(meta.nextActions));
+  const uniqueActions = Array.from(
+  new Set(meta.nextActions.filter(action => !UPLOAD_RELATED_ACTIONS.has(action)))
+);
 
   return (
     <div className="flex flex-wrap gap-2 mt-2">

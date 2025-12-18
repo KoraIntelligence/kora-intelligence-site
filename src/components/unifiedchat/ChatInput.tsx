@@ -1,14 +1,11 @@
 // src/components/unifiedchat/ChatInput.tsx
 
 import React, { useState, useRef } from "react";
-import { Paperclip, SendHorizontal, Loader2 } from "lucide-react";
+import { Paperclip, SendHorizontal, Loader2, X } from "lucide-react";
 
 type ChatInputProps = {
-  value: string;
-  onChange: (value: string) => void;
-
-  onSend: (payload: { text?: string; action?: string }) => void;
-  onUpload: (file: File) => void;
+  onSend: (payload: { text?: string; file?: File }) => void;
+  onUpload?: (file: File) => void; // optional: for pre-processing if needed
   sending: boolean;
   disabled?: boolean;
 };
@@ -20,24 +17,10 @@ export default function ChatInput({
   sending,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!value.trim() || disabled || sending) return;
-    onSend({ text: value.trim() });
-    setValue("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (value.trim()) {
-        onSend({ text: value.trim() });
-        setValue("");
-      }
-    }
-  };
+  /* ---------------- File Handling ---------------- */
 
   const handleFilePick = () => {
     if (disabled || sending) return;
@@ -47,8 +30,47 @@ export default function ChatInput({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onUpload(file);
+
+    // Store file locally instead of auto-sending
+    setPendingFile(file);
+
+    // Optional hook if parent wants to pre-process (e.g. validate)
+    onUpload?.(file);
+
     e.target.value = "";
+  };
+
+  const removePendingFile = () => {
+    setPendingFile(null);
+  };
+
+  /* ---------------- Send Handling ---------------- */
+
+  const canSend =
+    !disabled &&
+    !sending &&
+    (value.trim().length > 0 || pendingFile !== null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSend) return;
+
+    onSend({
+      text: value.trim() || undefined,
+      file: pendingFile || undefined,
+    });
+
+    setValue("");
+    setPendingFile(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (canSend) {
+        handleSubmit(e as any);
+      }
+    }
   };
 
   return (
@@ -87,31 +109,58 @@ export default function ChatInput({
         <Paperclip className="w-5 h-5" />
       </button>
 
-      {/* Textarea Input */}
-      <textarea
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        rows={1}
-        placeholder="Ask your companion…"
-        disabled={disabled || sending}
-        className="
-          flex-1 p-3 rounded-xl border resize-none
-          bg-white dark:bg-[#1a1a1a]
-          border-gray-300 dark:border-[#333333]
-          text-gray-900 dark:text-gray-100
-          placeholder-gray-400 dark:placeholder-gray-500
-          min-h-[48px] max-h-[140px]
-          focus:outline-none focus:ring-0
-          text-sm leading-relaxed
-          transition disabled:opacity-60
-        "
-      />
+      {/* Input + Attachment Preview */}
+      <div className="flex-1 flex flex-col gap-2">
+        {pendingFile && (
+          <div
+            className="
+              flex items-center justify-between gap-2
+              px-3 py-2 rounded-lg border text-xs
+              bg-gray-50 dark:bg-[#1b1b1b]
+              border-gray-300 dark:border-[#333333]
+              text-gray-700 dark:text-gray-300
+            "
+          >
+            <span className="truncate">{pendingFile.name}</span>
+            <button
+              type="button"
+              onClick={removePendingFile}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        <textarea
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          placeholder={
+            pendingFile
+              ? "Add instructions, or press send to continue…"
+              : "Ask your companion…"
+          }
+          disabled={disabled || sending}
+          className="
+            w-full p-3 rounded-xl border resize-none
+            bg-white dark:bg-[#1a1a1a]
+            border-gray-300 dark:border-[#333333]
+            text-gray-900 dark:text-gray-100
+            placeholder-gray-400 dark:placeholder-gray-500
+            min-h-[48px] max-h-[140px]
+            focus:outline-none focus:ring-0
+            text-sm leading-relaxed
+            transition disabled:opacity-60
+          "
+        />
+      </div>
 
       {/* Send Button */}
       <button
         type="submit"
-        disabled={disabled || sending}
+        disabled={!canSend}
         className="
           p-3 rounded-xl
           bg-amber-600 hover:bg-amber-700

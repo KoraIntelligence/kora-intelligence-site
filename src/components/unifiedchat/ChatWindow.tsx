@@ -9,7 +9,7 @@ import type { Message, Attachment } from "@/types/chat";
 
 type ChatWindowProps = {
   messages: Message[];
-  onSend: (payload: { text?: string; action?: string }) => void;
+  onSend: (payload: { text?: string; action?: string; file?: File }) => void;
   onUpload: (file: File) => void;
   sending: boolean;
   companion: "salar" | "lyra";
@@ -116,13 +116,16 @@ export default function ChatWindow({
         }}
       >
         <ChatInput
-          value={input}
-          onChange={setInput}
-          onSend={({ text, action }) => onSend({ text, action })}
-          onUpload={onUpload}
-          sending={sending}
-          disabled={sending}
-        />
+  onSend={({ text, file }) => {
+    onSend({
+      text,
+      file,
+    });
+  }}
+  onUpload={onUpload}
+  sending={sending}
+  disabled={sending}
+/>
       </div>
     </div>
   );
