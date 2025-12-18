@@ -24,10 +24,12 @@ export default function ChatInput({
 
     if (!value.trim() && !file) return;
 
-    onSend({
-      text: value.trim() || undefined,
-      file: file || undefined,
-    });
+    
+    const frozenFile = file;
+onSend({
+  text: value.trim() || undefined,
+  file: frozenFile ?? undefined,
+});
 
     setValue("");
     setFile(null);
