@@ -28,6 +28,21 @@ export default function ChatWindow({
   const [previewAttachment, setPreviewAttachment] =
     useState<Attachment | null>(null);
 
+  const fileToPayload = (file: File) =>
+  new Promise<any>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: reader.result, // base64 / data URL
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   /* Auto-scroll on update */
   useEffect(() => {
     const el = listRef.current;
@@ -116,14 +131,20 @@ export default function ChatWindow({
         }}
       >
         <ChatInput
-  onSend={({ text, file }) => {
-    onSend({
-      text,
-      file,
-    });
-  }}
   sending={sending}
   disabled={sending}
+  onSend={async ({ text, file }) => {
+    let filePayload = null;
+
+    if (file) {
+      filePayload = await fileToPayload(file);
+    }
+
+    onSend({
+      text,
+      ...(filePayload ? { filePayload } : {}),
+    });
+  }}
 />
       </div>
     </div>
