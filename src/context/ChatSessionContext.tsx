@@ -277,96 +277,88 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
     [companion, activeMode, tone, userId, activeSessionId, isGuest, messages]
   );
 
-  /* -------------------------------------------------- */
-  /* SEND MESSAGE (NOW SUPPORTS FILE ATTACHMENT)         */
-  /* -------------------------------------------------- */
-  const sendMessage = useCallback(
-    async (payload: { text?: string; action?: string; file?: File }) => {
-      const { text, action, file } = payload;
-      const trimmed = text?.trim();
+/* -------------------------------------------------- */
+/* SEND MESSAGE (SUPPORTS FILE ATTACHMENT)            */
+/* -------------------------------------------------- */
+const sendMessage = useCallback(
+  async (payload: { text?: string; action?: string; file?: File }) => {
+    const { text, action, file } = payload;
+    const trimmed = text?.trim();
 
-      // ✅ allow: text OR action OR file-only
-      if (!trimmed && !action && !file) return;
+    // allow: text OR action OR file-only
+    if (!trimmed && !action && !file) return;
 
-      setSending(true);
+    setSending(true);
 
-      const timestamp = Date.now();
-      const contentForUserBubble =
-        action ? `[Triggered Action: ${action}]` : trimmed || (file ? "[Uploaded file]" : "");
+    const userContent =
+      action
+        ? `[Triggered Action: ${action}]`
+        : trimmed || (file ? "[Uploaded file]" : "");
 
-      const userMsg: Message = {
-        id: uid(),
-        role: "user",
-        content: contentForUserBubble,
-        ts: timestamp,
-        // optional: mark locally that a file was attached (for UI later)
-        meta: file ? { hasFile: true, filename: file.name } : undefined,
-      };
+    const userMsg: Message = {
+      id: uid(),
+      role: "user",
+      content: userContent,
+      ts: Date.now(),
+      meta: file ? { hasFile: true, filename: file.name } : undefined,
+    };
 
-      setMessages((m) => [
-        ...m,
-        userMsg,
-        {
-          id: uid(),
-          role: "system",
-          content: "…",
-          ts: Date.now(),
-        },
-      ]);
+    setMessages((m) => [
+      ...m,
+      userMsg,
+      { id: uid(), role: "system", content: "…", ts: Date.now() },
+    ]);
 
-      try {
-        let filePayload: any = null;
+    try {
+      let filePayload: any = null;
 
-        if (file) {
-          const contentBase64 = await fileToContentBase64(file);
-          filePayload = {
-            name: file.name,
-            type: file.type || fallbackMimeType(file),
-            contentBase64,
-          };
-        }
-
-        const data = await callUnified({
-          input: trimmed || (file ? "[Uploaded file]" : null),
-          nextAction: action || null,
-          ...(filePayload ? { filePayload } : {}),
-        });
-
-        const assistantMeta = data.meta || {};
-
-        const assistantMsg: Message = {
-          id: uid(),
-          role: "assistant",
-          content: data.reply,
-          attachments: data.attachments || [],
-          meta: assistantMeta,
-          ts: Date.now(),
+      if (file) {
+        filePayload = {
+          name: file.name,
+          type: file.type || fallbackMimeType(file),
+          contentBase64: await fileToContentBase64(file),
         };
+      }
 
-        setMessages((m) => {
-          const cleaned = m.filter(
-            (msg) => !(msg.role === "system" && msg.content === "…")
-          );
-          return [...cleaned, assistantMsg];
-        });
-      } catch (err) {
-        console.error("❌ Chat error:", err);
+      const data = await callUnified({
+        input: trimmed || null,
+        nextAction: action || null,
+        ...(filePayload ? { filePayload } : {}),
+      });
 
-        setMessages((m) => [
-          ...m.filter((msg) => msg.role !== "system"),
+      setMessages((m) => {
+        const cleaned = m.filter(
+          (msg) => !(msg.role === "system" && msg.content === "…")
+        );
+        return [
+          ...cleaned,
           {
             id: uid(),
             role: "assistant",
-            content: "⚠️ Companion connection lost. Try again.",
+            content: data.reply,
+            attachments: data.attachments || [],
+            meta: data.meta || {},
             ts: Date.now(),
           },
-        ]);
-      }
+        ];
+      });
+    } catch (err) {
+      console.error("❌ Chat error:", err);
+      setMessages((m) => [
+        ...m.filter((msg) => msg.role !== "system"),
+        {
+          id: uid(),
+          role: "assistant",
+          content: "⚠️ Companion connection lost. Try again.",
+          ts: Date.now(),
+        },
+      ]);
+    }
 
-      setSending(false);
-    },
-    [callUnified]
-  );
+    setSending(false);
+  },
+  [callUnified]
+);
 
   /* -------------------------------------------------- */
   /* FILE UPLOAD (LEGACY / OPTIONAL)                    */
