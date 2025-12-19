@@ -165,6 +165,29 @@ export default function MessageBubble({
             </div>
           )}
 
+        {/* User-uploaded file (pre-processing visual) */}
+{isUser &&
+  !isSystem &&
+  !(message as any).attachments?.length &&
+  rawMeta?.hasFile &&
+  rawMeta?.filename && (
+    <div className="mt-2">
+      <div
+        className="
+          inline-flex items-center gap-2 px-3 py-2
+          rounded-lg border text-xs
+          bg-white border-gray-300 text-gray-700
+          dark:bg-[#1a1a1a] dark:border-[#333333] dark:text-gray-200
+        "
+      >
+        <span className="text-[14px]">📎</span>
+        <span className="truncate max-w-[220px]">
+          {rawMeta.filename}
+        </span>
+      </div>
+    </div>
+  )}  
+
         {/* Next Actions */}
         {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
           <div className="mt-2">
