@@ -10,7 +10,7 @@ import type { Message, Attachment } from "@/types/chat";
 type ChatWindowProps = {
   messages: Message[];
   onSend: (payload: { text?: string; action?: string; file?: File }) => void;
-  onUpload: (file: File) => void;
+  onUpload: (file: File) => void; // kept for backward compatibility
   sending: boolean;
   companion: "salar" | "lyra";
   topBarHeight?: number;
@@ -19,35 +19,37 @@ type ChatWindowProps = {
 export default function ChatWindow({
   messages,
   onSend,
-  onUpload,
   sending,
   companion,
 }: ChatWindowProps) {
   const listRef = useRef<HTMLDivElement>(null);
-  const [input, setInput] = useState("");
   const [previewAttachment, setPreviewAttachment] =
     useState<Attachment | null>(null);
 
-  /* Auto-scroll on update */
+  /* -------------------------------------------------- */
+  /* AUTO-SCROLL ON UPDATE                              */
+  /* -------------------------------------------------- */
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages, sending]);
 
-  const handleNextAction = (action: string) => onSend({ action });
+  const handleNextAction = (action: string) => {
+    onSend({ action });
+  };
 
   return (
     <div
       className="
-        relative w-full h-full flex flex-col 
+        relative w-full h-full flex flex-col
         bg-white dark:bg-[#0d0d0d]
         text-gray-900 dark:text-gray-100
         overflow-hidden
       "
     >
       {/* ------------------------------------------------ */}
-      {/* MESSAGE LIST */}
+      {/* MESSAGE LIST                                    */}
       {/* ------------------------------------------------ */}
       <div
         ref={listRef}
@@ -57,9 +59,7 @@ export default function ChatWindow({
           bg-white dark:bg-[#0d0d0d]
           overscroll-contain
         "
-        style={{
-          WebkitOverflowScrolling: "touch",
-        }}
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
         {messages.length === 0 && (
           <div className="text-center text-gray-400 dark:text-gray-500 text-sm mt-14">
@@ -85,13 +85,15 @@ export default function ChatWindow({
             <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
             <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
             <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-            <span>{companion === "salar" ? "Salar" : "Lyra"} is thinking…</span>
+            <span>
+              {companion === "salar" ? "Salar" : "Lyra"} is thinking…
+            </span>
           </div>
         )}
       </div>
 
       {/* ------------------------------------------------ */}
-      {/* ATTACHMENT PREVIEW */}
+      {/* ATTACHMENT PREVIEW                              */}
       {/* ------------------------------------------------ */}
       {previewAttachment && (
         <AttachmentPreviewModal
@@ -101,7 +103,7 @@ export default function ChatWindow({
       )}
 
       {/* ------------------------------------------------ */}
-      {/* INPUT BAR */}
+      {/* INPUT BAR                                       */}
       {/* ------------------------------------------------ */}
       <div
         className="
@@ -111,17 +113,13 @@ export default function ChatWindow({
           p-3
           relative
         "
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ChatInput
-  sending={sending}
-  disabled={sending}
-  onSend={({ text, file }) => {
-    onSend({ text, file });
-  }}
-/>
+          sending={sending}
+          disabled={sending}
+          onSend={onSend}
+        />
       </div>
     </div>
   );

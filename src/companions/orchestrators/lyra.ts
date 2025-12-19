@@ -301,3 +301,118 @@ Tone: ${tone}
     },
   };
 }
+
+export type LyraStreamingPlanInput = LyraOrchestratorInput;
+
+export function buildLyraStreamingPlan(orchestratorInput: LyraStreamingPlanInput) {
+  const { mode, input, extractedText, tone, nextAction, conversationHistory } =
+    orchestratorInput;
+
+  const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+
+  const pack = PACKS[mode];
+  if (!pack) throw new Error(`Unknown Lyra mode: ${mode}`);
+
+  const identity: any = loadIdentity("lyra", mode);
+
+  const toneText =
+    (typeof identity.tone === "string" ? identity.tone : identity.tone?.base) ||
+    "warm, clear, brand-conscious";
+
+  const promptBlock = resolvePrompt(pack, mode, nextAction);
+
+  const historyBlock =
+    safeHistory.length > 0
+      ? `
+Previous conversation:
+${safeHistory
+  .slice(-8)
+  .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
+  .join("\n\n")}
+`
+      : "";
+
+  function formatConversation(hist: any[]) {
+    return hist.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
+  }
+
+  const memoryBlock = safeHistory.length
+    ? `\nHere is the conversation so far:\n${formatConversation(safeHistory)}\n`
+    : "";
+
+  const fullPrompt = `
+${promptBlock}
+
+You are LYRA in mode **${mode}**
+Persona: ${identity.persona || "Creative Partner"}
+Base Tone: ${toneText}
+
+${memoryBlock}
+${historyBlock}
+
+User Input:
+"""
+${input}
+"""
+
+Uploaded Text:
+"""
+${extractedText || "N/A"}
+"""
+
+Tone: ${tone}
+`;
+
+  const attachmentTypes =
+    nextAction && pack.attachments?.final ? pack.attachments.final : [];
+
+  const workflow = getWorkflow("lyra", mode);
+  let workflowMeta: any = undefined;
+
+  if (workflow) {
+    const stageId =
+      (nextAction && workflow.nextActionToStage[nextAction]) ||
+      workflow.initialStageId;
+
+    const stage = workflow.stages[stageId];
+    if (stage) {
+      workflowMeta = {
+        stageId: stage.id,
+        stageLabel: stage.label,
+        stageDescription: stage.description,
+        nextStageIds: stage.nextStageIds,
+        isTerminal: !!stage.isTerminal,
+      };
+    }
+  }
+
+  const flatNextActions = Object.values(pack.nextActions || {}).flat();
+
+  return {
+    model: "gpt-4.1",
+    fullPrompt,
+    buildAttachments: async (finalText: string) => {
+      const attachments: any[] = [];
+      for (const type of attachmentTypes) {
+        if (type === "pdf") attachments.push(await createPDF(finalText));
+        if (type === "docx") attachments.push(await createDocx(finalText));
+        if (type === "xlsx") attachments.push(await createXlsx(finalText));
+      }
+      return attachments;
+    },
+    buildMeta: (_finalText: string) => ({
+      companion: "lyra",
+      mode,
+      tone,
+      nextActions: flatNextActions,
+      identity: {
+        persona: identity.persona || "Creative Partner",
+        title: "Brand & Marketing Intelligence Companion",
+        mode,
+        toneBase: toneText,
+      },
+      memory: { shortTerm: safeHistory.slice(-6) },
+      workflow: workflowMeta,
+    }),
+  };
+}

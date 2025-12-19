@@ -360,3 +360,150 @@ Requested Tone: ${tone}
     },
   };
 }
+// ---- Streaming helper types ----
+export type SalarStreamingPlanInput = SalarOrchestratorInput;
+
+export function buildSalarStreamingPlan(input: SalarStreamingPlanInput) {
+  const {
+    mode,
+    input: userInput,
+    extractedText,
+    tone,
+    nextAction,
+    conversationHistory,
+  } = input;
+
+  const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  const RECENT_TURNS = 8;
+  const recentHistory = safeHistory.slice(-RECENT_TURNS);
+
+  const pack = PACKS[mode];
+  if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
+
+  const identity: CompanionIdentity = loadIdentity("salar", mode);
+
+  const toneText =
+    typeof identity.tone === "string" ? identity.tone : identity.tone?.base ?? "";
+
+  const behavioursList: string[] =
+    (identity.behaviour as string[]) ||
+    (identity.behaviours as string[]) ||
+    [];
+
+  const identityPrompt = `
+========================
+KORA IDENTITY LAYER 3.0
+Companion: Salar — Commercial Intelligence Companion
+Mode: ${mode}
+Persona: ${identity.persona ?? "Commercial Partner"}
+Tone: ${toneText || "Warm professionalism, calm confidence"}
+========================
+
+Key Behaviours:
+${behavioursList.length ? behavioursList.map((b) => `• ${b}`).join("\n") : ""}
+
+Shared Codex:
+${identity.codex ?? ""}
+--------------------------------------------------
+`;
+
+  const prompt = resolvePrompt(pack, nextAction || undefined);
+
+  const formatConversation = (arr: any[]) =>
+    arr.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
+
+  const memoryBlock =
+    recentHistory.length > 0
+      ? `\nHere is the conversation so far:\n${formatConversation(recentHistory)}\n`
+      : "";
+
+  const fullPrompt = `
+${identityPrompt}
+${memoryBlock}
+
+${prompt}
+
+User Input:
+"""
+${userInput}
+"""
+
+Uploaded Text:
+"""
+${extractedText || "N/A"}
+"""
+
+Requested Tone: ${tone}
+`;
+
+  // Attachments plan mirrors runSalar logic
+  const shouldAttach =
+    mode !== "commercial_chat" &&
+    !!nextAction &&
+    nextAction.startsWith("finalise") &&
+    !!pack.attachments;
+
+  const attachmentTypes = shouldAttach ? (pack.attachments?.final || []) : [];
+
+  const workflow = getWorkflow("salar", mode);
+  let workflowMeta: any = undefined;
+
+  if (workflow) {
+    const stageIdFromAction =
+      (nextAction && workflow.nextActionToStage[nextAction]) ||
+      workflow.initialStageId;
+
+    const stage = workflow.stages[stageIdFromAction];
+    if (stage) {
+      workflowMeta = {
+        stageId: stage.id,
+        stageLabel: stage.label,
+        stageDescription: stage.description,
+        nextStageIds: stage.nextStageIds,
+        isTerminal: !!stage.isTerminal,
+      };
+    }
+  }
+
+  const identityMeta = {
+    persona: identity.persona ?? "Commercial Partner",
+    title: "Commercial Intelligence Companion",
+    mode,
+    toneBase: toneText,
+  };
+
+  return {
+    model: "gpt-4.1",
+    fullPrompt,
+    buildAttachments: async (finalText: string) => {
+      const attachments: any[] = [];
+
+      for (const type of attachmentTypes) {
+        if (type === "docx") attachments.push(await createDocx(finalText));
+        if (type === "pdf") attachments.push(await createPDF(finalText));
+        if (type === "xlsx") {
+          try {
+            const structured = await extractPricingStructure(finalText);
+            const safe = normaliseForXlsx(structured);
+            attachments.push(await createXlsx(safe));
+          } catch (err) {
+            console.error("❌ buildSalarStreamingPlan XLSX error:", err);
+          }
+        }
+      }
+
+      return attachments;
+    },
+    buildMeta: (_finalText: string) => ({
+      companion: "salar",
+      mode,
+      tone,
+      nextActions: Array.isArray(pack.nextActions)
+        ? pack.nextActions
+        : Object.values(pack.nextActions || {}).flat(),
+      identity: identityMeta,
+      memory: { shortTerm: safeHistory.slice(-6) },
+      workflow: workflowMeta,
+    }),
+  };
+}

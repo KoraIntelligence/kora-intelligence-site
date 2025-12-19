@@ -1,5 +1,5 @@
 // src/components/unifiedchat/Sidebar.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { SalarMode } from "@/companions/orchestrators/salar";
 import { LyraMode } from "@/companions/orchestrators/lyra";
 import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
@@ -48,6 +48,19 @@ export default function Sidebar({
   const isLyra = companion === "lyra";
   const modeLabels = isLyra ? LYRA_MODE_LABELS : SALAR_MODE_LABELS;
 
+  const [streamingEnabled, setStreamingEnabled] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("kora_streaming");
+    setStreamingEnabled(stored === "true");
+  }, []);
+
+  const toggleStreaming = () => {
+    const next = !streamingEnabled;
+    setStreamingEnabled(next);
+    localStorage.setItem("kora_streaming", String(next));
+  };
+
   const accent = isLyra
     ? {
         bg: "bg-teal-600 dark:bg-teal-500",
@@ -64,18 +77,14 @@ export default function Sidebar({
 
   const activeBtn = `
     ${accent.bg} text-white border ${accent.border} shadow-sm
-    dark:text-white transition-colors
   `;
 
   const inactiveBtn = `
     bg-white text-gray-700 border border-gray-200 hover:bg-gray-100
     dark:bg-[#1b1b1b] dark:text-gray-200 dark:border-[#333333]
-    dark:hover:bg-[#262626] transition-colors
+    dark:hover:bg-[#262626]
   `;
 
-  // --------------------------
-  // LOGOUT HANDLER
-  // --------------------------
   const handleLogout = async () => {
     const isGuest = localStorage.getItem("guest_mode") === "true";
 
@@ -87,56 +96,36 @@ export default function Sidebar({
 
     localStorage.clear();
     sessionStorage.clear();
-
-    window.location.href = "/auth"; // full reload ensures clean session
+    window.location.href = "/auth";
   };
 
   return (
-    <div
-      className="
-        flex flex-col gap-8 p-4 text-sm select-none
-        bg-gray-50 dark:bg-[#111111]
-        text-gray-900 dark:text-gray-200
-        h-full overflow-y-auto
-        transition-colors
-      "
-    >
+    <div className="flex flex-col gap-8 p-4 text-sm bg-gray-50 dark:bg-[#111111] h-full">
       {/* Companion Switch */}
-      <div className="flex gap-2 w-full">
-        {(["salar", "lyra"] as const).map((c) => {
-          const isActive = c === companion;
-          return (
-            <button
-              key={c}
-              className={`
-                flex-1 py-2 rounded-xl text-sm
-                ${isActive ? activeBtn : inactiveBtn}
-              `}
-              onClick={() => setCompanion(c)}
-            >
-              {c === "salar" ? "Salar" : "Lyra"}
-            </button>
-          );
-        })}
+      <div className="flex gap-2">
+        {(["salar", "lyra"] as const).map((c) => (
+          <button
+            key={c}
+            className={`flex-1 py-2 rounded-xl ${c === companion ? activeBtn : inactiveBtn}`}
+            onClick={() => setCompanion(c)}
+          >
+            {c === "salar" ? "Salar" : "Lyra"}
+          </button>
+        ))}
       </div>
 
       {/* Mode Selector */}
       <div>
-        <h2 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-3">
-          Modes
-        </h2>
-
+        <h2 className="text-xs font-semibold mb-3">Modes</h2>
         <div className="flex flex-col gap-2">
           {Object.entries(modeLabels).map(([key, label]) => {
             const isActive = isLyra ? key === lyraMode : key === salarMode;
-
             return (
               <button
                 key={key}
-                className={`
-                  w-full text-left px-3 py-2 rounded-xl text-xs
-                  ${isActive ? activeBtn : inactiveBtn}
-                `}
+                className={`px-3 py-2 rounded-xl text-xs text-left ${
+                  isActive ? activeBtn : inactiveBtn
+                }`}
                 onClick={() =>
                   isLyra
                     ? setLyraMode(key as LyraMode)
@@ -157,19 +146,31 @@ export default function Sidebar({
         </div>
       )}
 
+      {/* Streaming Toggle */}
+      <div className="pt-4 border-t border-gray-200 dark:border-[#333333]">
+        <label className="flex items-center justify-between text-xs cursor-pointer">
+          <span>
+            Streaming (Beta)
+            <div className="text-[10px] text-gray-400">
+              Token-by-token replies
+            </div>
+          </span>
+          <input
+            type="checkbox"
+            checked={streamingEnabled}
+            onChange={toggleStreaming}
+            className="accent-amber-600"
+          />
+        </label>
+      </div>
+
       <div className="flex-1" />
 
-      {/* -------------------------- */}
-      {/* LOGOUT SECTION             */}
-      {/* -------------------------- */}
+      {/* Logout */}
       <div className="pt-4 border-t border-gray-200 dark:border-[#333333]">
         <button
           onClick={handleLogout}
-          className="
-            w-full py-2 rounded-xl text-center mt-2
-            bg-red-600 hover:bg-red-700 text-white
-            transition-colors
-          "
+          className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white"
         >
           Logout
         </button>

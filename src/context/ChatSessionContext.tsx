@@ -48,6 +48,10 @@ const SESSION_KEY_PREFIX = "kora-session";
 
 const uid = () => Math.random().toString(36).slice(2);
 
+const ENABLE_STREAMING =
+  typeof window !== "undefined" &&
+  localStorage.getItem("kora_streaming") === "true";
+
 interface ProviderProps {
   children: React.ReactNode;
   tone: string; // current tone from UI
@@ -276,6 +280,35 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
     },
     [companion, activeMode, tone, userId, activeSessionId, isGuest, messages]
   );
+async function sendMessageStream(args: {
+  text?: string;
+  action?: string;
+  filePayload?: any;
+}) {
+  const res = await fetch("/api/unified-stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(isGuest ? { "x-guest": "true" } : {}),
+    },
+    body: JSON.stringify({
+      companion,
+      mode: activeMode,
+      tone,
+      sessionId: activeSessionId,
+      input: args.text || null,
+      nextAction: args.action || null,
+      ...(args.filePayload ? { filePayload: args.filePayload } : {}),
+    }),
+  });
+
+  if (!res.ok || !res.body) {
+    throw new Error("Streaming request failed");
+  }
+
+  return res.body;
+}
+
 
 /* -------------------------------------------------- */
 /* SEND MESSAGE (SUPPORTS FILE ATTACHMENT)            */
@@ -309,38 +342,102 @@ const sendMessage = useCallback(
       { id: uid(), role: "system", content: "…", ts: Date.now() },
     ]);
 
-    try {
-      const filePayload = file
-        ? {
-            name: file.name,
-            type: file.type || fallbackMimeType(file),
-            contentBase64: await fileToContentBase64(file),
-          }
-        : undefined;
+try {
+  const filePayload = file
+    ? {
+        name: file.name,
+        type: file.type || fallbackMimeType(file),
+        contentBase64: await fileToContentBase64(file),
+      }
+    : undefined;
 
-      const data = await callUnified({
-        input: trimmed || null,
-        nextAction: action || null,
-        ...(filePayload ? { filePayload } : {}),
-      });
+  if (!ENABLE_STREAMING) {
+    // 🔹 NON-STREAMING (existing behavior)
+    const data = await callUnified({
+      input: trimmed || null,
+      nextAction: action || null,
+      ...(filePayload ? { filePayload } : {}),
+    });
 
-      setMessages((m) => {
-        const cleaned = m.filter(
-          (msg) => !(msg.role === "system" && msg.content === "…")
+    setMessages((m) =>
+      m.filter((msg) => msg.content !== "…").concat({
+        id: uid(),
+        role: "assistant",
+        content: data.reply,
+        attachments: data.attachments || [],
+        meta: data.meta || {},
+        ts: Date.now(),
+      })
+    );
+
+    return;
+  }
+
+  // 🔹 STREAMING PATH
+  const assistantId = uid();
+
+  setMessages((m) => [
+    ...m.filter((msg) => msg.content !== "…"),
+    {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      ts: Date.now(),
+    },
+  ]);
+
+  const stream = await sendMessageStream({
+    text: trimmed || undefined,
+    action,
+    filePayload,
+  });
+
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split("\n\n").filter(Boolean);
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const event = JSON.parse(line.slice(6));
+
+      if (event.type === "token") {
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === assistantId
+              ? { ...msg, content: msg.content + event.value }
+              : msg
+          )
         );
-        return [
-          ...cleaned,
-          {
-            id: uid(),
-            role: "assistant",
-            content: data.reply,
-            attachments: data.attachments || [],
-            meta: data.meta || {},
-            ts: Date.now(),
-          },
-        ];
-      });
-    } catch (err) {
+      }
+
+      if (event.type === "done") {
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === assistantId
+              ? {
+                  ...msg,
+                  content: event.reply,
+                  attachments: event.attachments || [],
+                  meta: event.meta || {},
+                }
+              : msg
+          )
+        );
+      }
+
+      if (event.type === "error") {
+        throw new Error(event.error);
+      }
+    }
+  }
+} catch (err) {
       console.error("❌ Chat error:", err);
       setMessages((m) => [
         ...m.filter((msg) => msg.role !== "system"),

@@ -16,20 +16,24 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<"idle" | "processing">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (disabled) return;
-
+    if (disabled || sending) return;
     if (!value.trim() && !file) return;
 
-    
+    if (file) {
+      setUploadPhase("processing");
+    }
+
     const frozenFile = file;
-onSend({
-  text: value.trim() || undefined,
-  file: frozenFile ?? undefined,
-});
+
+    onSend({
+      text: value.trim() || undefined,
+      file: frozenFile ?? undefined,
+    });
 
     setValue("");
     setFile(null);
@@ -63,7 +67,6 @@ onSend({
         border-t border-gray-200 dark:border-[#2a2a2a]
       "
     >
-      {/* Attachment preview */}
       {file && (
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#1b1b1b]">
           <span className="text-xs truncate text-gray-700 dark:text-gray-200">
@@ -80,7 +83,6 @@ onSend({
       )}
 
       <div className="flex items-end gap-2">
-        {/* Hidden file input */}
         <input
           type="file"
           ref={fileRef}
@@ -89,7 +91,6 @@ onSend({
           onChange={handleFileChange}
         />
 
-        {/* Upload button */}
         <button
           type="button"
           onClick={handleFilePick}
@@ -105,7 +106,6 @@ onSend({
           <Paperclip className="w-5 h-5" />
         </button>
 
-        {/* Text input */}
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -129,18 +129,22 @@ onSend({
           "
         />
 
-        {/* Send button */}
         <button
-  type="submit"
-  disabled={disabled || (!value.trim() && !file)}
+          type="submit"
+          disabled={disabled || (!value.trim() && !file)}
           className="
             p-3 rounded-xl
             bg-amber-600 hover:bg-amber-700
             text-white disabled:opacity-60
           "
         >
-          {sending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+          {sending || uploadPhase === "processing" ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              {uploadPhase === "processing" && (
+                <span className="text-xs">Analyzing…</span>
+              )}
+            </div>
           ) : (
             <SendHorizontal className="w-5 h-5" />
           )}
