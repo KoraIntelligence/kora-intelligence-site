@@ -12,55 +12,51 @@ export default async function handler(
   }
 
   try {
-    const { code } = req.body;
+    // ✅ Robust body parsing (handles string + object)
+    const body =
+      typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    if (!code || typeof code !== "string") {
+    const rawCode = body?.code;
+
+    if (!rawCode || typeof rawCode !== "string") {
       return res.status(400).json({ error: "Missing promo code" });
     }
 
-    // 🔑 NORMALISE INPUT
-    const normalizedCode = code.trim().toUpperCase();
+    // ✅ NORMALISE (this is critical)
+    const code = rawCode.trim().toUpperCase();
 
+    // ✅ Query promo_codes table
     const { data, error } = await supabaseAdmin
       .from("promo_codes")
       .select("*")
-      .eq("code", normalizedCode)
+      .eq("code", code)
       .eq("is_active", true)
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      console.error("Promo lookup error:", error);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (!data) {
+    if (error || !data) {
       return res.status(400).json({ error: "Invalid promo code" });
     }
 
-    // ⏰ Expiry check (NULL-safe)
+    // ✅ Expiry check
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
       return res.status(400).json({ error: "Promo code expired" });
     }
 
-    // 🔢 Usage check (NULL-safe)
+    // ✅ Usage limit check
     if (
       typeof data.max_uses === "number" &&
       data.uses >= data.max_uses
     ) {
-      return res.status(400).json({ error: "Promo code fully used" });
+      return res.status(400).json({ error: "Promo code limit reached" });
     }
 
+    // ✅ SUCCESS
     return res.status(200).json({
       valid: true,
-      promo: {
-        code: data.code,
-        maxUses: data.max_uses,
-        uses: data.uses,
-        expiresAt: data.expires_at,
-      },
+      code: data.code,
     });
-  } catch (err: any) {
-    console.error("validate-promo error:", err);
-    return res.status(500).json({ error: "Unexpected error" });
+  } catch (err) {
+    console.error("❌ validate-promo error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 }
