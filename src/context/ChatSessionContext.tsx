@@ -410,6 +410,9 @@ const sendMessage = useCallback(
                   : msg
               )
             );
+
+              // 👇 artificial pacing so streaming is visible
+  await new Promise((r) => setTimeout(r, 15));
           }
 
           if (event.type === "done") {
