@@ -350,7 +350,7 @@ const sendMessage = useCallback(
           }
         : undefined;
 
-      // ---------------- NON-STREAMING ----------------
+      /* ---------------- NON-STREAMING ---------------- */
       if (!ENABLE_STREAMING) {
         const data = await callUnified({
           input: trimmed || null,
@@ -372,17 +372,12 @@ const sendMessage = useCallback(
         return;
       }
 
-      // ---------------- STREAMING ----------------
+      /* ---------------- STREAMING ---------------- */
       const assistantId = uid();
 
       setMessages((m) => [
         ...m.filter((msg) => msg.content !== "…"),
-        {
-          id: assistantId,
-          role: "assistant",
-          content: "",
-          ts: Date.now(),
-        },
+        { id: assistantId, role: "assistant", content: "", ts: Date.now() },
       ]);
 
       const stream = await sendMessageStream({
@@ -450,11 +445,10 @@ const sendMessage = useCallback(
         },
       ]);
     } finally {
-      // ✅ ALWAYS unlock UI
       setSending(false);
     }
   },
-  [callUnified, ENABLE_STREAMING]
+  [callUnified]
 );
 
   /* -------------------------------------------------- */
