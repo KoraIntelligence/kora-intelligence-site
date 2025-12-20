@@ -318,7 +318,6 @@ const sendMessage = useCallback(
     const { text, action, file } = payload;
     const trimmed = text?.trim();
 
-    // allow: text OR action OR file-only
     if (!trimmed && !action && !file) return;
 
     setSending(true);
@@ -342,102 +341,104 @@ const sendMessage = useCallback(
       { id: uid(), role: "system", content: "…", ts: Date.now() },
     ]);
 
-try {
-  const filePayload = file
-    ? {
-        name: file.name,
-        type: file.type || fallbackMimeType(file),
-        contentBase64: await fileToContentBase64(file),
-      }
-    : undefined;
+    try {
+      const filePayload = file
+        ? {
+            name: file.name,
+            type: file.type || fallbackMimeType(file),
+            contentBase64: await fileToContentBase64(file),
+          }
+        : undefined;
 
-  if (!ENABLE_STREAMING) {
-    // 🔹 NON-STREAMING (existing behavior)
-    const data = await callUnified({
-      input: trimmed || null,
-      nextAction: action || null,
-      ...(filePayload ? { filePayload } : {}),
-    });
+      // ---------------- NON-STREAMING ----------------
+      if (!ENABLE_STREAMING) {
+        const data = await callUnified({
+          input: trimmed || null,
+          nextAction: action || null,
+          ...(filePayload ? { filePayload } : {}),
+        });
 
-    setMessages((m) =>
-      m.filter((msg) => msg.content !== "…").concat({
-        id: uid(),
-        role: "assistant",
-        content: data.reply,
-        attachments: data.attachments || [],
-        meta: data.meta || {},
-        ts: Date.now(),
-      })
-    );
-
-    return;
-  }
-
-  // 🔹 STREAMING PATH
-  const assistantId = uid();
-
-  setMessages((m) => [
-    ...m.filter((msg) => msg.content !== "…"),
-    {
-      id: assistantId,
-      role: "assistant",
-      content: "",
-      ts: Date.now(),
-    },
-  ]);
-
-  const stream = await sendMessageStream({
-    text: trimmed || undefined,
-    action,
-    filePayload,
-  });
-
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split("\n\n").filter(Boolean);
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const event = JSON.parse(line.slice(6));
-
-      if (event.type === "token") {
         setMessages((m) =>
-          m.map((msg) =>
-            msg.id === assistantId
-              ? { ...msg, content: msg.content + event.value }
-              : msg
-          )
+          m.filter((msg) => msg.content !== "…").concat({
+            id: uid(),
+            role: "assistant",
+            content: data.reply,
+            attachments: data.attachments || [],
+            meta: data.meta || {},
+            ts: Date.now(),
+          })
         );
+
+        return;
       }
 
-      if (event.type === "done") {
-        setMessages((m) =>
-          m.map((msg) =>
-            msg.id === assistantId
-              ? {
-                  ...msg,
-                  content: event.reply,
-                  attachments: event.attachments || [],
-                  meta: event.meta || {},
-                }
-              : msg
-          )
-        );
-      }
+      // ---------------- STREAMING ----------------
+      const assistantId = uid();
 
-      if (event.type === "error") {
-        throw new Error(event.error);
+      setMessages((m) => [
+        ...m.filter((msg) => msg.content !== "…"),
+        {
+          id: assistantId,
+          role: "assistant",
+          content: "",
+          ts: Date.now(),
+        },
+      ]);
+
+      const stream = await sendMessageStream({
+        text: trimmed || undefined,
+        action,
+        filePayload,
+      });
+
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n\n").filter(Boolean);
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+
+          const event = JSON.parse(line.slice(6));
+
+          if (event.type === "token") {
+            setMessages((m) =>
+              m.map((msg) =>
+                msg.id === assistantId
+                  ? { ...msg, content: msg.content + event.value }
+                  : msg
+              )
+            );
+          }
+
+          if (event.type === "done") {
+            setMessages((m) =>
+              m.map((msg) =>
+                msg.id === assistantId
+                  ? {
+                      ...msg,
+                      content: event.reply,
+                      attachments: event.attachments || [],
+                      meta: event.meta || {},
+                    }
+                  : msg
+              )
+            );
+            return;
+          }
+
+          if (event.type === "error") {
+            throw new Error(event.error);
+          }
+        }
       }
-    }
-  }
-} catch (err) {
+    } catch (err) {
       console.error("❌ Chat error:", err);
       setMessages((m) => [
         ...m.filter((msg) => msg.role !== "system"),
@@ -448,11 +449,12 @@ try {
           ts: Date.now(),
         },
       ]);
+    } finally {
+      // ✅ ALWAYS unlock UI
+      setSending(false);
     }
-
-    setSending(false);
   },
-  [callUnified]
+  [callUnified, ENABLE_STREAMING]
 );
 
   /* -------------------------------------------------- */

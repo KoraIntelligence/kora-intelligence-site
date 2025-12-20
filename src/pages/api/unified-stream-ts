@@ -234,32 +234,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Tell the client we’re starting an assistant reply
     sseSend(res, { type: "start", sessionId });
 
-    /* ---------- STREAM OPENAI TOKENS ---------- */
-    let fullText = "";
+   /* ---------- STREAM OPENAI TOKENS ---------- */
+let fullText = "";
 
-    const stream = await openai.responses.stream(
-      {
-        model: plan.model || "gpt-4.1",
-        input: plan.fullPrompt,
-      },
-      { signal: abortController.signal as any }
-    );
+const stream = await openai.responses.stream(
+  {
+    model: plan.model || "gpt-4.1",
+    input: plan.fullPrompt,
+  },
+  { signal: abortController.signal as any }
+);
 
-    for await (const event of stream) {
-      if (abortController.signal.aborted) break;
+for await (const event of stream) {
+  if (abortController.signal.aborted) break;
 
-      // The Responses streaming API emits typed events; we only forward text deltas
-      // event.type examples include: "response.output_text.delta"
-      // @ts-ignore
-      if (event?.type === "response.output_text.delta") {
-        // @ts-ignore
-        const delta = event.delta || "";
-        if (delta) {
-          fullText += delta;
-          sseSend(res, { type: "token", value: delta });
-        }
-      }
+  // TEXT DELTAS
+  if (event?.type === "response.output_text.delta") {
+    const delta = event.delta || "";
+    if (delta) {
+      fullText += delta;
+      sseSend(res, { type: "token", value: delta });
     }
+  }
+
+  // 🔴 CRITICAL: detect completion explicitly
+  if (event?.type === "response.completed") {
+    break;
+  }
+}
 
     if (abortController.signal.aborted) {
       clearInterval(heartbeat);

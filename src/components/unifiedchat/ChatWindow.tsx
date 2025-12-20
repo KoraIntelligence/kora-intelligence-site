@@ -80,16 +80,17 @@ export default function ChatWindow({
           />
         ))}
 
-        {sending && (
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs animate-pulse pl-1 pt-2">
-            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-            <span>
-              {companion === "salar" ? "Salar" : "Lyra"} is thinking…
-            </span>
-          </div>
-        )}
+        {sending &&
+  !messages.some(
+    (m) => m.role === "assistant" && m.content && m.content.length > 0
+  ) && (
+    <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse">
+      <span className="w-2 h-2 rounded-full bg-gray-400" />
+      <span className="w-2 h-2 rounded-full bg-gray-400" />
+      <span className="w-2 h-2 rounded-full bg-gray-400" />
+      <span>{companion === "salar" ? "Salar" : "Lyra"} is thinking…</span>
+    </div>
+  )}
       </div>
 
       {/* ------------------------------------------------ */}
