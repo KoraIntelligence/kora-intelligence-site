@@ -37,7 +37,7 @@ export default function ComparisonTable() {
 
             <tr>
               <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Guided workflows for real business tasks
+                Guided journeys (workflows) for real business tasks
               </td>
               <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
               <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>
@@ -77,7 +77,7 @@ export default function ComparisonTable() {
 
             <tr>
               <td className="p-4 font-medium text-gray-900 dark:text-white">
-                Prompt logic shaped by real founder workflows
+                Prompt logic shaped by real founder journeys (workflows)
               </td>
               <td className="p-4 text-gray-600 dark:text-gray-300">❌</td>
               <td className="p-4 text-amber-600 font-semibold dark:text-amber-400">✅</td>

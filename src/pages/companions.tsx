@@ -24,7 +24,7 @@ export default function CompanionsPage() {
       </header>
 
       {/* Companion Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-8 justify-items-center">
         {Object.values(companions)
           .filter((companion: Companion) =>
             ['lyra', 'salar'].includes(companion.slug)

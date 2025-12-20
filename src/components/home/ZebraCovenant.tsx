@@ -19,13 +19,13 @@ export default function ZebraCovenant() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Link
-            href="/companions/fmc"
+            href="/companions/lyra"
             className="px-6 py-3 rounded-xl bg-white text-amber-600 font-semibold shadow-md hover:bg-gray-100 transition"
           >
             Try Lyra Now →
           </Link>
           <Link
-            href="/companions/ccc"
+            href="/companions/salar"
             className="px-6 py-3 rounded-xl bg-amber-700 text-white font-semibold shadow-md hover:bg-amber-800 transition"
           >
             Explore Salar →
