@@ -2,8 +2,13 @@ import Head from 'next/head';
 import { companions } from '@/data/companions';
 import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
 
-export default function CCCPage() {
-  const companion = companions['ccc'];
+export default function LyraPage() {
+  const companion = companions['lyra'];
+
+  // Safety guard — prevents build-time crash if data is missing
+  if (!companion) {
+    return null;
+  }
 
   return (
     <>
@@ -13,8 +18,8 @@ export default function CCCPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        {/* Intentionally left empty.
-            This page is now informational-only (no chat CTA). */}
+        {/* Informational-only page.
+            Chat entry is intentionally handled elsewhere (e.g. /mvp). */}
       </CompanionScrollLayout>
     </>
   );

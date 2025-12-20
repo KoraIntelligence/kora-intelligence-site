@@ -2,8 +2,13 @@ import Head from 'next/head';
 import { companions } from '@/data/companions';
 import CompanionScrollLayout from '@/components/layout/CompanionScrollLayout';
 
-export default function FMCPage() {
-  const companion = companions['fmc'];
+export default function SalarPage() {
+  const companion = companions['salar'];
+
+  // Safety guard — prevents build-time crash if data is missing
+  if (!companion) {
+    return null;
+  }
 
   return (
     <>
@@ -13,9 +18,9 @@ export default function FMCPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-              {/* Intentionally left empty.
-                  This page is now informational-only (no chat CTA). */}
-            </CompanionScrollLayout>
+        {/* Informational-only page.
+            Chat entry is intentionally handled elsewhere (e.g. /mvp). */}
+      </CompanionScrollLayout>
     </>
   );
 }
