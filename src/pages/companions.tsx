@@ -16,7 +16,7 @@ export default function CompanionsPage() {
           <span className="font-semibold"> Salar </span> for pricing and continuity.
         </p>
         <Link
-          href="/pages/mvp"
+          href="/mvp"
           className="inline-block mt-6 px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition"
         >
           Begin My Conversation →
