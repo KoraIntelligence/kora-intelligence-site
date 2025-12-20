@@ -5,8 +5,8 @@ export default function Footer() {
   return (
     <footer className="border-t border-gray-200 dark:border-zinc-800 py-8 text-center text-sm text-gray-600 dark:text-gray-400">
       <Image
-        src="/kora-intelligence-logo.png"
-        alt="Kora Intelligence Logo"
+        src="/kora-logo.png"
+        alt="Kora Logo"
         width={40}
         height={40}
         className="mx-auto mb-3 opacity-80 hover:opacity-100 transition-opacity"

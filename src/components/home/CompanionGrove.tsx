@@ -18,7 +18,7 @@ export default function CompanionGrove() {
         </h2>
         <p className="text-md sm:text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
           Start with the three active Companions, each designed to support a core function:
-          brand messaging (FMC), pricing and funding (CCC), or digital product flows (Builder).
+          brand messaging (Lyra), pricing and contracts (Salar).
         </p>
       </div>
 
@@ -26,7 +26,7 @@ export default function CompanionGrove() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {Object.values(companions)
           .filter((companion: Companion) =>
-            ['fmc', 'ccc'].includes(companion.slug)
+            ['lyra', 'salar'].includes(companion.slug)
           )
           .map((companion: Companion) => (
             <Link
