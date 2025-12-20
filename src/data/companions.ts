@@ -30,10 +30,10 @@ export const companions: Record<string, Companion> = {
       'Teams needing clear pricing, contract insight, or commercial sense-checking',
     ],
     helps: [
-      'Proposal Builder — Analyse RFQs and generate structured, client-ready proposals.',
-      'Contract Advisor — Review contracts, flag risks, and suggest plain-English redlines.',
-      'Pricing & Estimation — Build pricing models and produce editable cost sheets.',
-      'Commercial Strategy Chat — Sense-check decisions, negotiate scope, and explore options in freeform chat.',
+      'Proposal Builder - Analyse RFQs and generate structured, client-ready proposals.',
+      'Contract Advisor - Review contracts, flag risks, and suggest plain-English redlines.',
+      'Pricing & Estimation - Build pricing models and produce editable cost sheets.',
+      'Commercial Strategy Chat - Sense-check decisions, negotiate scope, and explore options in freeform chat.',
     ],
     howItWorks:
       'Start by uploading a document or describing your commercial challenge. Salar asks targeted clarification questions, then guides you through structured workflows or open commercial discussion. Outputs are generated as usable documents that can be refined until ready.',
@@ -56,15 +56,15 @@ export const companions: Record<string, Companion> = {
       },
     ],
     tools: [
-      'Guided Proposal Workflow',
+      'Guided Proposal Journey (Workflow)',
       'Contract Risk Analysis',
       'Pricing & Estimation Sheets',
-      'Freeform Commercial Chat',
+      'Commercial Strategist',
     ],
     whyItExists:
       'Salar exists because commercial work is often high-stakes, repetitive, and stressful. Many teams lack dedicated commercial support. Salar provides structured, calm assistance so users can make informed decisions without losing time or confidence.',
     impact:
-      'From uncertainty to clarity — Salar helps teams move forward with commercially sound decisions.',
+      'From uncertainty to clarity - Salar helps teams move forward with commercially sound decisions.',
     cta: 'Try Salar to bring clarity to your next commercial decision.',
     tags: [
       'Proposals',
@@ -80,7 +80,7 @@ export const companions: Record<string, Companion> = {
     slug: 'lyra',
     title: 'Lyra',
     glyph: '📡',
-    tagline: 'Clear messaging, campaigns, and outreach — built in your voice.',
+    tagline: 'Clear messaging, campaigns, and outreach - built in your voice.',
     description:
       'Lyra is an AI-powered marketing and communications companion that helps teams develop messaging, plan campaigns, and execute outreach with consistency and clarity. It combines creative guidance with structured workflows, suitable from junior marketers to senior marketing leaders.',
     for: [
@@ -90,10 +90,10 @@ export const companions: Record<string, Companion> = {
       'Small teams without dedicated marketing resources',
     ],
     helps: [
-      'Messaging Advisor — Clarify positioning, tone, and core messages.',
-      'Campaign Builder — Plan campaigns with copy and visual direction.',
-      'Lead Outreach — Segment leads and generate personalised outreach sequences.',
-      'Customer Nurture — Create structured email nurture flows.',
+      'Messaging Advisor - Clarify positioning, tone, and core messages.',
+      'Campaign Builder - Plan campaigns with copy and visual direction.',
+      'Lead Outreach - Segment leads and generate personalised outreach sequences.',
+      'Customer Nurture - Create structured email nurture flows.',
     ],
     howItWorks:
       'Begin with an idea, brief, or dataset. Lyra asks clarifying questions, then guides you through messaging or campaign workflows. Outputs are refined collaboratively and delivered as ready-to-use copy or visual assets.',
@@ -124,7 +124,7 @@ export const companions: Record<string, Companion> = {
     whyItExists:
       'Lyra exists because marketing work often suffers from inconsistency, tool sprawl, and lack of time. Lyra helps teams move from ideas to execution without losing their voice or overcomplicating the process.',
     impact:
-      'From scattered ideas to consistent communication — Lyra helps messages land.',
+      'From scattered ideas to consistent communication - Lyra helps messages land.',
     cta: 'Try Lyra to turn ideas into clear, consistent communication.',
     tags: [
       'Marketing',
