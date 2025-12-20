@@ -23,7 +23,7 @@ export default function CompassFlame() {
               1. Choose a Companion
             </h3>
             <p className="text-gray-600 dark:text-gray-300">
-              Select FMC, CCC, or The Builder - each crafted to support a different part of your brand or business.
+              Select Salar or Lyra - each crafted to support a different part of your brand or business.
             </p>
           </div>
 
@@ -33,17 +33,17 @@ export default function CompassFlame() {
               2. Start a Chat
             </h3>
             <p className="text-gray-600 dark:text-gray-300">
-              Open a chat session and share what you need, from brand copy to pricing clarity to landing page flows.
+              Open a chat session and share what you need, from brand copy to pricing clarity.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-white dark:bg-zinc-800 shadow-md">
             <CheckCircle className="w-8 h-8 text-amber-600 dark:text-amber-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              3. Receive Your Whisper
+              3. Receive Your Output
             </h3>
             <p className="text-gray-600 dark:text-gray-300">
-              Get a copy-ready, tone-aligned response in real time. Whether it’s a launch plan, pitch draft, or landing page.
+              Get a copy-ready, tone-aligned response in real time. Whether it’s a launch plan or a pitch draft.
             </p>
           </div>
         </div>

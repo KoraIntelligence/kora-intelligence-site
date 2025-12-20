@@ -36,7 +36,7 @@ export default function WhisperOfArrival() {
 
       <p className="mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
         Kora’s AI Companions help you write, price, and build - with clarity, continuity, and care. <br />
-        Built for solopreneurs, early-stage founders, and creatives who lead with meaning.
+        Built for SME's, early-stage founders, and creatives who lead with meaning.
       </p>
 
       <div className="mt-10">

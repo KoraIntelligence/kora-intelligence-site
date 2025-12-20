@@ -13,17 +13,9 @@ export default function FMCPage() {
       </Head>
 
       <CompanionScrollLayout companion={companion}>
-        <section className="space-y-8">
-          <div className="mt-6 text-center">
-            <a
-              href={`/companions/${companion.slug}/chat`}
-              className="text-amber-700 underline hover:text-amber-800 transition font-serif"
-            >
-              → Enter Sohbat with {companion.title}
-            </a>
-          </div>
-        </section>
-      </CompanionScrollLayout>
+              {/* Intentionally left empty.
+                  This page is now informational-only (no chat CTA). */}
+            </CompanionScrollLayout>
     </>
   );
 }

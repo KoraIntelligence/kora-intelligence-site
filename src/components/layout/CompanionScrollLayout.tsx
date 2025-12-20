@@ -171,7 +171,7 @@ export default function CompanionScrollLayout({
         <div className="text-center space-y-4 animate-fade-in-delayed">
           <p className="text-lg sm:text-xl font-medium">{companion.cta}</p>
           <Link
-            href={`/companions/${companion.slug}/chat`}
+            href={`/pages/mvp`}
             className="inline-block px-6 py-3 rounded-xl bg-amber-600 text-white font-semibold shadow-md hover:bg-amber-700 transition-transform hover:scale-[1.02]"
           >
             Talk to {companion.title.split('(')[0].trim()} →

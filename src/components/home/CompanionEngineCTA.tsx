@@ -7,7 +7,7 @@ export default function CompanionEngineCTA() {
         Meet your AI Companion.
       </p>
       <p className="text-md sm:text-lg text-amber-700 dark:text-amber-400 italic">
-        From brand tone, grant clarity and builder flows.
+        From brand tone to pricing clarity.
       </p>
       <Link
         href="/companions"

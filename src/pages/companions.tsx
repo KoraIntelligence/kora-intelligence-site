@@ -11,13 +11,12 @@ export default function CompanionsPage() {
           The Companions of Kora
         </h1>
         <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300">
-          Meet the three active Companions shaping the Grove today —  
-          <span className="font-semibold"> FMC </span> for brand clarity,  
-          <span className="font-semibold"> CCC </span> for pricing and continuity, and  
-          <span className="font-semibold"> The Builder </span> for turning vision into structure.
+          Meet the two active Companions shaping the Grove today -  
+          <span className="font-semibold"> Lyra </span> for brand clarity and 
+          <span className="font-semibold"> Salar </span> for pricing and continuity.
         </p>
         <Link
-          href="/companions/ccc/chat"
+          href="/pages/mvp"
           className="inline-block mt-6 px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition"
         >
           Begin My Conversation →
@@ -28,7 +27,7 @@ export default function CompanionsPage() {
       <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {Object.values(companions)
           .filter((companion: Companion) =>
-            ['fmc', 'ccc', 'builder'].includes(companion.slug)
+            ['fmc', 'ccc'].includes(companion.slug)
           )
           .map((companion: Companion) => (
             <Link

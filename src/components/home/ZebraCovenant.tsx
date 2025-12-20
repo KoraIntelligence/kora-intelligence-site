@@ -9,7 +9,7 @@ export default function ZebraCovenant() {
     >
       <div className="max-w-3xl mx-auto space-y-8">
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
-          Meet the AI Companion That Writes, Builds, and Prices Like You Do.
+          Meet the AI Companion That Writes and Prices Like You Do.
         </h2>
         <p className="text-lg sm:text-xl font-light max-w-2xl mx-auto">
           Don’t settle for generic AI outputs.  
@@ -22,20 +22,15 @@ export default function ZebraCovenant() {
             href="/companions/fmc"
             className="px-6 py-3 rounded-xl bg-white text-amber-600 font-semibold shadow-md hover:bg-gray-100 transition"
           >
-            Try FMC Now →
+            Try Lyra Now →
           </Link>
           <Link
             href="/companions/ccc"
             className="px-6 py-3 rounded-xl bg-amber-700 text-white font-semibold shadow-md hover:bg-amber-800 transition"
           >
-            Explore CCC →
+            Explore Salar →
           </Link>
-          <Link
-            href="/companions/builder"
-            className="px-6 py-3 rounded-xl bg-amber-700 text-white font-semibold shadow-md hover:bg-amber-800 transition"
-          >
-            Meet The Builder →
-          </Link>
+          
         </div>
 
         <p className="text-sm opacity-80 mt-6">
