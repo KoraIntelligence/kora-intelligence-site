@@ -9,6 +9,7 @@ export default function AuthScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
+  const [promoCode, setPromoCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -17,10 +18,40 @@ export default function AuthScreen() {
   /* ------------------------------------------------------ */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (localStorage.getItem("guest_mode") === "true") {
+    if (
+      localStorage.getItem("guest_mode") === "true" &&
+      localStorage.getItem("promo_ok") === "true"
+    ) {
       router.replace("/mvp");
     }
   }, [router]);
+
+  /* ------------------------------------------------------ */
+  /* PROMO CODE VALIDATION                                  */
+  /* ------------------------------------------------------ */
+  const validatePromo = async (): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/validate-promo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ promoCode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.valid) {
+        setMessage("❌ Invalid promo code.");
+        return false;
+      }
+
+      localStorage.setItem("promo_ok", "true");
+      return true;
+    } catch (err) {
+      console.error("Promo validation error:", err);
+      setMessage("❌ Failed to validate promo code.");
+      return false;
+    }
+  };
 
   /* ------------------------------------------------------ */
   /* MAGIC LINK                                             */
@@ -29,6 +60,11 @@ export default function AuthScreen() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
+    if (!(await validatePromo())) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -56,6 +92,11 @@ export default function AuthScreen() {
     setLoading(true);
     setMessage(null);
 
+    if (!(await validatePromo())) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -65,7 +106,7 @@ export default function AuthScreen() {
       });
 
       if (error) throw error;
-      // DO NOT redirect — Supabase handles it
+      // Supabase handles redirect
     } catch (err) {
       console.error("Google login error:", err);
       setMessage("❌ Google sign-in failed.");
@@ -76,7 +117,15 @@ export default function AuthScreen() {
   /* ------------------------------------------------------ */
   /* GUEST LOGIN                                            */
   /* ------------------------------------------------------ */
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    setMessage(null);
+
+    if (!(await validatePromo())) {
+      setLoading(false);
+      return;
+    }
+
     localStorage.setItem("guest_mode", "true");
     router.replace("/mvp");
   };
@@ -88,19 +137,25 @@ export default function AuthScreen() {
           Welcome to Kora Intelligence
         </h1>
 
+        {/* PROMO CODE */}
+        <input
+          type="text"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value)}
+          required
+          placeholder="Promo code"
+          className="w-full border rounded-md p-2"
+        />
+
         {/* GOOGLE */}
         <button
-  onClick={handleGoogleSignIn}
-  disabled={loading}
-  className="w-full flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-neutral-900 text-gray-700 dark:text-gray-200 rounded-lg py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition"
->
-  <img
-    src="/icons/google.svg"
-    alt="Google"
-    className="w-5 h-5"
-  />
-  Continue with Google
-</button>
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-neutral-900 text-gray-700 dark:text-gray-200 rounded-lg py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition"
+        >
+          <img src="/icons/google.svg" alt="Google" className="w-5 h-5" />
+          Continue with Google
+        </button>
 
         <div className="text-center text-gray-400 text-sm">or</div>
 
