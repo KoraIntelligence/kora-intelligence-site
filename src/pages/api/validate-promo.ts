@@ -1,5 +1,4 @@
 // src/pages/api/validate-promo.ts
-
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -12,51 +11,50 @@ export default async function handler(
   }
 
   try {
-    // ✅ Robust body parsing (handles string + object)
-    const body =
-      typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { code } = req.body as { code?: string };
 
-    const rawCode = body?.code;
-
-    if (!rawCode || typeof rawCode !== "string") {
+    if (!code || typeof code !== "string") {
       return res.status(400).json({ error: "Missing promo code" });
     }
 
-    // ✅ NORMALISE (this is critical)
-    const code = rawCode.trim().toUpperCase();
+    const normalizedCode = code.trim().toUpperCase();
 
-    // ✅ Query promo_codes table
-    const { data, error } = await supabaseAdmin
+    const { data: promo, error } = await supabaseAdmin
       .from("promo_codes")
       .select("*")
-      .eq("code", code)
+      .eq("code", normalizedCode)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error("Promo lookup error:", error);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (!promo) {
       return res.status(400).json({ error: "Invalid promo code" });
     }
 
-    // ✅ Expiry check
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    // ✅ Handle expiry
+    if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
       return res.status(400).json({ error: "Promo code expired" });
     }
 
-    // ✅ Usage limit check
+    // ✅ Handle usage limit ONLY if max_uses is set
     if (
-      typeof data.max_uses === "number" &&
-      data.uses >= data.max_uses
+      typeof promo.max_uses === "number" &&
+      promo.uses >= promo.max_uses
     ) {
-      return res.status(400).json({ error: "Promo code limit reached" });
+      return res.status(400).json({ error: "Promo code fully used" });
     }
 
     // ✅ SUCCESS
     return res.status(200).json({
       valid: true,
-      code: data.code,
+      code: promo.code,
     });
   } catch (err) {
-    console.error("❌ validate-promo error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("validate-promo error:", err);
+    return res.status(500).json({ error: "Unexpected server error" });
   }
 }
