@@ -1,47 +1,26 @@
-import { allDispatches } from 'contentlayer/generated';
-import { useMDXComponent } from 'next-contentlayer/hooks';
-import Head from 'next/head';
+// Dispatch posts are being rebuilt — coming soon.
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 
-export default function DispatchPage({ post }: { post: any }) {
+export default function DispatchPage() {
   const router = useRouter();
-
-  if (router.isFallback) {
-    return <div>Loading...</div>;
-  }
-
-  const MDXContent = useMDXComponent(post.body.code);
 
   return (
     <>
       <Head>
-        <title>{post.title} – Kora Dispatch</title>
-        <meta name="description" content={post.description} />
+        <title>Kora Dispatch</title>
       </Head>
-
-      <div className="pt-24 pb-32 px-6 sm:px-12 max-w-3xl mx-auto font-serif text-gray-800 dark:text-gray-100 space-y-6">
-        <h1 className="text-4xl sm:text-5xl font-semibold text-amber-600">{post.title}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-          {post.date} — by {post.authors?.join(', ')}
-        </p>
-
-        <article className="prose prose-amber dark:prose-invert max-w-none">
-          <MDXContent />
-        </article>
+      <div className="pt-32 pb-32 px-6 text-center text-gray-400 dark:text-gray-600">
+        <p className="text-sm">Coming soon.</p>
       </div>
     </>
   );
 }
 
 export async function getStaticPaths() {
-  const paths = allDispatches.map((p: any) => ({
-    params: { slug: p.slug },
-  }));
-
-  return { paths, fallback: false };
+  return { paths: [], fallback: 'blocking' };
 }
 
-export async function getStaticProps({ params }: { params: any }) {
-  const post = allDispatches.find((p: any) => p.slug === params.slug);
-  return { props: { post } };
+export async function getStaticProps() {
+  return { props: {} };
 }

@@ -20,11 +20,11 @@ export default function CompanionCard({
   const isSalar = companion === "salar";
 
   const theme = {
-    bg: isSalar ? "bg-amber-50" : "bg-teal-50",
-    border: isSalar ? "border-amber-300" : "border-teal-300",
-    text: isSalar ? "text-amber-700" : "text-teal-700",
+    bg: isSalar ? "bg-yellow-50" : "bg-teal-50",
+    border: isSalar ? "border-yellow-300" : "border-teal-300",
+    text: isSalar ? "text-yellow-700" : "text-teal-700",
     badge: isSalar
-      ? "bg-amber-600 text-white"
+      ? "bg-yellow-600 text-white"
       : "bg-teal-600 text-white",
   };
 
@@ -51,7 +51,7 @@ export default function CompanionCard({
           {isSalar ? "Salar — Commercial Intelligence" : "Lyra — Brand Intelligence"}
         </p>
 
-        <p className="text-xs text-gray-600 capitalize mt-0.5">
+        <p className="text-xs text-gray-400 capitalize mt-0.5">
           Mode: {mode.replace(/_/g, " ")}
         </p>
 

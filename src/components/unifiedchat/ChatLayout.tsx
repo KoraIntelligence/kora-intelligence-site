@@ -21,9 +21,9 @@ export default function ChatLayout({
   return (
     <div
       className="
-        w-full h-screen flex 
-        bg-white dark:bg-[#0d0d0d] 
-        text-gray-900 dark:text-gray-100 
+        w-full h-full flex
+        bg-[#171717]
+        text-gray-100
         overflow-hidden relative
       "
     >
@@ -34,8 +34,8 @@ export default function ChatLayout({
         className="
           hidden md:block 
           w-64 
-          border-r border-gray-200 dark:border-neutral-800
-          bg-gray-50 dark:bg-neutral-900 
+          border-r border-neutral-800
+          bg-[#171717]
           overflow-y-auto
         "
       >
@@ -47,9 +47,9 @@ export default function ChatLayout({
       {/* -------------------------------------------------- */}
       <div
         className={`
-          fixed inset-y-0 left-0 w-64 
-          bg-gray-50 dark:bg-neutral-900
-          border-r border-gray-200 dark:border-neutral-800
+          fixed inset-y-0 left-0 w-64
+          bg-[#171717]
+          border-r border-neutral-800
           z-40
           transform transition-transform duration-300 md:hidden
           ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -77,7 +77,7 @@ export default function ChatLayout({
       {/* -------------------------------------------------- */}
       {/* MAIN CHAT AREA */}
       {/* -------------------------------------------------- */}
-      <main className="flex-1 flex flex-col overflow-hidden relative bg-white dark:bg-[#0d0d0d]">
+      <main className="flex-1 flex flex-col overflow-hidden relative bg-[#171717]">
 
   {/* MOBILE MENU OPEN BUTTON */}
   <button
@@ -93,20 +93,13 @@ export default function ChatLayout({
   </button>
         {/* ---- Top Bar (WorkflowTopBar) ---- */}
         {topBar && (
-          <div
-            className="
-              shrink-0 
-              border-b border-gray-200 dark:border-neutral-800
-              bg-white dark:bg-[#111111]
-              z-10
-            "
-          >
+          <div className="shrink-0">
             {topBar}
           </div>
         )}
 
         {/* ---- Chat Window ---- */}
-        <div className="flex-1 overflow-hidden bg-white dark:bg-[#0d0d0d]">
+        <div className="flex-1 overflow-hidden bg-[#171717]">
           {chatWindow}
         </div>
       </main>

@@ -1,10 +1,10 @@
 // src/companions/orchestrators/salar.ts
 // ======================================================
 //  SALAR ORCHESTRATOR — Handles all 5 Salar Modes
-//  Modes: commercial_chat | proposal | contract_advice | pricing | strategy
+//  Migrated to Anthropic Claude (claude-sonnet-4-6)
 // ======================================================
 
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { getWorkflow } from "../workflows";
 import { SALAR_COMMERCIAL_CHAT_PROMPTS } from "../prompts/salar/commercial_chat";
 import { SALAR_PROPOSAL_PROMPTS } from "../prompts/salar/proposal";
@@ -29,6 +29,8 @@ export interface SalarOrchestratorInput {
   tone: string;
   nextAction?: string;
   conversationHistory?: { role: string; content: string; meta?: any | null }[];
+  brandContext?: string;
+  handoverContext?: string;
 }
 
 export interface SalarPromptPack {
@@ -67,9 +69,11 @@ const PACKS: Record<SalarMode, SalarPromptPack> = {
   commercial_strategist: SALAR_STRATEGY_PROMPTS,
 };
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+
+const MODEL = process.env.KORA_MODEL || "claude-sonnet-4-6";
 
 function resolvePrompt(pack: SalarPromptPack, nextAction?: string): string {
   if (pack.mode === "commercial_chat") {
@@ -140,51 +144,105 @@ function resolvePrompt(pack: SalarPromptPack, nextAction?: string): string {
 }
 
 async function extractPricingStructure(output: string) {
-  // Expecting the model to include a JSON block inside <pricing> tags
   const match = output.match(/<pricing>([\s\S]*?)<\/pricing>/);
-
   if (!match) {
-    // fallback: dump raw text
     return {
-      sheets: [
-        {
-          name: "Pricing Output",
-          rows: output.split("\n").map((line) => [line])
-        }
-      ]
+      sheets: [{ name: "Pricing Output", rows: output.split("\n").map((line) => [line]) }],
     };
   }
-
   try {
     return JSON.parse(match[1]);
   } catch {
-    // fallback to text again
     return {
-      sheets: [
-        {
-          name: "Pricing Output",
-          rows: output.split("\n").map((line) => [line])
-        }
-      ]
+      sheets: [{ name: "Pricing Output", rows: output.split("\n").map((line) => [line]) }],
     };
   }
 }
 
 function normaliseForXlsx(input: any): string {
   if (!input) return "";
-
-  // Already JSON? Convert to string safely.
   if (typeof input === "object") {
-    try {
-      return JSON.stringify(input);
-    } catch {
-      return "";
+    try { return JSON.stringify(input); } catch { return ""; }
+  }
+  return String(input);
+}
+
+// Build the system prompt (identity + mode instructions + brand context)
+function buildSystemPrompt(
+  identity: CompanionIdentity,
+  pack: SalarPromptPack,
+  nextAction: string | undefined,
+  brandContext: string,
+  handoverContext: string,
+  mode: SalarMode,
+  tone: string
+): string {
+  const toneText =
+    typeof identity.tone === "string" ? identity.tone : identity.tone?.base ?? "";
+
+  const behavioursList: string[] =
+    (identity.behaviour as string[]) || (identity.behaviours as string[]) || [];
+
+  const identityBlock = `You are Salar, Kora's commercial intelligence companion.
+Persona: ${identity.persona ?? "Commercial Partner"}
+Mode: ${mode}
+Tone: ${toneText || "Warm professionalism, calm confidence"}
+${behavioursList.length ? "\nKey behaviours:\n" + behavioursList.map((b) => `• ${b}`).join("\n") : ""}
+${identity.codex ? "\n" + identity.codex : ""}`;
+
+  const modeInstructions = resolvePrompt(pack, nextAction);
+
+  const brandBlock = brandContext
+    ? `\n\n---\nBRAND CONTEXT:\n${brandContext}\n---`
+    : "";
+
+  const handoverBlock = handoverContext
+    ? `\n\n---\nCONTEXT FROM PREVIOUS CONVERSATION:\n${handoverContext}\n---`
+    : "";
+
+  const toneBlock = `\nRequested tone: ${tone}`;
+
+  return `${identityBlock}\n\n${modeInstructions}${brandBlock}${handoverBlock}${toneBlock}`;
+}
+
+// Convert conversation history to Claude message format
+function buildMessages(
+  conversationHistory: { role: string; content: string }[],
+  userInput: string,
+  extractedText: string
+): Array<{ role: "user" | "assistant"; content: string }> {
+  const RECENT_TURNS = 8;
+  const recentHistory = conversationHistory.slice(-RECENT_TURNS);
+
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+  for (const turn of recentHistory) {
+    if (turn.role === "user" || turn.role === "assistant") {
+      messages.push({ role: turn.role, content: turn.content });
     }
   }
 
-  // If it's a number, boolean, etc → cast to string
-  return String(input);
+  // Current user turn
+  let currentContent = userInput || "";
+  if (extractedText) {
+    currentContent += `\n\nUploaded document:\n"""\n${extractedText}\n"""`;
+  }
+  if (currentContent.trim()) {
+    messages.push({ role: "user", content: currentContent.trim() });
+  }
+
+  // Claude requires messages to alternate. If we somehow end with assistant, add a placeholder.
+  // In practice this shouldn't happen but guard anyway.
+  if (messages.length === 0) {
+    messages.push({ role: "user", content: "(start)" });
+  }
+
+  return messages;
 }
+
+// ======================================================
+// MAIN ORCHESTRATOR (non-streaming, used by unified.ts)
+// ======================================================
 
 export async function runSalar(input: SalarOrchestratorInput) {
   const {
@@ -193,125 +251,55 @@ export async function runSalar(input: SalarOrchestratorInput) {
     extractedText,
     tone,
     nextAction,
-    conversationHistory,
+    conversationHistory = [],
+    brandContext = "",
+    handoverContext = "",
   } = input;
-
-  const safeHistory = Array.isArray(conversationHistory)
-    ? conversationHistory
-    : [];
-
-  // 🔹 NEW: Truncate history to last 8 turns (helps with token load)
-  const RECENT_TURNS = 8;
-  const recentHistory = safeHistory.slice(-RECENT_TURNS);
 
   const pack = PACKS[mode];
   if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
 
   const identity: CompanionIdentity = loadIdentity("salar", mode);
 
-  const toneText =
-    typeof identity.tone === "string"
-      ? identity.tone
-      : identity.tone?.base ?? "";
-
-  const behavioursList: string[] =
-    (identity.behaviour as string[]) ||
-    (identity.behaviours as string[]) ||
-    [];
-
-  const identityPrompt = `
-========================
-KORA IDENTITY LAYER 3.0
-Companion: Salar — Commercial Intelligence Companion
-Mode: ${mode}
-Persona: ${identity.persona ?? "Commercial Partner"}
-Tone: ${toneText || "Warm professionalism, calm confidence"}
-========================
-
-Key Behaviours:
-${behavioursList.length ? behavioursList.map((b) => `• ${b}`).join("\n") : ""}
-
-Shared Codex:
-${identity.codex ?? ""}
---------------------------------------------------
-`;
-
-  const prompt = resolvePrompt(pack, nextAction || undefined);
-
-  const formatConversation = (arr: any[]) =>
-    arr.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
-
-  // 🔹 NEW: only use the truncated recentHistory in the memory block
-  const memoryBlock =
-    recentHistory.length > 0
-      ? `\nHere is the conversation so far:\n${formatConversation(
-          recentHistory
-        )}\n`
-      : "";
-
-  const fullPrompt = `
-${identityPrompt}
-${memoryBlock}
-
-${prompt}
-
-User Input:
-"""
-${userInput}
-"""
-
-Uploaded Text:
-"""
-${extractedText || "N/A"}
-"""
-
-Requested Tone: ${tone}
-`;
-
-  // Small debug hook (optional, keep or remove as you wish)
-  console.log(
-    "🟨 runSalar: mode=%s, nextAction=%s, promptLength=%d",
-    mode,
-    nextAction,
-    fullPrompt.length
+  const systemPrompt = buildSystemPrompt(
+    identity, pack, nextAction, brandContext, handoverContext, mode, tone
   );
 
-  const completion = await openai.responses.create({
-    model: "gpt-4.1",
-    input: fullPrompt,
+  const messages = buildMessages(conversationHistory, userInput, extractedText);
+
+  console.log(
+    "🟨 runSalar: mode=%s, nextAction=%s, messages=%d",
+    mode, nextAction, messages.length
+  );
+
+  const response = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 8192,
+    system: systemPrompt,
+    messages,
   });
 
   const outputText =
-    completion.output_text || "Salar was unable to generate a response.";
+    response.content[0]?.type === "text"
+      ? response.content[0].text
+      : "Salar was unable to generate a response.";
 
   const attachments: any[] = [];
 
-  // Attachments only for non-chat modes + finalise actions
   if (
     mode !== "commercial_chat" &&
     nextAction?.startsWith("finalise") &&
     pack.attachments
   ) {
-    const finalAttachments = pack.attachments.final || [];
-    for (const type of finalAttachments) {
-      if (type === "docx") {
-        attachments.push(await createDocx(outputText));
-      }
-      if (type === "pdf") {
-        attachments.push(await createPDF(outputText));
-      }
+    for (const type of pack.attachments.final || []) {
+      if (type === "docx") attachments.push(await createDocx(outputText));
+      if (type === "pdf") attachments.push(await createPDF(outputText));
       if (type === "xlsx") {
-        // 🔹 IMPORTANT: use the normalised/flattened structure for XLSX
         try {
           const structured = await extractPricingStructure(outputText);
-          const safe = normaliseForXlsx(structured);
-          console.log(
-            "🟨 runSalar: generating XLSX, structuredType=",
-            typeof structured
-          );
-          attachments.push(await createXlsx(safe));
+          attachments.push(await createXlsx(normaliseForXlsx(structured)));
         } catch (err) {
-          console.error("❌ runSalar XLSX generation error:", err);
+          console.error("❌ runSalar XLSX error:", err);
         }
       }
     }
@@ -321,11 +309,9 @@ Requested Tone: ${tone}
   let workflowMeta: any = undefined;
 
   if (workflow) {
-    const stageIdFromAction =
-      (nextAction && workflow.nextActionToStage[nextAction]) ||
-      workflow.initialStageId;
-
-    const stage = workflow.stages[stageIdFromAction];
+    const stageId =
+      (nextAction && workflow.nextActionToStage[nextAction]) || workflow.initialStageId;
+    const stage = workflow.stages[stageId];
     if (stage) {
       workflowMeta = {
         stageId: stage.id,
@@ -337,12 +323,8 @@ Requested Tone: ${tone}
     }
   }
 
-  const identityMeta = {
-    persona: identity.persona ?? "Commercial Partner",
-    title: "Commercial Intelligence Companion",
-    mode,
-    toneBase: toneText,
-  };
+  const toneText =
+    typeof identity.tone === "string" ? identity.tone : identity.tone?.base ?? "";
 
   return {
     reply: outputText,
@@ -354,13 +336,23 @@ Requested Tone: ${tone}
       nextActions: Array.isArray(pack.nextActions)
         ? pack.nextActions
         : Object.values(pack.nextActions || {}).flat(),
-      identity: identityMeta,
-      memory: { shortTerm: safeHistory.slice(-6) }, // keep as before
+      identity: {
+        persona: identity.persona ?? "Commercial Partner",
+        title: "Commercial Intelligence Companion",
+        mode,
+        toneBase: toneText,
+      },
+      memory: { shortTerm: conversationHistory.slice(-6) },
       workflow: workflowMeta,
     },
   };
 }
-// ---- Streaming helper types ----
+
+// ======================================================
+// STREAMING PLAN (used by unified-stream.ts)
+// Returns system + messages instead of fullPrompt
+// ======================================================
+
 export type SalarStreamingPlanInput = SalarOrchestratorInput;
 
 export function buildSalarStreamingPlan(input: SalarStreamingPlanInput) {
@@ -370,73 +362,22 @@ export function buildSalarStreamingPlan(input: SalarStreamingPlanInput) {
     extractedText,
     tone,
     nextAction,
-    conversationHistory,
+    conversationHistory = [],
+    brandContext = "",
+    handoverContext = "",
   } = input;
-
-  const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
-  const RECENT_TURNS = 8;
-  const recentHistory = safeHistory.slice(-RECENT_TURNS);
 
   const pack = PACKS[mode];
   if (!pack) throw new Error(`Unknown Salar mode: ${mode}`);
 
   const identity: CompanionIdentity = loadIdentity("salar", mode);
 
-  const toneText =
-    typeof identity.tone === "string" ? identity.tone : identity.tone?.base ?? "";
+  const systemPrompt = buildSystemPrompt(
+    identity, pack, nextAction, brandContext, handoverContext, mode, tone
+  );
 
-  const behavioursList: string[] =
-    (identity.behaviour as string[]) ||
-    (identity.behaviours as string[]) ||
-    [];
+  const messages = buildMessages(conversationHistory, userInput, extractedText);
 
-  const identityPrompt = `
-========================
-KORA IDENTITY LAYER 3.0
-Companion: Salar — Commercial Intelligence Companion
-Mode: ${mode}
-Persona: ${identity.persona ?? "Commercial Partner"}
-Tone: ${toneText || "Warm professionalism, calm confidence"}
-========================
-
-Key Behaviours:
-${behavioursList.length ? behavioursList.map((b) => `• ${b}`).join("\n") : ""}
-
-Shared Codex:
-${identity.codex ?? ""}
---------------------------------------------------
-`;
-
-  const prompt = resolvePrompt(pack, nextAction || undefined);
-
-  const formatConversation = (arr: any[]) =>
-    arr.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
-
-  const memoryBlock =
-    recentHistory.length > 0
-      ? `\nHere is the conversation so far:\n${formatConversation(recentHistory)}\n`
-      : "";
-
-  const fullPrompt = `
-${identityPrompt}
-${memoryBlock}
-
-${prompt}
-
-User Input:
-"""
-${userInput}
-"""
-
-Uploaded Text:
-"""
-${extractedText || "N/A"}
-"""
-
-Requested Tone: ${tone}
-`;
-
-  // Attachments plan mirrors runSalar logic
   const shouldAttach =
     mode !== "commercial_chat" &&
     !!nextAction &&
@@ -449,11 +390,9 @@ Requested Tone: ${tone}
   let workflowMeta: any = undefined;
 
   if (workflow) {
-    const stageIdFromAction =
-      (nextAction && workflow.nextActionToStage[nextAction]) ||
-      workflow.initialStageId;
-
-    const stage = workflow.stages[stageIdFromAction];
+    const stageId =
+      (nextAction && workflow.nextActionToStage[nextAction]) || workflow.initialStageId;
+    const stage = workflow.stages[stageId];
     if (stage) {
       workflowMeta = {
         stageId: stage.id,
@@ -465,33 +404,27 @@ Requested Tone: ${tone}
     }
   }
 
-  const identityMeta = {
-    persona: identity.persona ?? "Commercial Partner",
-    title: "Commercial Intelligence Companion",
-    mode,
-    toneBase: toneText,
-  };
+  const toneText =
+    typeof identity.tone === "string" ? identity.tone : identity.tone?.base ?? "";
 
   return {
-    model: "gpt-4.1",
-    fullPrompt,
+    model: MODEL,
+    system: systemPrompt,
+    messages,
     buildAttachments: async (finalText: string) => {
       const attachments: any[] = [];
-
       for (const type of attachmentTypes) {
         if (type === "docx") attachments.push(await createDocx(finalText));
         if (type === "pdf") attachments.push(await createPDF(finalText));
         if (type === "xlsx") {
           try {
             const structured = await extractPricingStructure(finalText);
-            const safe = normaliseForXlsx(structured);
-            attachments.push(await createXlsx(safe));
+            attachments.push(await createXlsx(normaliseForXlsx(structured)));
           } catch (err) {
             console.error("❌ buildSalarStreamingPlan XLSX error:", err);
           }
         }
       }
-
       return attachments;
     },
     buildMeta: (_finalText: string) => ({
@@ -501,8 +434,13 @@ Requested Tone: ${tone}
       nextActions: Array.isArray(pack.nextActions)
         ? pack.nextActions
         : Object.values(pack.nextActions || {}).flat(),
-      identity: identityMeta,
-      memory: { shortTerm: safeHistory.slice(-6) },
+      identity: {
+        persona: identity.persona ?? "Commercial Partner",
+        title: "Commercial Intelligence Companion",
+        mode,
+        toneBase: toneText,
+      },
+      memory: { shortTerm: conversationHistory.slice(-6) },
       workflow: workflowMeta,
     }),
   };

@@ -1,11 +1,9 @@
 import Head from 'next/head';
 import {
   WhisperOfArrival,
-  ComparisonTable,
   CompanionGrove,
   CompassFlame,
   RitualEchoes,
-  ZebraCovenant,
   CallToPresence,
 } from '../components/home';
 
@@ -13,27 +11,25 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Kora Intelligence | AI Companions for Founders Who Lead with Clarity</title>
+        <title>Kora Intelligence — AI Companions for Commercial Teams</title>
         <meta
           name="description"
-          content="Emotional operating systems for startups. Discover AI companions for marketing, grant writing, and clarity in scale."
+          content="Two AI companions for commercial and marketing teams. Salar handles proposals, pricing, and deals. Lyra handles campaigns, messaging, and outreach."
         />
-        <meta property="og:title" content="Kora Intelligence – AI Companions for Calm Growth" />
+        <meta property="og:title" content="Kora Intelligence — AI Companions for Commercial Teams" />
         <meta
           property="og:description"
-          content="Meet your AI companions for resonance, grant clarity, and founder alignment."
+          content="Structured outputs, workflow-guided intelligence. Built for teams that need real outputs, not chat."
         />
         <meta property="og:image" content="/og-default.png" />
         <meta property="og:type" content="website" />
       </Head>
 
-      <div className="space-y-24 font-serif text-gray-800 dark:text-gray-100 bg-white dark:bg-neutral-900 transition-colors duration-300 ease-in-out">
+      <div className="bg-[#080808]">
         <WhisperOfArrival />
-        <ComparisonTable />
         <CompanionGrove />
         <CompassFlame />
         <RitualEchoes />
-        <ZebraCovenant />
         <CallToPresence />
       </div>
     </>

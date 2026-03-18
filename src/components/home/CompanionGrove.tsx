@@ -1,64 +1,140 @@
-import CompanionEngineCTA from './CompanionEngineCTA';
+// src/components/home/CompanionGrove.tsx
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { companions, Companion } from '../../data/companions';
+import { motion } from 'framer-motion';
+
+type CompanionEntry = {
+  slug: 'salar' | 'lyra';
+  name: string;
+  letter: string;
+  tagline: string;
+  modes: string[];
+  accentText: string;
+  accentBgLight: string;
+  accentBorderColor: string;
+  glowColor: string;
+};
+
+const COMPANIONS: CompanionEntry[] = [
+  {
+    slug: 'salar',
+    name: 'Salar',
+    letter: 'S',
+    tagline: 'Commercial intelligence for proposals, pricing, and contracts.',
+    modes: ['Commercial Chat', 'Proposal Builder', 'Contract Advisor', 'Pricing & Estimation', 'Commercial Strategist'],
+    accentText: 'text-amber-500',
+    accentBgLight: 'bg-amber-500/10',
+    accentBorderColor: 'rgba(245,158,11,0.25)',
+    glowColor: 'rgba(245,158,11,0.06)',
+  },
+  {
+    slug: 'lyra',
+    name: 'Lyra',
+    letter: 'L',
+    tagline: 'Marketing intelligence for campaigns, messaging, and outreach.',
+    modes: ['Creative Chat', 'Messaging Advisor', 'Campaign Builder', 'Lead Outreach', 'Customer Nurture'],
+    accentText: 'text-teal-500',
+    accentBgLight: 'bg-teal-500/10',
+    accentBorderColor: 'rgba(20,184,166,0.25)',
+    glowColor: 'rgba(20,184,166,0.06)',
+  },
+];
 
 export default function CompanionGrove() {
   return (
     <section
       id="companions"
       aria-label="Meet the Companions"
-      className="scroll-mt-24 bg-neutral-50 dark:bg-gray-900 pt-24 pb-32 px-6 sm:px-12 transition-colors ease-in-out duration-500"
+      className="bg-[#0a0a0a] py-24 px-6 sm:px-12"
     >
-      {/* Header */}
-      <div className="max-w-3xl mx-auto text-center mb-12 space-y-4">
-        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100">
-          Meet Your Companions
-        </h2>
-        <p className="text-md sm:text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-          Start with the two active Companions, each designed to support a core function:
-          brand messaging (Lyra), pricing and contracts (Salar).
-        </p>
-      </div>
+      <div className="max-w-4xl mx-auto">
+        {/* Section header */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.45 }}
+          className="mb-12 text-center"
+        >
+          <p className="text-[10px] tracking-[0.22em] uppercase text-white/30 font-medium mb-3">
+            Two companions
+          </p>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
+            Built for different work. Both built to deliver.
+          </h2>
+        </motion.div>
 
-      {/* Companion Cards */}
-      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-8 justify-items-center">
-        {Object.values(companions)
-          .filter((companion: Companion) =>
-            ['lyra', 'salar'].includes(companion.slug)
-          )
-          .map((companion: Companion) => (
-            <Link
-              key={companion.slug}
-              href={`/companions/${companion.slug}`}
-              className="group bg-white dark:bg-neutral-800 rounded-2xl text-center shadow hover:shadow-xl transition-all duration-300 p-6 border border-transparent hover:border-amber-300 dark:hover:border-amber-500 flex flex-col items-center justify-between"
+        {/* Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {COMPANIONS.map((c, i) => (
+            <motion.div
+              key={c.slug}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.45, delay: i * 0.1 }}
             >
-              <Image
-                src={`/assets/glyphs/glyph-${companion.slug}.png`}
-                alt={`${companion.title} – AI Companion glyph`}
-                width={96}
-                height={96}
-                className="mb-4 rounded-full transition-transform duration-300 group-hover:scale-105"
-              />
+              <Link
+                href={`/companions/${c.slug}`}
+                className="group block rounded-2xl p-6 h-full transition-all duration-200"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  backdropFilter: 'blur(8px)',
+                  border: `1px solid ${c.accentBorderColor}`,
+                  boxShadow: `0 0 40px 0 ${c.glowColor}`,
+                }}
+              >
+                {/* Glyph + name */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div
+                    className={`
+                      w-9 h-9 rounded-full flex-shrink-0
+                      flex items-center justify-center
+                      text-[15px] font-bold
+                      ${c.accentBgLight} ${c.accentText}
+                    `}
+                  >
+                    {c.letter}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-semibold ${c.accentText}`}>{c.name}</p>
+                    <p className="text-[10px] tracking-widest uppercase text-white/30 mt-0.5">
+                      Intelligence
+                    </p>
+                  </div>
+                </div>
 
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {companion.title}
-              </h3>
-
-              {/* Use tagline instead of essence */}
-              {companion.tagline && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {companion.tagline}
+                {/* Tagline */}
+                <p className="text-[13px] text-white/55 leading-relaxed mb-5">
+                  {c.tagline}
                 </p>
-              )}
-            </Link>
-          ))}
-      </div>
 
-      {/* CTA */}
-      <div className="mt-20">
-        <CompanionEngineCTA />
+                {/* Mode pills */}
+                <div className="flex flex-wrap gap-1.5">
+                  {c.modes.map((mode) => (
+                    <span
+                      key={mode}
+                      className="text-[10px] px-2.5 py-1 rounded-full text-white/35 border border-white/10"
+                    >
+                      {mode}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Arrow hint */}
+                <p
+                  className={`
+                    mt-5 text-[11px] font-medium
+                    ${c.accentText} opacity-0 group-hover:opacity-100
+                    transition-opacity duration-200
+                  `}
+                >
+                  View {c.name} →
+                </p>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );

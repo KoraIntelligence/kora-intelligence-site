@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-200 dark:border-zinc-800 py-8 text-center text-sm text-gray-600 dark:text-gray-400">
+    <footer className="border-t border-neutral-800/60 py-8 text-center text-sm text-gray-500 bg-[#171717]">
       <Image
         src="/kora-logo.png"
         alt="Kora Logo"

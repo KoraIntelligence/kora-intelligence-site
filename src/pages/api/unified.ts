@@ -31,6 +31,7 @@ import {
   getMessages,
   saveMessage,
   saveTone,
+  updateSessionTitle,
 } from "@/lib/memory";
 
 type CompanionSlug = "salar" | "lyra";
@@ -256,6 +257,10 @@ if (isGuest) {
 
     let orchestratorResult: OrchestratorResult;
 
+    // Fetch brand context for authenticated users
+    const { getBrandContext } = await import("@/lib/memory");
+    const brandContext = await getBrandContext(userId);
+
     if (companion === "salar") {
       console.log("🟨 Running Salar orchestrator…");
       orchestratorResult = await runSalar({
@@ -265,6 +270,7 @@ if (isGuest) {
         tone,
         nextAction: nextAction || undefined,
         conversationHistory,
+        brandContext,
       } as SalarOrchestratorInput);
     } else {
       console.log("🟨 Running Lyra orchestrator…");
@@ -275,6 +281,7 @@ if (isGuest) {
         tone,
         nextAction: nextAction || undefined,
         conversationHistory,
+        brandContext,
       } as LyraOrchestratorInput);
     }
 
@@ -319,6 +326,11 @@ if (isGuest) {
       attachments,
       meta,
     });
+
+    // Auto-name session on first assistant reply
+    if (sessionId && !incomingSessionId) {
+      updateSessionTitle(sessionId as string, companion, mode).catch(() => {});
+    }
 
     // Only store tone for authenticated users (userId != null)
     if (userId) {

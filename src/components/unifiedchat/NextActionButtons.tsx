@@ -1,5 +1,8 @@
 // src/components/unifiedchat/NextActionButtons.tsx
+
 import React from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 export type WorkflowMeta = {
   stageId?: string;
@@ -19,7 +22,7 @@ export type NextActionMeta = {
 
 type Props = {
   meta: NextActionMeta;
-  history?: { meta?: { workflow?: WorkflowMeta | null } }[]; // kept for future but unused now
+  history?: { meta?: { workflow?: WorkflowMeta | null } }[];
   onSend?: (action: string) => void;
   onRenderVisual?: () => void;
   sending?: boolean;
@@ -88,46 +91,62 @@ export default function NextActionButtons({
   const isLyra = companionName === "lyra";
 
   const uniqueActions = Array.from(
-  new Set(meta.nextActions.filter(action => !UPLOAD_RELATED_ACTIONS.has(action)))
-);
+    new Set(meta.nextActions.filter((action) => !UPLOAD_RELATED_ACTIONS.has(action)))
+  );
+
+  if (uniqueActions.length === 0) return null;
+
+  /* ── Accent classes ─────────────────────────────────────── */
+  const primaryClass = isLyra
+    ? "bg-teal-600 hover:bg-teal-500 text-white border-transparent dark:bg-teal-500 dark:hover:bg-teal-400"
+    : "bg-yellow-600 hover:bg-yellow-500 text-white border-transparent dark:bg-yellow-500 dark:hover:bg-yellow-400";
+
+  const outlineClass = isLyra
+    ? "border-teal-600/40 text-teal-700 hover:bg-teal-50 hover:border-teal-500 dark:border-teal-500/30 dark:text-teal-400 dark:hover:bg-teal-500/10 dark:hover:border-teal-400"
+    : "border-yellow-600/40 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500 dark:border-yellow-500/30 dark:text-yellow-400 dark:hover:bg-yellow-500/10 dark:hover:border-yellow-400";
 
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
-      {uniqueActions.map((action) => {
+    <div
+      className={`flex flex-wrap gap-2 mt-3 ${sending ? "opacity-50 pointer-events-none" : ""}`}
+    >
+      {uniqueActions.map((action, i) => {
         const label = LABEL_MAP[action] || action.replace(/_/g, " ");
+        const isPrimary = i === 0;
 
-        const style = isLyra
-          ? "bg-teal-600 text-white border border-teal-700 hover:bg-teal-700"
-          : "bg-amber-600 text-white border border-amber-700 hover:bg-amber-700";
-
-        const common =
-          `px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${style} ` +
-          (sending ? "opacity-50 cursor-not-allowed" : "");
-
-        if (action === "render_visual") {
-          return (
-            <button
-              key={action}
-              type="button"
-              disabled={sending}
-              onClick={() => !sending && onRenderVisual?.()}
-              className={common}
-            >
-              {label}
-            </button>
-          );
-        }
+        const handleClick = () => {
+          if (sending) return;
+          if (action === "render_visual") {
+            onRenderVisual?.();
+          } else {
+            onSend?.(action);
+          }
+        };
 
         return (
-          <button
+          <motion.div
             key={action}
-            type="button"
-            disabled={sending}
-            onClick={() => !sending && onSend?.(action)}
-            className={common}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.2,
+              delay: i * 0.05,
+              ease: "easeOut",
+            }}
           >
-            {label}
-          </button>
+            <Button
+              type="button"
+              size="sm"
+              variant={isPrimary ? "default" : "outline"}
+              disabled={!!sending}
+              onClick={handleClick}
+              className={`
+                text-xs font-medium tracking-wide transition-all duration-150
+                ${isPrimary ? primaryClass : outlineClass}
+              `}
+            >
+              {label}
+            </Button>
+          </motion.div>
         );
       })}
     </div>

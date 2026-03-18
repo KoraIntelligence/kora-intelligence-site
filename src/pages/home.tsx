@@ -1,11 +1,9 @@
 import Head from 'next/head';
 import {
   WhisperOfArrival,
-  ComparisonTable,
   CompanionGrove,
   CompassFlame,
   RitualEchoes,
-  ZebraCovenant,
   CallToPresence,
 } from '../components/home';
 
@@ -15,13 +13,11 @@ export default function HomePage() {
       <Head>
         <title>Kora Intelligence</title>
       </Head>
-      <div className="font-serif text-gray-800 dark:text-gray-100 bg-white dark:bg-neutral-900 transition-colors ease-in-out duration-500">
+      <div className="bg-[#080808]">
         <WhisperOfArrival />
-        <ComparisonTable />
-        <CompanionGrove />  
+        <CompanionGrove />
         <CompassFlame />
         <RitualEchoes />
-        <ZebraCovenant />
         <CallToPresence />
       </div>
     </>

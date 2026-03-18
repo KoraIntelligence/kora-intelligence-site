@@ -1,51 +1,128 @@
 /* 1. Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-/* 1. Tailwind core directives */
+
+/* 2. Tailwind core directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 🌿 Smooth scrolling for in-page anchors */
-html {
-  scroll-behavior: smooth;
+/* 3. CSS variable theme (shadcn/ui) + global resets — single @layer base block */
+@layer base {
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --radius: 0.5rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 0 0% 98%;
+  }
+
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 240 5.9% 10%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans bg-background text-foreground;
+  }
 }
 
-/* 2. Global reset */
-body {
-  @apply font-sans bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100;
+/* Typing indicator dot animation */
+@keyframes kora-pulse {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.82); }
+  40%           { opacity: 1;    transform: scale(1);    }
 }
 
-/* Typography */
-h1 {
+/* 4. Prose / content area typography
+   Scoped to .prose so shadcn component internals (Button, Card, Dialog, etc.)
+   are not affected by these heading/link/form styles. */
+.prose h1 {
   @apply text-3xl sm:text-4xl md:text-5xl font-bold text-amber-600 mb-6;
 }
 
-h2 {
+.prose h2 {
   @apply text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4;
 }
 
-h3 {
+.prose h3 {
   @apply text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-2;
 }
 
-p {
+.prose p {
   @apply leading-relaxed text-gray-700 dark:text-gray-300;
 }
 
-/* Links */
-a {
+.prose a {
   @apply no-underline text-amber-600 hover:opacity-70 transition;
 }
 
-.dark a {
+.dark .prose a {
   @apply text-amber-400 hover:opacity-80;
-}
-
-/* Forms */
-input,
-textarea,
-select {
-  @apply bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 rounded;
 }
 
 /* Prose in dark mode */
@@ -53,17 +130,12 @@ select {
   @apply text-gray-100;
 }
 
-/* Print-specific tweaks */
-@media print {
-  .messages > * {
-    page-break-inside: avoid;
-  }
-
-  .section-heading {
+/* 5. Section utility class */
+.section-heading {
   @apply text-2xl font-bold text-amber-600 text-center mb-8;
 }
 
-/* Fade-in animations */
+/* 6. Fade-in animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -88,5 +160,10 @@ select {
   animation: fadeIn 1s ease-out forwards;
   animation-delay: 0.25s;
 }
-}
 
+/* 7. Print styles */
+@media print {
+  .messages > * {
+    page-break-inside: avoid;
+  }
+}

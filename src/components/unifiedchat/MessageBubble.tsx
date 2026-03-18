@@ -1,6 +1,7 @@
 // src/components/unifiedchat/MessageBubble.tsx
 
 import React from "react";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -30,12 +31,16 @@ type MessageBubbleProps = {
   message: Message;
   onOpenAttachment?: (attachment: Attachment) => void;
   onNextAction?: (action: string) => void;
+  isFirstInRun?: boolean;
+  isTyping?: boolean;
 };
 
 export default function MessageBubble({
   message,
   onOpenAttachment,
   onNextAction,
+  isFirstInRun = true,
+  isTyping = false,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
@@ -53,151 +58,240 @@ export default function MessageBubble({
 
   const meta = rawMeta;
   const workflow = meta.workflow || undefined;
-
-  /* -------------------------------------------------------
-     BUBBLE STYLING — SOFT DARK MODE PATCH
-  ------------------------------------------------------- */
-  const bubbleBase =
-    "max-w-4xl w-full px-4 py-3 rounded-2xl text-sm transition-colors duration-150 shadow-sm";
-
-  // USER MESSAGE BUBBLE — Light & Soft Dark
-  const bubbleUser =
-    "bg-gray-100 text-gray-900 " +
-    "dark:bg-[#1a1a1a] dark:text-gray-100 dark:border dark:border-neutral-800";
-
-  // SYSTEM MESSAGE BUBBLE — unchanged, light text only
-  const bubbleSystem =
-    "text-gray-500 dark:text-gray-400 text-xs italic bg-transparent shadow-none";
-
-  // ASSISTANT MESSAGE BUBBLE — themed by companion
-  const bubbleAssistant =
-    "bg-white border border-gray-200 " +
-    "dark:bg-[#141414] dark:border-[#2a2a2a] dark:text-gray-200";
-
-  // Salar vs Lyra Accent Rings (dark-mode friendly)
-  const accentRing = isLyra
-    ? "ring-1 ring-teal-500/40 border-teal-500 dark:border-teal-400"
-    : "ring-1 ring-amber-500/40 border-amber-500 dark:border-amber-400";
-
-  const roleStyle = isSystem
-    ? bubbleSystem
-    : isUser
-    ? bubbleUser
-    : `${bubbleAssistant} ${accentRing}`;
-
-  /* Workflow visibility */
   const showWorkflow = !isUser && !isSystem && !!workflow;
 
-  /* -------------------------------------------------------
-     RENDER
-  ------------------------------------------------------- */
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
-      <div className={`${bubbleBase} ${roleStyle}`}>
-        
-        {/* Header: Companion + Mode */}
-        {!isUser && !isSystem && (
-          <div className="flex justify-between items-center mb-1">
+  /* ── Accent tokens ─────────────────────────────────────── */
+  const accentText = isLyra
+    ? "text-teal-500 dark:text-teal-400"
+    : "text-yellow-500 dark:text-yellow-400";
+
+  const accentBg = isLyra
+    ? "bg-teal-500/10 dark:bg-teal-500/[0.12]"
+    : "bg-yellow-500/10 dark:bg-yellow-500/[0.12]";
+
+  const accentBorder = isLyra
+    ? "border-l-teal-500 dark:border-l-teal-400"
+    : "border-l-yellow-500 dark:border-l-yellow-400";
+
+  const dotColor = isLyra ? "bg-teal-400" : "bg-yellow-400";
+
+  /* ── Typing indicator ────────────────────────────────────── */
+  if (isTyping) {
+    return (
+      <div className="flex items-start gap-3 w-full px-1">
+        {/* Avatar slot — always shown for typing */}
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[#222222] border border-neutral-800 overflow-hidden">
+          <Image
+            src={`/assets/glyphs/glyph-${companion}.png`}
+            alt={companion}
+            width={28}
+            height={28}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* Dots */}
+        <div
+          className={`
+            flex items-center gap-[5px] px-4 py-3
+            border-l-[3px] ${accentBorder}
+            pl-3 ml-0
+          `}
+        >
+          {[0, 1, 2].map((i) => (
             <span
-              className={`text-[11px] font-semibold ${
-                isLyra
-                  ? "text-teal-600 dark:text-teal-300"
-                  : "text-amber-600 dark:text-amber-300"
-              }`}
-            >
-              {companion[0].toUpperCase() + companion.slice(1)}
-            </span>
+              key={i}
+              className={`w-[5px] h-[5px] rounded-full ${dotColor} opacity-60`}
+              style={{
+                animation: `kora-pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+              }}
+            />
+          ))}
+        </div>
 
-            {displayMode && (
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                {displayMode}
-              </span>
-            )}
+        <style jsx>{`
+          @keyframes kora-pulse {
+            0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
+            40% { opacity: 1; transform: scale(1); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  /* ── System message ─────────────────────────────────────── */
+  if (isSystem) {
+    return (
+      <div className="flex justify-center w-full py-1">
+        <span className="text-[11px] text-gray-400 dark:text-gray-400 italic tracking-wide">
+          {message.content}
+        </span>
+      </div>
+    );
+  }
+
+  /* ── User message ────────────────────────────────────────── */
+  if (isUser) {
+    return (
+      <div className="group flex justify-end w-full">
+        <div className="max-w-[72%]">
+          <div
+            className={`
+              px-4 py-3 rounded-xl text-sm
+              ${accentBg}
+              text-gray-900 dark:text-gray-100
+            `}
+          >
+            {/* File chip */}
+            {!(message as any).attachments?.length &&
+              rawMeta?.hasFile &&
+              rawMeta?.filename && (
+                <div className="mb-2">
+                  <div
+                    className="
+                      inline-flex items-center gap-2 px-2.5 py-1.5
+                      rounded-md border text-xs
+                      bg-white/60 border-gray-300/60 text-gray-700
+                      dark:bg-white/5 dark:border-white/10 dark:text-gray-300
+                    "
+                  >
+                    <span className="text-[12px]">📎</span>
+                    <span className="truncate max-w-[200px]">
+                      {rawMeta.filename}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+            <div className="prose prose-sm max-w-none prose-invert leading-relaxed">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+
+            {Array.isArray((message as any).attachments) &&
+              (message as any).attachments.length > 0 && (
+                <div className="mt-2">
+                  <MessageAttachments
+                    items={(message as any).attachments as any}
+                    onOpenAttachment={onOpenAttachment as any}
+                  />
+                </div>
+              )}
           </div>
+
+          {/* Timestamp — hover reveal */}
+          <div className="flex justify-end mt-0.5 pr-1">
+            <span className="text-[10px] text-gray-400 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 tracking-wide">
+              {new Date((message as any).ts).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Assistant message ──────────────────────────────────── */
+  return (
+    <div className="group flex items-start gap-3 w-full">
+      {/* Avatar — only on first in run */}
+      <div className="flex-shrink-0 w-7 h-7 mt-0.5">
+        {isFirstInRun ? (
+          <div className="w-7 h-7 rounded-full bg-[#222222] border border-neutral-800 overflow-hidden">
+            <Image
+              src={`/assets/glyphs/glyph-${companion}.png`}
+              alt={companion}
+              width={28}
+              height={28}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="w-7 h-7" />
         )}
+      </div>
 
-        {/* Workflow Stage */}
-        {showWorkflow && workflow?.stageLabel && (
-          <div className="mb-2">
-            <div
-              className={`text-[12px] font-semibold ${
-                isLyra
-                  ? "text-teal-700 dark:text-teal-300"
-                  : "text-amber-700 dark:text-amber-300"
-              }`}
-            >
-              {workflow.stageLabel}
-
-              {workflow.isTerminal && (
-                <span className="ml-1 text-green-600 dark:text-green-400">
-                  (Final Stage)
+      {/* Message body */}
+      <div className="flex-1 min-w-0">
+        <div
+          className={`
+            border-l-[3px] ${accentBorder}
+            pl-3
+          `}
+        >
+          {/* Header: name + mode */}
+          {isFirstInRun && (
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <span className={`text-[11px] font-semibold tracking-wide uppercase ${accentText}`}>
+                {companion[0].toUpperCase() + companion.slice(1)}
+              </span>
+              {displayMode && (
+                <span className="text-[10px] text-gray-400 dark:text-gray-400 tracking-widest uppercase">
+                  {displayMode.replace(/_/g, " ")}
                 </span>
               )}
             </div>
+          )}
 
-            {workflow.stageDescription && (
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-pre-line mt-1">
-                {workflow.stageDescription}
+          {/* Workflow stage */}
+          {showWorkflow && workflow?.stageLabel && (
+            <div className="mb-2">
+              <div className={`text-[11px] font-medium tracking-wide ${accentText}`}>
+                {workflow.stageLabel}
+                {workflow.isTerminal && (
+                  <span className="ml-1.5 text-green-500 dark:text-green-400">
+                    ✓ Final
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-        )}
+              {workflow.stageDescription && (
+                <div className="text-[11px] text-gray-500 dark:text-gray-500 whitespace-pre-line mt-0.5">
+                  {workflow.stageDescription}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Message Content */}
-        {isSystem ? (
-          <span>{message.content}</span>
-        ) : (
-          <div className="prose prose-sm max-w-none dark:prose-invert">
+          {/* Content */}
+          <div className="prose prose-sm max-w-none prose-invert prose-headings:text-gray-100 prose-strong:text-gray-200 prose-a:text-yellow-400 prose-li:text-gray-200 prose-p:text-gray-200 prose-code:text-gray-200 text-gray-200 leading-relaxed">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
             </ReactMarkdown>
           </div>
-        )}
 
-        {/* Attachments */}
-        {Array.isArray((message as any).attachments) &&
-          (message as any).attachments.length > 0 && (
-            <div className="mt-3">
-              <MessageAttachments
-                items={(message as any).attachments as any}
-                onOpenAttachment={onOpenAttachment as any}
-              />
+          {/* Attachments */}
+          {Array.isArray((message as any).attachments) &&
+            (message as any).attachments.length > 0 && (
+              <div className="mt-3">
+                <MessageAttachments
+                  items={(message as any).attachments as any}
+                  onOpenAttachment={onOpenAttachment as any}
+                />
+              </div>
+            )}
+
+          {/* Next actions */}
+          {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
+            <div className="mt-2">
+              <NextActionButtons meta={meta} onSend={onNextAction} />
             </div>
           )}
 
-        {/* User-uploaded file (pre-processing visual) */}
-{isUser &&
-  !isSystem &&
-  !(message as any).attachments?.length &&
-  rawMeta?.hasFile &&
-  rawMeta?.filename && (
-    <div className="mt-2">
-      <div
-        className="
-          inline-flex items-center gap-2 px-3 py-2
-          rounded-lg border text-xs
-          bg-white border-gray-300 text-gray-700
-          dark:bg-[#1a1a1a] dark:border-[#333333] dark:text-gray-200
-        "
-      >
-        <span className="text-[14px]">📎</span>
-        <span className="truncate max-w-[220px]">
-          {rawMeta.filename}
-        </span>
-      </div>
-    </div>
-  )}  
+          {/* v2 scaffold: metadata slot */}
+          <div data-message-meta className="hidden" />
+        </div>
 
-        {/* Next Actions */}
-        {Array.isArray(meta.nextActions) && meta.nextActions.length > 0 && (
-          <div className="mt-2">
-            <NextActionButtons meta={meta} onSend={onNextAction} />
-          </div>
-        )}
-
-        {/* Timestamp */}
-        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500 text-right">
-          {new Date(message.ts).toLocaleTimeString()}
+        {/* Timestamp — hover reveal */}
+        <div className="mt-0.5 pl-3">
+          <span className="text-[10px] text-gray-400 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 tracking-wide">
+            {new Date((message as any).ts).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
         </div>
       </div>
     </div>

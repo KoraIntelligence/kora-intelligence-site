@@ -1,12 +1,13 @@
 // src/components/unifiedchat/WorkflowTopBar.tsx
 import React, { useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Package } from "lucide-react";
 import type { Message as BaseMessage } from "@/types/chat";
 import {
   getWorkflow,
   type GenericWorkflow,
   type GenericWorkflowStage,
 } from "@/companions/workflows";
-
 import { useCompanion } from "@/context/CompanionContext";
 import { useUIState } from "@/context/UIStateContext";
 
@@ -27,6 +28,7 @@ type MessageWithMeta = BaseMessage & {
 type WorkflowTopBarProps = {
   companion: "salar" | "lyra";
   messages: MessageWithMeta[];
+  onOpenDeliverables?: () => void;
 };
 
 /* -----------------------------------------------------------
@@ -50,7 +52,6 @@ function buildLinearStages(workflow: GenericWorkflow): GenericWorkflowStage[] {
         : undefined;
 
     if (!next) break;
-
     cursor = next;
   }
 
@@ -60,6 +61,7 @@ function buildLinearStages(workflow: GenericWorkflow): GenericWorkflowStage[] {
 export default function WorkflowTopBar({
   companion,
   messages,
+  onOpenDeliverables,
 }: WorkflowTopBarProps) {
   const barRef = useRef<HTMLDivElement | null>(null);
   const { setTopBarHeight } = useUIState();
@@ -92,87 +94,146 @@ export default function WorkflowTopBar({
     setTopBarHeight(barRef.current.getBoundingClientRect().height);
   }, [workflowMessages.length, safeIndex, stages.length, setTopBarHeight]);
 
-  if (noWorkflow || !workflow || !currentStageId) return null;
+  // No workflow yet — render a minimal bar so Deliverables is always accessible
+  if (noWorkflow || !workflow || !currentStageId) {
+    return (
+      <div
+        ref={barRef}
+        className="relative w-full h-10 flex items-center bg-[#171717] border-b border-yellow-500/20 px-3 md:px-4"
+      >
+        <div className="flex-1" />
+        <button
+          disabled
+          title="Available at export stage"
+          className="flex items-center gap-1.5 text-[10px] tracking-wider uppercase font-medium text-yellow-500/40 rounded-md px-2.5 py-1 cursor-default"
+        >
+          <Package size={12} strokeWidth={1.8} />
+          <span className="hidden sm:inline">Deliverables</span>
+        </button>
+      </div>
+    );
+  }
 
-  /* ---------------------- UI THEME ---------------------- */
+  /* ── Accent tokens ─────────────────────────────────────── */
   const isLyra = companion === "lyra";
 
-  const bgClass = isLyra
-    ? "bg-teal-50 dark:bg-teal-900/20"
-    : "bg-amber-50 dark:bg-amber-900/20";
-
-  const borderClass = isLyra
-    ? "border-teal-200 dark:border-teal-900/40"
-    : "border-amber-200 dark:border-amber-900/40";
-
   const accentText = isLyra
-    ? "text-teal-700 dark:text-teal-300"
-    : "text-amber-700 dark:text-amber-300";
+    ? "text-teal-500 dark:text-teal-400"
+    : "text-yellow-500 dark:text-yellow-400";
 
-  const accentDot = isLyra
-    ? "bg-teal-500 border-teal-500 dark:bg-teal-400 dark:border-teal-300"
-    : "bg-amber-500 border-amber-500 dark:bg-amber-400 dark:border-amber-300";
+  const accentBorderB = isLyra
+    ? "border-b border-teal-500/40 dark:border-teal-400/30"
+    : "border-b border-yellow-500/40 dark:border-yellow-400/30";
+
+  const accentDotFill = isLyra
+    ? "bg-teal-500 dark:bg-teal-400"
+    : "bg-yellow-500 dark:bg-yellow-400";
+
+  const accentRing = isLyra
+    ? "ring-2 ring-teal-500/25 dark:ring-teal-400/20"
+    : "ring-2 ring-yellow-500/25 dark:ring-yellow-400/20";
+
+  const accentHoverBg = isLyra
+    ? "hover:bg-teal-500/10 dark:hover:bg-teal-400/10"
+    : "hover:bg-yellow-500/10 dark:hover:bg-yellow-400/10";
+
+  const deliverablesEnabled = !!activeStage?.isTerminal;
 
   return (
     <div
       ref={barRef}
-      className={`w-full border-b ${borderClass} ${bgClass}
-        px-4 md:px-6 py-3 flex flex-col md:flex-row
-        md:items-center md:justify-between gap-3
-        sticky top-0 z-20 backdrop-blur-sm`}
+      className={`
+        relative w-full h-10 flex items-center
+        bg-[#171717]
+        ${accentBorderB}
+        px-3 md:px-4
+      `}
     >
-      {/* Left section */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-          <span className={`w-2 h-2 rounded-full ${accentDot}`} />
-          <span>Workflow Stage</span>
-          {activeStage?.isTerminal && (
-            <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-semibold">
-              Final Stage
-            </span>
-          )}
-        </div>
-
-        <div className={`text-sm font-semibold ${accentText} truncate`}>
+      {/* ── Left: stage name ───────────────────────────────── */}
+      <div className="hidden md:flex items-center flex-1 min-w-0">
+        <span className={`text-[11px] tracking-wide ${accentText} truncate`}>
           {activeStage?.label}
-        </div>
-
-        {activeStage?.description && (
-          <div className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line line-clamp-2">
-            {activeStage.description}
-          </div>
-        )}
+        </span>
       </div>
 
-      {/* Right stage indicator */}
-      <div className="flex items-center gap-2 md:ml-4">
+      {/* ── Center: stage dots ─────────────────────────────── */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0">
         {stages.map((stage, idx) => {
           const isPast = idx < safeIndex;
           const isCurrent = idx === safeIndex;
-
-          let circleClass =
-            "w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700";
-
-          if (isPast) circleClass = `w-2.5 h-2.5 rounded-full border ${accentDot}`;
-          if (isCurrent)
-            circleClass = `w-3 h-3 rounded-full border-2 ${accentDot}
-            ring-2 ring-offset-1 ring-gray-200 dark:ring-gray-700 dark:ring-offset-gray-900`;
+          const isUpcoming = idx > safeIndex;
 
           return (
             <React.Fragment key={stage.id}>
-              <div className="flex flex-col items-center gap-1">
-                <div className={circleClass} />
-                <span className="hidden md:block text-[10px] text-gray-500 dark:text-gray-400 max-w-[80px] truncate text-center">
-                  {stage.label}
-                </span>
+              <div className="flex flex-col items-center">
+                {/* Dot */}
+                <motion.div
+                  layout
+                  animate={{
+                    scale: isCurrent ? 1 : 1,
+                    opacity: isUpcoming ? 0.4 : 1,
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  className={`
+                    rounded-full
+                    ${isCurrent
+                      ? `w-2.5 h-2.5 ${accentDotFill} ${accentRing}`
+                      : isPast
+                      ? `w-2 h-2 ${accentDotFill}`
+                      : "w-2 h-2 border border-gray-300 dark:border-neutral-700 bg-transparent"
+                    }
+                  `}
+                />
+
+                {/* Active stage label — only active dot gets a label */}
+                <div className="h-0 overflow-visible flex justify-center">
+                  <AnimatePresence>
+                    {isCurrent && (
+                      <motion.span
+                        key={stage.id}
+                        initial={{ opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -2 }}
+                        transition={{ duration: 0.2 }}
+                        className={`
+                          absolute top-[22px]
+                          text-[8px] tracking-widest uppercase whitespace-nowrap
+                          ${accentText}
+                        `}
+                      >
+                        {stage.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
+              {/* Connector */}
               {idx < stages.length - 1 && (
-                <div className="w-6 h-px bg-gray-300 dark:bg-gray-600 hidden md:block" />
+                <div className="w-5 h-px bg-gray-200 dark:bg-neutral-800 mx-0.5" />
               )}
             </React.Fragment>
           );
         })}
+      </div>
+
+      {/* ── Right: Deliverables button ─────────────────────── */}
+      <div className="flex items-center justify-end flex-1">
+        <button
+          onClick={deliverablesEnabled ? onOpenDeliverables : undefined}
+          title={!deliverablesEnabled ? "Available at export stage" : undefined}
+          className={`
+            flex items-center gap-1.5
+            text-[10px] tracking-wider uppercase font-medium
+            ${accentText} ${accentHoverBg}
+            rounded-md px-2.5 py-1
+            transition-all duration-150
+            ${!deliverablesEnabled ? "opacity-40 cursor-default" : "cursor-pointer"}
+          `}
+        >
+          <Package size={12} strokeWidth={1.8} />
+          <span className="hidden sm:inline">Deliverables</span>
+        </button>
       </div>
     </div>
   );

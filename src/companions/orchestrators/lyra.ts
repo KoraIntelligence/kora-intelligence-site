@@ -1,25 +1,20 @@
 // src/companions/orchestrators/lyra.ts
 // =====================================================================
 // LYRA ORCHESTRATOR — Handles all Lyra Modes
+// Migrated to Anthropic Claude (claude-sonnet-4-6)
 // =====================================================================
 
+import Anthropic from "@anthropic-ai/sdk";
 import { getWorkflow } from "../workflows";
 import { loadIdentity } from "../identity/loader";
-import OpenAI from "openai";
 
-// Prompt Packs
 import { LYRA_CREATIVE_CHAT_PROMPTS } from "../prompts/lyra/creative_chat";
 import { LYRA_MESSAGING_PROMPTS } from "../prompts/lyra/messaging";
 import { LYRA_CAMPAIGN_PROMPTS } from "../prompts/lyra/campaign";
 import { LYRA_OUTREACH_PROMPTS } from "../prompts/lyra/outreach";
 import { LYRA_NURTURE_PROMPTS } from "../prompts/lyra/nurture";
 
-// Attachment builders
-import {
-  createPDF,
-  createDocx,
-  createXlsx,
-} from "../../pages/api/session/utils/generateDocs";
+import { createPDF, createDocx, createXlsx } from "../../pages/api/session/utils/generateDocs";
 
 // =====================================================================
 // TYPES
@@ -39,6 +34,8 @@ export interface LyraOrchestratorInput {
   tone: string;
   nextAction?: string;
   conversationHistory?: { role: string; content: string; meta?: any | null }[];
+  brandContext?: string;
+  handoverContext?: string;
 }
 
 export interface LyraPromptPack {
@@ -52,14 +49,11 @@ export interface LyraPromptPack {
 
   context?: string;
   explore?: string;
-
   contentPlan?: string;
   kvDirection?: string;
-
   dataIngestion?: string;
   segmentation?: string;
   outreachSequence?: string;
-
   narrativeArc?: string;
   emailDrafts?: string;
 
@@ -85,33 +79,28 @@ const PACKS: Record<LyraMode, LyraPromptPack> = {
 };
 
 // =====================================================================
-// OPENAI CLIENT
+// ANTHROPIC CLIENT
 // =====================================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+
+const MODEL = process.env.KORA_MODEL || "claude-sonnet-4-6";
 
 // =====================================================================
 // PROMPT ROUTER
 // =====================================================================
 
-function resolvePrompt(
-  pack: LyraPromptPack,
-  mode: LyraMode,
-  nextAction?: string
-): string {
+function resolvePrompt(pack: LyraPromptPack, mode: LyraMode, nextAction?: string): string {
   if (!nextAction) return pack.system;
 
   switch (nextAction) {
     case "clarify_requirements":
     case "ask_questions":
       return pack.clarify || pack.error;
-
     case "finalise_pack":
       return pack.finalise || pack.error;
-
-    // ---- Creative Chat ----
     case "refine_idea":
       return pack.refine || pack.error;
     case "explore_options":
@@ -120,20 +109,14 @@ function resolvePrompt(
       return pack.finalise || pack.error;
     case "switch_mode":
       return pack.system;
-
-    // ---- Messaging ----
     case "draft_concepts":
       return pack.draft || pack.error;
     case "refine_direction":
       return pack.refine || pack.error;
-
-    // ---- Campaign ----
     case "content_plan":
       return pack.contentPlan || pack.error;
     case "kv_direction":
       return pack.kvDirection || pack.error;
-
-    // ---- Outreach ----
     case "request_csv":
       return pack.clarify || pack.error;
     case "segment_data":
@@ -142,22 +125,92 @@ function resolvePrompt(
       return pack.outreachSequence || pack.draft || pack.error;
     case "refine_outreach":
       return pack.refine || pack.error;
-
-    // ---- Nurture ----
     case "draft_arc":
       return pack.narrativeArc || pack.draft || pack.error;
     case "draft_emails":
       return pack.emailDrafts || pack.draft || pack.error;
     case "refine_emails":
       return pack.refine || pack.error;
-
     default:
       return pack.system;
   }
 }
 
 // =====================================================================
-// MAIN ORCHESTRATOR
+// BUILD SYSTEM PROMPT
+// =====================================================================
+
+function buildSystemPrompt(
+  identity: any,
+  pack: LyraPromptPack,
+  nextAction: string | undefined,
+  brandContext: string,
+  handoverContext: string,
+  mode: LyraMode,
+  tone: string
+): string {
+  const toneText =
+    (typeof identity.tone === "string" ? identity.tone : identity.tone?.base) ||
+    "warm, clear, brand-conscious";
+
+  const identityBlock = `You are Lyra, Kora's brand and marketing intelligence companion.
+Persona: ${identity.persona || "Creative Partner"}
+Mode: ${mode}
+Tone: ${toneText}
+${identity.codex ? "\n" + identity.codex : ""}`;
+
+  const modeInstructions = resolvePrompt(pack, mode, nextAction);
+
+  const brandBlock = brandContext
+    ? `\n\n---\nBRAND CONTEXT:\n${brandContext}\n---`
+    : "";
+
+  const handoverBlock = handoverContext
+    ? `\n\n---\nCONTEXT FROM PREVIOUS CONVERSATION:\n${handoverContext}\n---`
+    : "";
+
+  const toneBlock = `\nRequested tone: ${tone}`;
+
+  return `${identityBlock}\n\n${modeInstructions}${brandBlock}${handoverBlock}${toneBlock}`;
+}
+
+// =====================================================================
+// BUILD MESSAGES
+// =====================================================================
+
+function buildMessages(
+  conversationHistory: { role: string; content: string }[],
+  userInput: string,
+  extractedText: string
+): Array<{ role: "user" | "assistant"; content: string }> {
+  const RECENT_TURNS = 8;
+  const recentHistory = conversationHistory.slice(-RECENT_TURNS);
+
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+  for (const turn of recentHistory) {
+    if (turn.role === "user" || turn.role === "assistant") {
+      messages.push({ role: turn.role, content: turn.content });
+    }
+  }
+
+  let currentContent = userInput || "";
+  if (extractedText) {
+    currentContent += `\n\nUploaded document:\n"""\n${extractedText}\n"""`;
+  }
+  if (currentContent.trim()) {
+    messages.push({ role: "user", content: currentContent.trim() });
+  }
+
+  if (messages.length === 0) {
+    messages.push({ role: "user", content: "(start)" });
+  }
+
+  return messages;
+}
+
+// =====================================================================
+// MAIN ORCHESTRATOR (non-streaming)
 // =====================================================================
 
 export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
@@ -167,84 +220,33 @@ export async function runLyra(orchestratorInput: LyraOrchestratorInput) {
     extractedText,
     tone,
     nextAction,
-    conversationHistory,
+    conversationHistory = [],
+    brandContext = "",
+    handoverContext = "",
   } = orchestratorInput;
-
-  const safeHistory = Array.isArray(conversationHistory)
-    ? conversationHistory
-    : [];
 
   const pack = PACKS[mode];
   if (!pack) throw new Error(`Unknown Lyra mode: ${mode}`);
 
   const identity: any = loadIdentity("lyra", mode);
 
-  const toneText =
-    (typeof identity.tone === "string"
-      ? identity.tone
-      : identity.tone?.base) || "warm, clear, brand-conscious";
+  const systemPrompt = buildSystemPrompt(
+    identity, pack, nextAction, brandContext, handoverContext, mode, tone
+  );
 
-  const promptBlock = resolvePrompt(pack, mode, nextAction);
+  const messages = buildMessages(conversationHistory, input, extractedText);
 
-  const historyBlock =
-    safeHistory.length > 0
-      ? `
-Previous conversation:
-${safeHistory
-  .slice(-8)
-  .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
-  .join("\n\n")}
-`
-      : "";
-
-  function formatConversation(hist: any[]) {
-    return hist
-      .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
-      .join("\n");
-  }
-
-  const memoryBlock = safeHistory.length
-    ? `\nHere is the conversation so far:\n${formatConversation(safeHistory)}\n`
-    : "";
-
-  const fullPrompt = `
-${promptBlock}
-
-You are LYRA in mode **${mode}**
-Persona: ${identity.persona || "Creative Partner"}
-Base Tone: ${toneText}
-
-${memoryBlock}
-${historyBlock}
-
-User Input:
-"""
-${input}
-"""
-
-Uploaded Text:
-"""
-${extractedText || "N/A"}
-"""
-
-Tone: ${tone}
-`;
-
-  // -------------------------------------------------------------------
-  // OPENAI
-  // -------------------------------------------------------------------
-
-  const completion = await openai.responses.create({
-    model: "gpt-4.1",
-    input: fullPrompt,
+  const response = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 8192,
+    system: systemPrompt,
+    messages,
   });
 
   const outputText =
-    completion.output_text || "Lyra was unable to generate a response.";
-
-  // -------------------------------------------------------------------
-  // ATTACHMENTS (PDF / DOCX / XLSX)
-  // -------------------------------------------------------------------
+    response.content[0]?.type === "text"
+      ? response.content[0].text
+      : "Lyra was unable to generate a response.";
 
   const attachments: any[] = [];
 
@@ -256,18 +258,12 @@ Tone: ${tone}
     }
   }
 
-  // -------------------------------------------------------------------
-  // WORKFLOW METADATA
-  // -------------------------------------------------------------------
-
   const workflow = getWorkflow("lyra", mode);
   let workflowMeta: any = undefined;
 
   if (workflow) {
     const stageId =
-      (nextAction && workflow.nextActionToStage[nextAction]) ||
-      workflow.initialStageId;
-
+      (nextAction && workflow.nextActionToStage[nextAction]) || workflow.initialStageId;
     const stage = workflow.stages[stageId];
     if (stage) {
       workflowMeta = {
@@ -279,6 +275,10 @@ Tone: ${tone}
       };
     }
   }
+
+  const toneText =
+    (typeof identity.tone === "string" ? identity.tone : identity.tone?.base) ||
+    "warm, clear, brand-conscious";
 
   const flatNextActions = Object.values(pack.nextActions || {}).flat();
 
@@ -296,72 +296,40 @@ Tone: ${tone}
         mode,
         toneBase: toneText,
       },
-      memory: { shortTerm: safeHistory.slice(-6) },
+      memory: { shortTerm: conversationHistory.slice(-6) },
       workflow: workflowMeta,
     },
   };
 }
 
+// =====================================================================
+// STREAMING PLAN
+// =====================================================================
+
 export type LyraStreamingPlanInput = LyraOrchestratorInput;
 
 export function buildLyraStreamingPlan(orchestratorInput: LyraStreamingPlanInput) {
-  const { mode, input, extractedText, tone, nextAction, conversationHistory } =
-    orchestratorInput;
-
-  const safeHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  const {
+    mode,
+    input,
+    extractedText,
+    tone,
+    nextAction,
+    conversationHistory = [],
+    brandContext = "",
+    handoverContext = "",
+  } = orchestratorInput;
 
   const pack = PACKS[mode];
   if (!pack) throw new Error(`Unknown Lyra mode: ${mode}`);
 
   const identity: any = loadIdentity("lyra", mode);
 
-  const toneText =
-    (typeof identity.tone === "string" ? identity.tone : identity.tone?.base) ||
-    "warm, clear, brand-conscious";
+  const systemPrompt = buildSystemPrompt(
+    identity, pack, nextAction, brandContext, handoverContext, mode, tone
+  );
 
-  const promptBlock = resolvePrompt(pack, mode, nextAction);
-
-  const historyBlock =
-    safeHistory.length > 0
-      ? `
-Previous conversation:
-${safeHistory
-  .slice(-8)
-  .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
-  .join("\n\n")}
-`
-      : "";
-
-  function formatConversation(hist: any[]) {
-    return hist.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n");
-  }
-
-  const memoryBlock = safeHistory.length
-    ? `\nHere is the conversation so far:\n${formatConversation(safeHistory)}\n`
-    : "";
-
-  const fullPrompt = `
-${promptBlock}
-
-You are LYRA in mode **${mode}**
-Persona: ${identity.persona || "Creative Partner"}
-Base Tone: ${toneText}
-
-${memoryBlock}
-${historyBlock}
-
-User Input:
-"""
-${input}
-"""
-
-Uploaded Text:
-"""
-${extractedText || "N/A"}
-"""
-
-Tone: ${tone}
-`;
+  const messages = buildMessages(conversationHistory, input, extractedText);
 
   const attachmentTypes =
     nextAction && pack.attachments?.final ? pack.attachments.final : [];
@@ -371,9 +339,7 @@ Tone: ${tone}
 
   if (workflow) {
     const stageId =
-      (nextAction && workflow.nextActionToStage[nextAction]) ||
-      workflow.initialStageId;
-
+      (nextAction && workflow.nextActionToStage[nextAction]) || workflow.initialStageId;
     const stage = workflow.stages[stageId];
     if (stage) {
       workflowMeta = {
@@ -386,11 +352,16 @@ Tone: ${tone}
     }
   }
 
+  const toneText =
+    (typeof identity.tone === "string" ? identity.tone : identity.tone?.base) ||
+    "warm, clear, brand-conscious";
+
   const flatNextActions = Object.values(pack.nextActions || {}).flat();
 
   return {
-    model: "gpt-4.1",
-    fullPrompt,
+    model: MODEL,
+    system: systemPrompt,
+    messages,
     buildAttachments: async (finalText: string) => {
       const attachments: any[] = [];
       for (const type of attachmentTypes) {
@@ -411,7 +382,7 @@ Tone: ${tone}
         mode,
         toneBase: toneText,
       },
-      memory: { shortTerm: safeHistory.slice(-6) },
+      memory: { shortTerm: conversationHistory.slice(-6) },
       workflow: workflowMeta,
     }),
   };

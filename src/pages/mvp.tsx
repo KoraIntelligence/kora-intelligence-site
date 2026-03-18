@@ -7,7 +7,9 @@
 --------------------------------------------------------- */
 
 import React, { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/router";
+import Header from "@/components/layout/Header";
 import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react";
 
 import ChatScreen from "@/screens/ChatScreen";
@@ -72,3 +74,15 @@ export default function MVP() {
     </CompanionProvider>
   );
 }
+
+// Bypass default Layout — use a tight shell with Header + full-height chat area
+MVP.getLayout = function getLayout(page: ReactNode) {
+  return (
+    <div className="flex flex-col h-screen bg-[#111111] overflow-hidden">
+      <Header />
+      <div className="flex-1 overflow-hidden pt-14">
+        {page}
+      </div>
+    </div>
+  );
+};

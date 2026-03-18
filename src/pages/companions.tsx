@@ -1,58 +1,119 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { companions, Companion } from '../data/companions';
+// src/pages/companions.tsx
+import React, { useState, useRef, useEffect } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import { motion } from 'framer-motion';
+import CompanionCard from '@/components/CompanionCard';
+
+type CompanionKey = 'salar' | 'lyra';
 
 export default function CompanionsPage() {
-  return (
-    <main className="pt-24 pb-32 px-6 max-w-6xl mx-auto text-center text-gray-800 dark:text-gray-100">
-      {/* Page Header */}
-      <header className="space-y-4 mb-12">
-        <h1 className="text-amber-600 text-3xl sm:text-4xl md:text-5xl font-bold">
-          The Companions of Kora
-        </h1>
-        <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300">
-          Meet the two active Companions shaping the Grove today -  
-          <span className="font-semibold"> Lyra </span> for brand clarity and 
-          <span className="font-semibold"> Salar </span> for pricing and continuity.
-        </p>
-        <Link
-          href="/mvp"
-          className="inline-block mt-6 px-6 py-3 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition"
-        >
-          Begin My Conversation →
-        </Link>
-      </header>
+  const router = useRouter();
 
-      {/* Companion Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-8 justify-items-center">
-        {Object.values(companions)
-          .filter((companion: Companion) =>
-            ['lyra', 'salar'].includes(companion.slug)
-          )
-          .map((companion: Companion) => (
-            <Link
-              key={companion.slug}
-              href={`/companions/${companion.slug}`}
-              className="group bg-white dark:bg-neutral-800 p-6 rounded-2xl shadow hover:shadow-lg transition-all duration-300 flex flex-col items-center border border-transparent hover:border-amber-300 dark:hover:border-amber-500"
-            >
-              <Image
-                src={`/assets/glyphs/glyph-${companion.slug}.png`}
-                alt={`${companion.title} glyph`}
-                width={96}
-                height={96}
-                className="mx-auto mb-4 rounded-full transition-transform duration-300 group-hover:scale-105"
-              />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {companion.title}
-              </h2>
-              {companion.tagline && (
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-xs">
-                  {companion.tagline}
-                </p>
-              )}
-            </Link>
-          ))}
-      </section>
-    </main>
+  const [hovered, setHovered] = useState<CompanionKey | null>(null);
+  const [dwelled, setDwelled] = useState<CompanionKey | null>(null);
+  const [expanded, setExpanded] = useState<CompanionKey | null>(null);
+
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = (c: CompanionKey) => {
+    setHovered(c);
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    dwellTimer.current = setTimeout(() => setDwelled(c), 300);
+  };
+
+  const handleMouseLeave = () => {
+    setHovered(null);
+    setDwelled(null);
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    };
+  }, []);
+
+  const handleToggle = (c: CompanionKey) => {
+    setExpanded((prev) => (prev === c ? null : c));
+  };
+
+  const handleBegin = (c: CompanionKey) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kora_companion', c);
+    }
+    router.push('/mvp');
+  };
+
+  return (
+    <>
+      <Head>
+        <title>Choose Your Companion — Kora Intelligence</title>
+        <meta
+          name="description"
+          content="Salar for commercial intelligence. Lyra for marketing intelligence. Choose your companion."
+        />
+      </Head>
+
+      {/*
+        Break out of the Layout's horizontal padding for full-bleed split.
+        Layout's <main> has: px-4 sm:px-6 pt-24 pb-24
+        We counteract horizontal padding with negative margins.
+        -mb-24 cancels the bottom padding so the split reaches the footer edge.
+      */}
+      <div
+        className="-mx-4 sm:-mx-6 -mb-24 overflow-hidden"
+        style={{ minHeight: 'calc(100vh - 3.5rem)' }}
+      >
+        {/* Heading strip */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="relative z-10 text-center py-7 px-6 bg-[#0a0a0a] border-b border-neutral-800/60"
+        >
+          <p className="text-[10px] tracking-[0.2em] uppercase text-gray-500 font-medium">
+            Kora Intelligence
+          </p>
+          <h1 className="mt-1.5 text-lg md:text-xl font-semibold text-gray-100 tracking-tight">
+            Choose your companion
+          </h1>
+        </motion.div>
+
+        {/* Split */}
+        <div
+          className="flex flex-col md:flex-row"
+          style={{ minHeight: 'calc(100vh - 3.5rem - 73px)' }}
+        >
+          <CompanionCard
+            companion="salar"
+            isActive={hovered === 'salar'}
+            isOtherActive={hovered === 'lyra'}
+            hasDwelled={dwelled === 'salar'}
+            isExpanded={expanded === 'salar'}
+            onMouseEnter={() => handleMouseEnter('salar')}
+            onMouseLeave={handleMouseLeave}
+            onToggle={() => handleToggle('salar')}
+            onBegin={() => handleBegin('salar')}
+          />
+
+          {/* Vertical divider (desktop) / horizontal (mobile) */}
+          <div className="hidden md:block w-px bg-neutral-800/80 flex-shrink-0" />
+          <div className="md:hidden h-px bg-neutral-800/80 flex-shrink-0" />
+
+          <CompanionCard
+            companion="lyra"
+            isActive={hovered === 'lyra'}
+            isOtherActive={hovered === 'salar'}
+            hasDwelled={dwelled === 'lyra'}
+            isExpanded={expanded === 'lyra'}
+            onMouseEnter={() => handleMouseEnter('lyra')}
+            onMouseLeave={handleMouseLeave}
+            onToggle={() => handleToggle('lyra')}
+            onBegin={() => handleBegin('lyra')}
+          />
+        </div>
+      </div>
+    </>
   );
 }

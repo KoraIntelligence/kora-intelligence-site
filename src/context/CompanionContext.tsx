@@ -16,9 +16,9 @@ interface CompanionState {
   setLyraMode: (m: LyraMode) => void;
 
   theme: {
-    accent: string;       // amber-600 or teal-600
-    accentLight: string;  // amber-50 or teal-50
-    border: string;       // border-amber-600 or border-teal-600
+    accent: string;       // yellow-600 or teal-600
+    accentLight: string;  // yellow-50 or teal-50
+    border: string;       // border-yellow-600 or border-teal-600
   };
 }
 
@@ -38,9 +38,18 @@ export function CompanionProvider({ children }: { children: React.ReactNode }) {
     );
   }, [companion, salarMode, lyraMode]);
 
-  // Load on mount
+  // Load on mount — also picks up kora_companion written by companions.tsx
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // companions.tsx writes kora_companion when user clicks "Begin" — use it first
+    const selected = localStorage.getItem("kora_companion") as Companion | null;
+    if (selected === "salar" || selected === "lyra") {
+      setCompanion(selected);
+      localStorage.removeItem("kora_companion"); // consume it
+      return;
+    }
+
     const raw = localStorage.getItem("kora_companion_state");
     if (!raw) return;
 
@@ -60,9 +69,9 @@ export function CompanionProvider({ children }: { children: React.ReactNode }) {
           border: "border-teal-600",
         }
       : {
-          accent: "amber-600",
-          accentLight: "amber-50",
-          border: "border-amber-600",
+          accent: "yellow-600",
+          accentLight: "yellow-50",
+          border: "border-yellow-600",
         };
 
   return (

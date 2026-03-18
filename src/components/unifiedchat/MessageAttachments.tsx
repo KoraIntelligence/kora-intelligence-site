@@ -42,7 +42,7 @@ export default function MessageAttachments({
               className="border rounded-xl bg-white shadow p-4 cursor-pointer"
               onClick={handleClick}
             >
-              <h3 className="font-semibold text-amber-700 mb-2">
+              <h3 className="font-semibold text-yellow-700 mb-2">
                 {att.title || "Preview"}
               </h3>
 
@@ -53,7 +53,7 @@ export default function MessageAttachments({
                   <a
                     href={att.dataUrl}
                     download={`${att.title || "preview"}.png`}
-                    className="px-3 py-1 text-sm rounded-md bg-amber-600 text-white"
+                    className="px-3 py-1 text-sm rounded-md bg-yellow-600 text-white"
                     onClick={(e) => e.stopPropagation()}
                   >
                     Download PNG
@@ -92,7 +92,7 @@ export default function MessageAttachments({
                   onClick={() =>
                     navigator.clipboard.writeText(att.content || "")
                   }
-                  className="text-sm text-gray-600 underline"
+                  className="text-sm text-gray-400 underline"
                 >
                   Copy Code
                 </button>
@@ -109,7 +109,7 @@ export default function MessageAttachments({
             key={i}
             href={att.dataUrl}
             download={att.filename}
-            className="px-3 py-2 text-sm rounded-lg bg-amber-600 text-white hover:bg-amber-700 inline-block"
+            className="px-3 py-2 text-sm rounded-lg bg-yellow-600 text-white hover:bg-yellow-700 inline-block"
           >
             Download {att.kind.toUpperCase()}
           </a>

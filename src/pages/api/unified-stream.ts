@@ -1,4 +1,5 @@
 // src/pages/api/unified-stream.ts
+// Main streaming SSE endpoint — Anthropic Claude
 
 export const config = {
   api: {
@@ -9,13 +10,21 @@ export const config = {
 };
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { withRetry } from "../../lib/retry";
 import { parseUploadedFile } from "../../pages/api/session/utils/parseFiles";
 import { loadIdentity } from "../../companions/identity/loader";
-import { createSession, getMessages, saveMessage, saveTone } from "../../lib/memory";
+import {
+  createSession,
+  getMessages,
+  saveMessage,
+  saveTone,
+  getBrandContext,
+  updateSessionTitle,
+} from "../../lib/memory";
 
 import type { SalarMode } from "../../companions/orchestrators/salar";
 import type { LyraMode } from "../../companions/orchestrators/lyra";
@@ -41,6 +50,7 @@ interface UnifiedRequestBody {
   filePayload?: any;
   userId?: string | null;
   sessionId?: string | null;
+  handoverContext?: string | null;
 }
 
 export interface ConversationTurn {
@@ -70,17 +80,13 @@ function parseBody(req: NextApiRequest): UnifiedRequestBody {
   return req.body as UnifiedRequestBody;
 }
 
-// SSE helpers
 function sseInit(res: NextApiResponse) {
   res.status(200);
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
-  // Prevent buffering by some proxies
   res.setHeader("X-Accel-Buffering", "no");
-  // CORS (same-origin in your case, but safe)
   res.setHeader("Access-Control-Allow-Origin", "*");
-  // Flush headers if available
   // @ts-ignore
   res.flushHeaders?.();
 }
@@ -90,13 +96,16 @@ function sseSend(res: NextApiResponse, data: any) {
 }
 
 function ssePing(res: NextApiResponse) {
-  // comment line keeps connection alive without triggering message handlers
   res.write(`: ping\n\n`);
 }
 
 /* ---------------- Handler ---------------- */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+const MODEL = process.env.KORA_MODEL || "claude-sonnet-4-6";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("🟦 unified-stream.ts: Incoming request:", req.method);
@@ -105,17 +114,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Start SSE right away
   sseInit(res);
 
-  // Heartbeat to keep mobile/proxies alive
   const heartbeat = setInterval(() => {
-    try {
-      ssePing(res);
-    } catch {}
+    try { ssePing(res); } catch {}
   }, 15_000);
 
-  // Abort streaming if client disconnects
   const abortController = new AbortController();
   req.on("close", () => {
     abortController.abort();
@@ -133,6 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nextAction = null,
       filePayload,
       sessionId: incomingSessionId,
+      handoverContext = null,
     } = body;
 
     if (!mode) {
@@ -143,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const isGuest = req.headers["x-guest"] === "true";
 
-    /* ---------- USER ID HANDLING (match unified.ts) ---------- */
+    /* ---------- USER ID ---------- */
     let userId: string | null = null;
 
     if (isGuest) {
@@ -164,7 +169,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userId = user.id;
     }
 
-    /* ---------- FILE HANDLING (match unified.ts) ---------- */
+    /* ---------- FILE HANDLING ---------- */
     let extractedText = "";
     if (filePayload) {
       try {
@@ -177,7 +182,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    /* ---------- SESSION HANDLING (match unified.ts) ---------- */
+    /* ---------- SESSION ---------- */
     let sessionId = incomingSessionId || null;
 
     if (!sessionId) {
@@ -192,24 +197,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       meta: m.meta || null,
     }));
 
-    /* ---------- SAVE USER MESSAGE (match unified.ts) ---------- */
+    /* ---------- SAVE USER MESSAGE ---------- */
     const trimmed =
       input?.trim() || (extractedText ? "User uploaded a document for analysis." : "");
 
     if (trimmed || nextAction) {
       const userContent = trimmed || `[Triggered Action: ${nextAction}]`;
-
       await saveMessage(sessionId as string, "user", userContent, {
-        meta: {
-          nextAction: nextAction || undefined,
-          mode,
-          companion,
-        },
+        meta: { nextAction: nextAction || undefined, mode, companion },
       });
     }
 
-    /* ---------- BUILD STREAMING PLAN (prompt + meta + attachments plan) ---------- */
-    // rawIdentity is still used as a safe fallback identity in case meta doesn't include identity
+    /* ---------- BRAND CONTEXT ---------- */
+    const brandContext = await getBrandContext(userId);
+
+    /* ---------- BUILD STREAMING PLAN ---------- */
     const rawIdentity = loadIdentity(companion, mode);
 
     const plan =
@@ -221,6 +223,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tone,
             nextAction: nextAction || undefined,
             conversationHistory,
+            brandContext,
+            handoverContext: handoverContext || undefined,
           } as SalarStreamingPlanInput)
         : buildLyraStreamingPlan({
             mode: mode as LyraMode,
@@ -229,51 +233,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tone,
             nextAction: nextAction || undefined,
             conversationHistory,
+            brandContext,
+            handoverContext: handoverContext || undefined,
           } as LyraStreamingPlanInput);
 
-    // Tell the client we’re starting an assistant reply
     sseSend(res, { type: "start", sessionId });
 
-   /* ---------- STREAM OPENAI TOKENS ---------- */
-let fullText = "";
+    /* ---------- STREAM CLAUDE TOKENS ---------- */
+    let fullText = "";
 
-const stream = await openai.responses.stream(
-  {
-    model: plan.model || "gpt-4.1",
-    input: plan.fullPrompt,
-  },
-  { signal: abortController.signal as any }
-);
+    const stream = anthropic.messages.stream(
+      {
+        model: plan.model || MODEL,
+        max_tokens: 8192,
+        system: plan.system,
+        messages: plan.messages as Array<{ role: "user" | "assistant"; content: string }>,
+      },
+      { signal: abortController.signal as any }
+    );
 
-for await (const event of stream) {
-  if (abortController.signal.aborted) break;
+    for await (const event of stream) {
+      if (abortController.signal.aborted) break;
 
-  // TEXT DELTAS
-  if (event?.type === "response.output_text.delta") {
-    const delta = event.delta || "";
-    if (delta) {
-      fullText += delta;
-      sseSend(res, { type: "token", value: delta });
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        const delta = event.delta.text;
+        if (delta) {
+          fullText += delta;
+          sseSend(res, { type: "token", value: delta });
+        }
+      }
+
+      if (event.type === "message_stop") {
+        break;
+      }
     }
-  }
-
-  // 🔴 CRITICAL: detect completion explicitly
-  if (event?.type === "response.completed") {
-    break;
-  }
-}
 
     if (abortController.signal.aborted) {
       clearInterval(heartbeat);
       return res.end();
     }
 
-    // Ensure we end up with the final output text (some SDKs also provide it at end)
     const finalReply = fullText.trim() || "No response generated.";
 
-    /* ---------- POST-PROCESS: attachments + meta ---------- */
+    /* ---------- POST-PROCESS ---------- */
     const attachments = await plan.buildAttachments(finalReply);
-
     const metaFromPlan = plan.buildMeta(finalReply);
 
     const meta = {
@@ -291,39 +297,34 @@ for await (const event of stream) {
               : rawIdentity?.tone?.base,
           mode,
         } as any),
-      memory: {
-        shortTerm: conversationHistory.slice(-8),
-      },
+      memory: { shortTerm: conversationHistory.slice(-8) },
     };
 
-    /* ---------- SAVE ASSISTANT MESSAGE (match unified.ts) ---------- */
+    /* ---------- SAVE ASSISTANT MESSAGE ---------- */
     await saveMessage(sessionId as string, "assistant", finalReply, {
       attachments,
       meta,
     });
+
+    // Auto-name on first message of a new session
+    if (sessionId && !incomingSessionId) {
+      updateSessionTitle(sessionId as string, companion, mode).catch(() => {});
+    }
 
     if (userId) {
       await saveTone(userId, companion, tone || "calm", "post-response update");
     }
 
     /* ---------- FINAL EVENT ---------- */
-    sseSend(res, {
-      type: "done",
-      reply: finalReply,
-      attachments,
-      meta,
-      sessionId,
-    });
+    sseSend(res, { type: "done", reply: finalReply, attachments, meta, sessionId });
 
     clearInterval(heartbeat);
     return res.end();
   } catch (err: any) {
     console.error("❌ unified-stream.ts error:", err);
-
     try {
       sseSend(res, { type: "error", error: err?.message || "Unknown error" });
     } catch {}
-
     clearInterval(heartbeat);
     return res.end();
   }

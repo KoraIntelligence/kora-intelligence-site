@@ -26,15 +26,14 @@ type ChatSessionContextValue = {
   uploading: boolean;
   sessionIds: Record<Companion, string | null>;
   activeSessionId: string | null;
+  handingOver: boolean;
 
-  // ✅ now supports file
   sendMessage: (payload: {
     text?: string;
     action?: string;
     file?: File;
   }) => Promise<void>;
 
-  // kept for backwards compatibility (can be retired later)
   uploadFile: (file: File) => Promise<void>;
 
   clearMessagesForCompanion: (companion: Companion) => void;
@@ -102,6 +101,9 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [handingOver, setHandingOver] = useState(false);
+  const [handoverContext, setHandoverContext] = useState<string | null>(null);
+  const prevCompanionRef = React.useRef<Companion>(companion);
 
   /* -------------------------------------------------- */
   /* USER ID INITIALISATION                             */
@@ -136,6 +138,35 @@ export function ChatSessionProvider({ children, tone, isGuest }: ProviderProps) 
       lyra: lyraStored,
     });
   }, []);
+
+  /* -------------------------------------------------- */
+  /* COMPANION SWITCH: SUMMARISE + HAND OVER CONTEXT    */
+  /* -------------------------------------------------- */
+  useEffect(() => {
+    const prev = prevCompanionRef.current;
+    if (prev === companion) return;
+    prevCompanionRef.current = companion;
+
+    // Only hand over if there were messages in the previous session
+    const prevSessionId = sessionIds[prev];
+    if (!prevSessionId || messages.length === 0) return;
+
+    setHandingOver(true);
+
+    fetch("/api/session/summarise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: prevSessionId }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.summary) {
+          setHandoverContext(data.summary);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHandingOver(false));
+  }, [companion]);
 
   /* -------------------------------------------------- */
   /* LAZY SESSION INITIALISATION FOR ACTIVE COMPANION   */
@@ -284,6 +315,7 @@ async function sendMessageStream(args: {
   text?: string;
   action?: string;
   filePayload?: any;
+  handoverContext?: string | null;
 }) {
   const res = await fetch("/api/unified-stream", {
     method: "POST",
@@ -299,6 +331,7 @@ async function sendMessageStream(args: {
       input: args.text || null,
       nextAction: args.action || null,
       ...(args.filePayload ? { filePayload: args.filePayload } : {}),
+      ...(args.handoverContext ? { handoverContext: args.handoverContext } : {}),
     }),
   });
 
@@ -380,10 +413,15 @@ const sendMessage = useCallback(
         { id: assistantId, role: "assistant", content: "", ts: Date.now() },
       ]);
 
+      // Pass handover context on first message to new session, then clear it
+      const currentHandover = handoverContext;
+      if (currentHandover) setHandoverContext(null);
+
       const stream = await sendMessageStream({
         text: trimmed || undefined,
         action,
         filePayload,
+        handoverContext: currentHandover,
       });
 
       const reader = stream.getReader();
@@ -532,6 +570,7 @@ const sendMessage = useCallback(
         uploading,
         sessionIds,
         activeSessionId,
+        handingOver,
         sendMessage,
         uploadFile,
         clearMessagesForCompanion,

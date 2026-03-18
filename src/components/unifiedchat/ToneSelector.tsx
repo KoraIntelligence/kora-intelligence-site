@@ -28,13 +28,13 @@ export default function ToneSelector({
   --------------------------------------- */
   const accent = {
     text: isSalar
-      ? "text-amber-700 dark:text-amber-300"
+      ? "text-yellow-700 dark:text-yellow-300"
       : "text-teal-700 dark:text-teal-300",
     ring: isSalar
-      ? "focus:ring-amber-400 dark:focus:ring-amber-500"
+      ? "focus:ring-yellow-400 dark:focus:ring-yellow-500"
       : "focus:ring-teal-400 dark:focus:ring-teal-500",
     bgHover: isSalar
-      ? "hover:bg-amber-50 dark:hover:bg-amber-900/30"
+      ? "hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
       : "hover:bg-teal-50 dark:hover:bg-teal-900/30",
   };
 

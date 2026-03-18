@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
+import type { ReactNode } from "react";
 import Layout from "../components/layout/Layout";
 import { ThemeProvider } from "next-themes";
 import { useEffect, useState } from "react";
@@ -33,16 +34,19 @@ function ProfileSync() {
 export default function App({ Component, pageProps }: AppProps) {
   const [supabaseClient] = useState(() => createPagesBrowserClient());
 
+  // Pages can export getLayout to opt out of the default Layout
+  const getLayout: (page: ReactNode) => ReactNode =
+    (Component as any).getLayout ??
+    ((page: ReactNode) => <Layout>{page}</Layout>);
+
   return (
     <SessionContextProvider
       supabaseClient={supabaseClient}
       initialSession={pageProps.initialSession}
     >
-      <ThemeProvider attribute="class">
-        <Layout>
-          <ProfileSync />
-          <Component {...pageProps} />
-        </Layout>
+      <ThemeProvider attribute="class" defaultTheme="dark">
+        <ProfileSync />
+        {getLayout(<Component {...pageProps} />)}
       </ThemeProvider>
     </SessionContextProvider>
   );

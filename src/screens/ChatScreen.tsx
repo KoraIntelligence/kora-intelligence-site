@@ -8,6 +8,9 @@ import Sidebar from "@/components/unifiedchat/Sidebar";
 import IdentityOverlay from "@/components/unifiedchat/IdentityOverlay";
 import ToneSelector from "@/components/unifiedchat/ToneSelector";
 import WorkflowTopBar from "@/components/unifiedchat/WorkflowTopBar";
+import DeliverablesPanel from "@/components/unifiedchat/DeliverablesPanel";
+import ModeSelectorOverlay from "@/components/unifiedchat/ModeSelectorOverlay";
+import OnboardingDialog from "@/components/unifiedchat/OnboardingDialog";
 
 import { useCompanion } from "@/context/CompanionContext";
 import { useChatSession } from "@/context/ChatSessionContext";
@@ -17,6 +20,13 @@ export default function ChatScreen() {
   /* ------------------------------------------------------ */
   /* CONTEXT HOOKS                                          */
   /* ------------------------------------------------------ */
+  const [deliverablesOpen, setDeliverablesOpen] = React.useState(false);
+  const [modeSelectorOpen, setModeSelectorOpen] = React.useState(false);
+  const [onboardingOpen, setOnboardingOpen] = React.useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('kora_onboarded') !== 'true';
+  });
+
   const {
     companion,
     setCompanion,
@@ -55,6 +65,7 @@ export default function ChatScreen() {
       lyraMode={lyraMode}
       setLyraMode={setLyraMode}
       toneSelector={toneSelectorNode}
+      onSwitchMode={() => setModeSelectorOpen(true)}
     />
   );
 
@@ -62,7 +73,11 @@ export default function ChatScreen() {
   /* TOP BAR (standalone, given to ChatLayout)              */
   /* ------------------------------------------------------ */
   const workflowTopBarNode = (
-    <WorkflowTopBar companion={companion} messages={messages as any} />
+    <WorkflowTopBar
+      companion={companion}
+      messages={messages as any}
+      onOpenDeliverables={() => setDeliverablesOpen(true)}
+    />
   );
 
   /* ------------------------------------------------------ */
@@ -95,11 +110,47 @@ export default function ChatScreen() {
   /* FINAL RENDER                                           */
   /* ------------------------------------------------------ */
   return (
-    <ChatLayout
-      sidebar={sidebarNode}
-      topBar={workflowTopBarNode}    // <-- use this (you were missing it)
-      chatWindow={chatWindowNode}
-      identityOverlay={identityOverlayNode}
-    />
+    <>
+      <ChatLayout
+        sidebar={sidebarNode}
+        topBar={workflowTopBarNode}
+        chatWindow={chatWindowNode}
+        identityOverlay={identityOverlayNode}
+      />
+      <DeliverablesPanel
+        open={deliverablesOpen}
+        onClose={() => setDeliverablesOpen(false)}
+        companion={companion}
+        mode={companion === "salar" ? salarMode : lyraMode}
+        exports={[]}
+      />
+      <ModeSelectorOverlay
+        isOpen={modeSelectorOpen}
+        companion={companion}
+        activeMode={companion === "salar" ? salarMode : lyraMode}
+        onSelect={(mode) => {
+          if (companion === "salar") setSalarMode(mode as any);
+          else setLyraMode(mode as any);
+        }}
+        onClose={() => setModeSelectorOpen(false)}
+      />
+      <OnboardingDialog
+        isOpen={onboardingOpen}
+        companion={companion}
+        onComplete={(tone) => {
+          setTone(tone as any);
+          setOnboardingOpen(false);
+          localStorage.setItem("kora_onboarded", "true");
+        }}
+        onModeSelect={(mode) => {
+          if (companion === "salar") setSalarMode(mode as any);
+          else setLyraMode(mode as any);
+        }}
+        onClose={() => {
+          setOnboardingOpen(false);
+          localStorage.setItem("kora_onboarded", "true");
+        }}
+      />
+    </>
   );
 }
