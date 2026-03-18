@@ -23,6 +23,7 @@ import {
   saveMessage,
   saveTone,
   getBrandContext,
+  getLastTone,
   updateSessionTitle,
 } from "../../lib/memory";
 
@@ -167,6 +168,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       userId = user.id;
+    }
+
+    /* ---------- TONE RESOLUTION ---------- */
+    // If frontend sent no tone or the default, load from DB so returning users
+    // get their saved preference rather than always defaulting to "calm".
+    if (!tone || tone === "calm") {
+      const savedTone = await getLastTone(userId, companion);
+      if (savedTone && savedTone !== "calm") tone = savedTone;
     }
 
     /* ---------- FILE HANDLING ---------- */

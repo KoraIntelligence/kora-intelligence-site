@@ -44,7 +44,7 @@ export default function ChatScreen() {
     topBarHeight, // <-- used to size ChatWindow correctly
   } = useUIState();
 
-  const { messages, sending, uploadFile, sendMessage } = useChatSession();
+  const { messages, sending, uploadFile, sendMessage, userId } = useChatSession();
 
   /* ------------------------------------------------------ */
   /* TONE SELECTOR                                          */
@@ -137,10 +137,18 @@ export default function ChatScreen() {
       <OnboardingDialog
         isOpen={onboardingOpen}
         companion={companion}
-        onComplete={(tone) => {
+        onComplete={(tone, brandName, industry) => {
           setTone(tone as any);
           setOnboardingOpen(false);
           localStorage.setItem("kora_onboarded", "true");
+          // Persist brand data to Supabase if user is authenticated
+          if ((brandName || industry) && userId) {
+            fetch("/api/brand/profile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, brandName, industry }),
+            }).catch(() => {});
+          }
         }}
         onModeSelect={(mode) => {
           if (companion === "salar") setSalarMode(mode as any);

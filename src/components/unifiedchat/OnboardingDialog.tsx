@@ -12,7 +12,7 @@ type Step = 1 | 2 | 3 | 4;
 type Props = {
   isOpen: boolean;
   companion: 'salar' | 'lyra';
-  onComplete: (tone: string) => void;
+  onComplete: (tone: string, brandName?: string, industry?: string) => void;
   onModeSelect: (mode: string) => void;
   onClose: () => void;
 };
@@ -78,12 +78,18 @@ export default function OnboardingDialog({
   };
 
   const handleComplete = (skip: boolean) => {
+    const trimmedBrand = brandName.trim();
+    const trimmedIndustry = industry.trim();
     if (!skip) {
-      if (brandName.trim()) localStorage.setItem('kora_brand_name', brandName.trim());
-      if (industry.trim()) localStorage.setItem('kora_brand_industry', industry.trim());
+      if (trimmedBrand) localStorage.setItem('kora_brand_name', trimmedBrand);
+      if (trimmedIndustry) localStorage.setItem('kora_brand_industry', trimmedIndustry);
     }
     localStorage.setItem('kora_onboarded', 'true');
-    onComplete(tone);
+    onComplete(
+      tone,
+      skip ? undefined : trimmedBrand || undefined,
+      skip ? undefined : trimmedIndustry || undefined,
+    );
     onClose();
   };
 

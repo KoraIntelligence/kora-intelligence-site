@@ -39,13 +39,22 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [topBarHeight, setTopBarHeight] = useState(64);
 
   // NEW: tone + guest
-  const [tone, setTone] = useState<string>("calm");
+  const [tone, setToneRaw] = useState<string>("calm");
   const [isGuest, setIsGuest] = useState<boolean>(false);
+
+  // Persist tone to localStorage whenever it changes
+  const setTone = React.useCallback((v: string) => {
+    localStorage.setItem("kora_tone", v);
+    setToneRaw(v);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const guestFlag = localStorage.getItem("guest_mode") === "true";
     setIsGuest(guestFlag);
+    // Restore tone from localStorage on mount
+    const storedTone = localStorage.getItem("kora_tone");
+    if (storedTone) setToneRaw(storedTone);
   }, []);
 
   return (
