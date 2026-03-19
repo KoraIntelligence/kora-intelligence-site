@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const {
     brand_name,
+    brandName,         // camelCase from onboarding dialog
     industry,
     tone_keywords,
     messaging_pillars,
@@ -43,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const result = await upsertBrandProfile({
     user_id: userId,
-    brand_name: brand_name ?? null,
+    brand_name: brand_name ?? brandName ?? null,
     industry: industry ?? null,
     tone_keywords: Array.isArray(tone_keywords) ? tone_keywords : null,
     messaging_pillars: Array.isArray(messaging_pillars) ? messaging_pillars : null,

@@ -11,6 +11,7 @@ export const config = {
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
@@ -52,6 +53,7 @@ interface UnifiedRequestBody {
   userId?: string | null;
   sessionId?: string | null;
   handoverContext?: string | null;
+  clientId?: string | null; // Platform: inject RAG context from knowledge_chunks
 }
 
 export interface ConversationTurn {
@@ -106,6 +108,41 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+// ---------------------------------------------------------------------------
+// RAG: retrieve top-k knowledge chunks for a client + query
+// ---------------------------------------------------------------------------
+async function retrieveKnowledgeChunks(
+  clientId: string,
+  query: string,
+  topK = 5
+): Promise<string[]> {
+  try {
+    const embeddingRes = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: query,
+    });
+    const queryEmbedding = embeddingRes.data[0].embedding;
+
+    const { data, error } = await supabaseAdmin.rpc('match_knowledge_chunks', {
+      query_embedding: queryEmbedding,
+      match_client_id: clientId,
+      match_count: topK,
+    });
+
+    if (error) {
+      console.warn('⚠️ RAG retrieval error:', error.message);
+      return [];
+    }
+
+    return (data as Array<{ content: string }>).map((row) => row.content);
+  } catch (err) {
+    console.warn('⚠️ RAG retrieval failed:', err);
+    return [];
+  }
+}
+
 const MODEL = process.env.KORA_MODEL || "claude-sonnet-4-6";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -139,6 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filePayload,
       sessionId: incomingSessionId,
       handoverContext = null,
+      clientId = null,
     } = body;
 
     if (!mode) {
@@ -220,8 +258,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     /* ---------- BRAND CONTEXT ---------- */
     const brandContext = await getBrandContext(userId);
 
+    /* ---------- RAG CONTEXT (platform clients only) ---------- */
+    let ragContext = "";
+    if (clientId && (trimmed || nextAction)) {
+      const queryText = trimmed || nextAction || "";
+      const chunks = await retrieveKnowledgeChunks(clientId, queryText);
+      if (chunks.length > 0) {
+        ragContext =
+          "\n--------------------------------------------------\n" +
+          "KNOWLEDGE BASE (from this business's data — use as primary source):\n" +
+          chunks.join("\n\n---\n") +
+          "\n--------------------------------------------------\n";
+      }
+    }
+
     /* ---------- BUILD STREAMING PLAN ---------- */
     const rawIdentity = loadIdentity(companion, mode);
+
+    // Merge RAG context into brandContext so it flows into the system prompt
+    const combinedContext = ragContext
+      ? brandContext + ragContext
+      : brandContext;
 
     const plan =
       companion === "salar"
@@ -232,7 +289,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tone,
             nextAction: nextAction || undefined,
             conversationHistory,
-            brandContext,
+            brandContext: combinedContext,
             handoverContext: handoverContext || undefined,
           } as SalarStreamingPlanInput)
         : buildLyraStreamingPlan({
@@ -242,7 +299,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tone,
             nextAction: nextAction || undefined,
             conversationHistory,
-            brandContext,
+            brandContext: combinedContext,
             handoverContext: handoverContext || undefined,
           } as LyraStreamingPlanInput);
 

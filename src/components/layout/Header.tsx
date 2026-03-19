@@ -9,7 +9,6 @@ import { X, Menu } from 'lucide-react';
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Companions', href: '/companions' },
-  { label: 'Dispatches', href: '/dispatch' },
 ];
 
 export default function Header() {
